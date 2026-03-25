@@ -1,0 +1,178 @@
+.formation-detail-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* En-tête */
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.back-button {
+  margin-left: -8px;
+}
+
+.title-section {
+  flex: 1;
+}
+
+.title-section h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.badges {
+  display: flex;
+  gap: 8px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Grille de contenu */
+.content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.info-card, .stats-card {
+  height: fit-content;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.info-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.info-value {
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.description {
+  margin-top: 16px;
+}
+
+.description h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.description p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.5;
+}
+
+/* Statistiques */
+.stat-item {
+  margin-bottom: 20px;
+}
+
+.stat-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.stat-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-bar mat-progress-bar {
+  flex: 1;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: #1e293b;
+  min-width: 40px;
+}
+
+/* Participants */
+.participants-card {
+  overflow: hidden;
+}
+
+.card-actions {
+  margin-left: auto;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.empty-state mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: #cbd5e1;
+  margin-bottom: 16px;
+}
+
+.empty-state p {
+  margin: 0 0 16px 0;
+  color: #64748b;
+}
+
+.participants-table {
+  width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .formation-detail-container {
+    padding: 12px;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+  .title-section h1 {
+    font-size: 24px;
+  }
+
+  .actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .participants-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

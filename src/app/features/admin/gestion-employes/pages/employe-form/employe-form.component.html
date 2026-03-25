@@ -1,0 +1,229 @@
+<div class="form-shell">
+
+  <!-- Back -->
+  <div class="back-bar">
+    <button class="back-btn" (click)="onCancel()">
+      <span>←</span>
+      <span>{{ isEditMode ? 'Fiche employé' : 'Équipe' }}</span>
+    </button>
+  </div>
+
+  <!-- Header -->
+  <div class="form-header">
+    <div class="form-header-left">
+      <span class="header-tag">{{ isEditMode ? 'Modification' : 'Nouveau membre' }}</span>
+      <h1 class="form-title">{{ isEditMode ? 'Modifier l\'employé' : 'Ajouter un employé' }}</h1>
+      <p class="form-subtitle">
+        {{ isEditMode
+          ? 'Tous les champs sont éditables et seront sauvegardés.'
+          : 'Remplissez les informations du nouveau membre d\'équipe.' }}
+      </p>
+    </div>
+    <div class="step-indicator">
+      <div class="step-dot active"></div>
+      <div class="step-line"></div>
+      <div class="step-dot" [class.active]="isStepTwoVisible()"></div>
+      <div class="step-line"></div>
+      <div class="step-dot" [class.active]="isStepThreeVisible()"></div>
+    </div>
+  </div>
+
+  <!-- Loader -->
+  <div class="loader-wrap" *ngIf="loading">
+    <div class="loader-ring"></div>
+    <p class="loader-text">Chargement des données…</p>
+  </div>
+
+  <!-- Formulaire -->
+  <form [formGroup]="employeForm" (ngSubmit)="onSubmit()" *ngIf="!loading" class="form-body" autocomplete="off">
+
+    <!-- ── Section 1 : Identité ──────────── -->
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-num">1</span>
+        <span class="section-title">Identité</span>
+        <span class="section-desc">Informations de base</span>
+      </div>
+      <div class="section-fields">
+
+        <div class="field-group">
+          <label class="field-label" for="matricule">Matricule <span class="req">*</span></label>
+          <input id="matricule" class="field-input"
+                 formControlName="matricule"
+                 placeholder="EMP-001"
+                 [class.invalid]="hasErr('matricule')"
+                 autocomplete="off">
+          <span class="field-error" *ngIf="hasErr('matricule')">{{ getErr('matricule') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="nom">Nom <span class="req">*</span></label>
+          <input id="nom" class="field-input"
+                 formControlName="nom"
+                 placeholder="Dupont"
+                 [class.invalid]="hasErr('nom')"
+                 autocomplete="off">
+          <span class="field-error" *ngIf="hasErr('nom')">{{ getErr('nom') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="prenom">Prénom <span class="req">*</span></label>
+          <input id="prenom" class="field-input"
+                 formControlName="prenom"
+                 placeholder="Jean"
+                 [class.invalid]="hasErr('prenom')"
+                 autocomplete="off">
+          <span class="field-error" *ngIf="hasErr('prenom')">{{ getErr('prenom') }}</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Section 2 : Contact ───────────── -->
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-num">2</span>
+        <span class="section-title">Contact</span>
+        <span class="section-desc">Coordonnées professionnelles</span>
+      </div>
+      <div class="section-fields">
+
+        <div class="field-group field-group--wide">
+          <label class="field-label" for="email">Email professionnel <span class="req">*</span></label>
+          <input id="email" class="field-input"
+                 type="email"
+                 formControlName="email"
+                 placeholder="jean.dupont@entreprise.com"
+                 [class.invalid]="hasErr('email')"
+                 autocomplete="off">
+          <span class="field-error" *ngIf="hasErr('email')">{{ getErr('email') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="telephone">
+            Téléphone
+            <span class="optional-badge">Optionnel</span>
+          </label>
+          <input id="telephone" class="field-input"
+                 type="tel"
+                 formControlName="telephone"
+                 placeholder="+33 6 12 34 56 78"
+                 [class.invalid]="hasErr('telephone')"
+                 autocomplete="off">
+          <span class="field-error" *ngIf="hasErr('telephone')">{{ getErr('telephone') }}</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Section 3 : Emploi ────────────── -->
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-num">3</span>
+        <span class="section-title">Emploi</span>
+        <span class="section-desc">Poste &amp; rémunération</span>
+      </div>
+      <div class="section-fields">
+
+        <div class="field-group">
+          <label class="field-label" for="poste">Poste <span class="req">*</span></label>
+          <select id="poste" class="field-select"
+                  formControlName="poste"
+                  [class.invalid]="hasErr('poste')">
+            <option value="" disabled>Sélectionner…</option>
+            <option *ngFor="let p of postes" [value]="p">{{ p }}</option>
+          </select>
+          <span class="field-error" *ngIf="hasErr('poste')">{{ getErr('poste') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="departement">Département <span class="req">*</span></label>
+          <select id="departement" class="field-select"
+                  formControlName="departement"
+                  [class.invalid]="hasErr('departement')">
+            <option value="" disabled>Sélectionner…</option>
+            <option *ngFor="let d of departements" [value]="d">{{ d }}</option>
+          </select>
+          <span class="field-error" *ngIf="hasErr('departement')">{{ getErr('departement') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Statut</label>
+          <div class="statut-chips">
+            <button type="button" class="statut-chip"
+                    [class.active-actif]="f['statut'].value === 'ACTIF'"
+                    (click)="setStatut('ACTIF')">
+              <span class="dot-s actif"></span> Actif
+            </button>
+            <button type="button" class="statut-chip"
+                    [class.active-conge]="f['statut'].value === 'CONGE'"
+                    (click)="setStatut('CONGE')">
+              <span class="dot-s conge"></span> Congé
+            </button>
+            <button type="button" class="statut-chip"
+                    [class.active-inactif]="f['statut'].value === 'INACTIF'"
+                    (click)="setStatut('INACTIF')">
+              <span class="dot-s inactif"></span> Inactif
+            </button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="dateEmbauche">Date d'embauche <span class="req">*</span></label>
+          <input id="dateEmbauche" class="field-input"
+                 type="date"
+                 formControlName="dateEmbauche"
+                 [class.invalid]="hasErr('dateEmbauche')">
+          <span class="field-error" *ngIf="hasErr('dateEmbauche')">{{ getErr('dateEmbauche') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="salaire">Salaire annuel (€) <span class="req">*</span></label>
+          <div class="input-wrap">
+            <span class="input-prefix">€</span>
+            <input id="salaire" class="field-input field-input--prefixed"
+                   type="number" min="0" max="1000000" step="100"
+                   formControlName="salaire"
+                   placeholder="45 000"
+                   [class.invalid]="hasErr('salaire')">
+          </div>
+          <span class="field-error" *ngIf="hasErr('salaire')">{{ getErr('salaire') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="soldeConges">
+            Solde congés
+            <span class="optional-badge">jours</span>
+          </label>
+          <input id="soldeConges" class="field-input"
+                 type="number" min="0" max="365"
+                 formControlName="soldeConges"
+                 placeholder="25"
+                 [class.invalid]="hasErr('soldeConges')">
+          <span class="field-error" *ngIf="hasErr('soldeConges')">{{ getErr('soldeConges') }}</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Actions ───────────────────────── -->
+    <div class="form-actions">
+      <span class="actions-hint">
+        <span class="req">*</span> Champs obligatoires
+      </span>
+      <div class="actions-right">
+        <button type="button" class="btn-cancel" (click)="onCancel()">
+          Annuler
+        </button>
+        <button type="submit" class="btn-submit" [disabled]="submitting">
+          <span class="btn-spinner" *ngIf="submitting"></span>
+          <span *ngIf="!submitting">
+            {{ isEditMode ? 'Enregistrer les modifications' : 'Créer le membre' }}
+          </span>
+          <span *ngIf="submitting">Envoi en cours…</span>
+        </button>
+      </div>
+    </div>
+
+  </form>
+</div>

@@ -1,0 +1,288 @@
+/* Variables */
+:host {
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+  --header-height: 64px;
+  --primary-color: #1976d2;
+  --sidebar-bg: #1e293b;
+  --sidebar-hover: #334155;
+  --sidebar-active: #0f172a;
+  --text-light: #f8fafc;
+  --text-muted: #94a3b8;
+}
+
+/* Layout Container */
+.layout-container {
+  height: 100vh;
+  transition: all 0.3s ease;
+}
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  color: var(--text-light);
+  border: none;
+  transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+/* Sidebar Header */
+.sidebar-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.logo-icon {
+  font-size: 28px;
+  min-width: 28px;
+}
+
+.app-title {
+  font-size: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.collapse-btn {
+  color: var(--text-muted);
+  transition: transform 0.3s ease;
+}
+
+.collapse-btn:hover {
+  color: var(--text-light);
+}
+
+/* Navigation Menu */
+.nav-menu {
+  padding: 16px 8px;
+}
+
+.nav-item {
+  margin-bottom: 4px;
+  position: relative;
+}
+
+.nav-item a {
+  color: var(--text-muted);
+  border-radius: 8px;
+  height: 48px;
+  padding: 0 12px;
+  transition: all 0.2s ease;
+}
+
+.nav-item a:hover {
+  background: var(--sidebar-hover);
+  color: var(--text-light);
+}
+
+.nav-item a.active {
+  background: var(--primary-color);
+  color: white;
+}
+
+.nav-item mat-icon {
+  margin-right: 12px;
+  font-size: 20px;
+}
+
+.nav-label {
+  white-space: nowrap;
+}
+
+/* Tooltips pour mode collapsed */
+.tooltip {
+  position: absolute;
+  left: calc(var(--sidebar-collapsed-width) + 8px);
+  background: var(--sidebar-bg);
+  color: var(--text-light);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+}
+
+.nav-item:hover .tooltip {
+  opacity: 1;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  position: absolute;
+  bottom: 16px;
+  width: 100%;
+  padding: 0 16px;
+}
+
+.version-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 16px;
+}
+
+/* Main Content */
+.main-content {
+  background: #f1f5f9;
+}
+
+/* Header */
+.header {
+  height: var(--header-height);
+  background: white !important;
+  color: #1e293b !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.menu-toggle {
+  display: none;
+  margin-right: 16px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 500;
+  margin-left: 16px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.header-icon {
+  margin: 0 4px;
+  color: #64748b;
+}
+
+.header-icon:hover {
+  color: var(--primary-color);
+}
+
+/* Avatar utilisateur */
+.user-profile {
+  margin-left: 8px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 500;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+/* Menus déroulants */
+::ng-deep .notification-menu {
+  min-width: 300px;
+}
+
+.menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+}
+
+.user-info {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-info strong {
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.user-info span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.menu-item-time {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+/* Content Area */
+.content-area {
+  padding: 24px;
+  min-height: calc(100vh - var(--header-height));
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar:not(.collapsed) {
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+
+  .page-title {
+    font-size: 16px;
+    margin-left: 8px;
+  }
+
+  .content-area {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-icon {
+    margin: 0 2px;
+  }
+
+  .content-area {
+    padding: 12px;
+  }
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.content-area {
+  animation: slideIn 0.3s ease-out;
+}

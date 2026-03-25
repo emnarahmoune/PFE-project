@@ -1,0 +1,93 @@
+<mat-sidenav-container class="layout-container" [class.sidebar-collapsed]="!isSidebarOpen">
+  
+  <!-- SIDEBAR -->
+  <mat-sidenav 
+    [opened]="isSidebarOpen" 
+    mode="side" 
+    class="sidebar"
+    [class.collapsed]="!isSidebarOpen">
+    
+    <div class="sidebar-header">
+      <div class="logo-container">
+        <span class="logo-icon">👤</span>
+        <span *ngIf="isSidebarOpen" class="app-title">Espace Employé</span>
+      </div>
+      <button mat-icon-button class="collapse-btn" (click)="toggleSidebar()">
+        <mat-icon>{{ isSidebarOpen ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+      </button>
+    </div>
+
+    <mat-nav-list class="nav-menu">
+      <div *ngFor="let item of menuItems" class="nav-item">
+        <a 
+          mat-list-item 
+          [routerLink]="item.path" 
+          routerLinkActive="active"
+          #rla="routerLinkActive"
+          [class.active]="rla.isActive">
+          <mat-icon>{{ item.icon }}</mat-icon>
+          <span class="nav-label" *ngIf="isSidebarOpen">{{ item.label }}</span>
+          <span class="tooltip" *ngIf="!isSidebarOpen">{{ item.label }}</span>
+        </a>
+      </div>
+    </mat-nav-list>
+
+    <div class="sidebar-footer" *ngIf="isSidebarOpen">
+      <mat-divider></mat-divider>
+      <div class="version-info">
+        <span>Version 1.0.0</span>
+        <span>© {{ currentYear }}</span>
+      </div>
+    </div>
+  </mat-sidenav>
+
+  <!-- MAIN CONTENT -->
+  <mat-sidenav-content class="main-content">
+    
+    <!-- HEADER -->
+    <mat-toolbar color="primary" class="header">
+      <button mat-icon-button (click)="toggleSidebar()" class="menu-toggle">
+        <mat-icon>menu</mat-icon>
+      </button>
+      
+      <span class="spacer"></span>
+
+      <!-- Notifications -->
+      <button mat-icon-button [matMenuTriggerFor]="notifMenu" class="header-icon">
+        <mat-icon>notifications</mat-icon>
+      </button>
+      <mat-menu #notifMenu="matMenu">
+        <button mat-menu-item>
+          <span>Aucune notification</span>
+        </button>
+      </mat-menu>
+
+      <!-- Profil utilisateur -->
+      <button mat-icon-button [matMenuTriggerFor]="userMenu" class="header-icon user-profile">
+        <div class="avatar">{{ getUserInitials() }}</div>
+      </button>
+      <mat-menu #userMenu="matMenu">
+        <div class="user-info">
+          <strong>{{ getUserName() }}</strong>
+          <span>Employé</span>
+        </div>
+        <mat-divider></mat-divider>
+        <button mat-menu-item routerLink="/employee/mon-profil">
+          <mat-icon>person</mat-icon>
+          <span>Mon profil</span>
+        </button>
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="logout()">
+          <mat-icon>exit_to_app</mat-icon>
+          <span>Déconnexion</span>
+        </button>
+      </mat-menu>
+    </mat-toolbar>
+
+    <!-- CONTENT AREA -->
+    <div class="content-area">
+      <router-outlet></router-outlet>
+    </div>
+
+  </mat-sidenav-content>
+</mat-sidenav-container>

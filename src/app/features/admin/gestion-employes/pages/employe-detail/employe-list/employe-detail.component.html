@@ -1,0 +1,198 @@
+<div class="detail-shell">
+
+  <!-- Loader -->
+  <div class="loader-wrap" *ngIf="loading">
+    <div class="loader-ring"></div>
+    <p class="loader-text">Chargement de la fiche…</p>
+  </div>
+
+  <ng-container *ngIf="!loading && employe">
+
+    <!-- Back Bar -->
+    <div class="back-bar">
+      <button class="back-btn" (click)="goBack()">
+        <span class="back-arrow">←</span>
+        <span>Équipe</span>
+      </button>
+      <div class="breadcrumb-sep">·</div>
+      <span class="breadcrumb-name">{{ employe.prenom }} {{ employe.nom }}</span>
+    </div>
+
+    <!-- Hero Card -->
+    <div class="hero-section">
+      <div class="hero-accent-bar" [style.background]="getAvatarColor()"></div>
+      <div class="hero-content">
+
+        <div class="hero-avatar" [style.background]="getAvatarColor()">
+          {{ getInitials() }}
+        </div>
+
+        <div class="hero-info">
+          <div class="hero-tags">
+            <span class="tag tag--dept">{{ employe.departement }}</span>
+            <span class="badge" [class]="'badge-' + employe.statut.toLowerCase()">
+              <span class="badge-dot"></span>{{ employe.statut }}
+            </span>
+          </div>
+          <h1 class="hero-name">{{ employe.prenom }} {{ employe.nom }}</h1>
+          <p class="hero-role">{{ employe.poste }}</p>
+          <code class="hero-matricule">{{ employe.matricule }}</code>
+        </div>
+
+        <div class="hero-actions">
+          <button class="action-secondary" (click)="editEmploye()">
+            ✎&nbsp; Modifier
+          </button>
+          <button class="action-danger" (click)="deleteEmploye()">
+            ✕&nbsp; Désactiver
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon-wrap">💰</div>
+        <div class="stat-info">
+          <span class="stat-lbl">Salaire annuel</span>
+          <span class="stat-val">{{ getSalaireFormate() }}</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap">📅</div>
+        <div class="stat-info">
+          <span class="stat-lbl">Ancienneté</span>
+          <span class="stat-val">{{ getAnciennete() }}</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap">🏖</div>
+        <div class="stat-info">
+          <span class="stat-lbl">Solde congés</span>
+          <span class="stat-val">{{ employe.soldeConges ?? '—' }} jours</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrap">📋</div>
+        <div class="stat-info">
+          <span class="stat-lbl">Embauché le</span>
+          <span class="stat-val stat-val--sm">{{ getDateEmbaucheFormatee() }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detail Grid -->
+    <div class="detail-grid">
+
+      <!-- Contact -->
+      <div class="info-panel">
+        <h3 class="panel-title">
+          <span class="panel-ico">✉</span> Contact
+        </h3>
+        <div class="field-list">
+          <div class="field-row">
+            <span class="field-key">Email professionnel</span>
+            <a class="field-val field-val--link"
+               href="mailto:{{ employe.email }}">{{ employe.email || '—' }}</a>
+          </div>
+          <div class="field-row">
+            <span class="field-key">Téléphone</span>
+            <span class="field-val">
+              <a *ngIf="employe.telephone" href="tel:{{ employe.telephone }}" class="field-val--link">
+                {{ employe.telephone }}
+              </a>
+              <span *ngIf="!employe.telephone">—</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emploi -->
+      <div class="info-panel">
+        <h3 class="panel-title">
+          <span class="panel-ico">💼</span> Emploi
+        </h3>
+        <div class="field-list">
+          <div class="field-row">
+            <span class="field-key">Poste</span>
+            <span class="field-val">{{ employe.poste || '—' }}</span>
+          </div>
+          <div class="field-row">
+            <span class="field-key">Département</span>
+            <span class="field-val">{{ employe.departement || '—' }}</span>
+          </div>
+          <div class="field-row">
+            <span class="field-key">Date d'embauche</span>
+            <span class="field-val">{{ getDateEmbaucheFormatee() }}</span>
+          </div>
+          <div class="field-row">
+            <span class="field-key">Statut</span>
+            <span class="badge-inline badge-{{ employe.statut.toLowerCase() }}">
+              {{ employe.statut }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-section">
+      <div class="tab-nav">
+        <button class="tab-btn"
+                [class.active]="activeTab === 'competences'"
+                (click)="activeTab = 'competences'">
+          Compétences
+        </button>
+        <button class="tab-btn"
+                [class.active]="activeTab === 'formations'"
+                (click)="activeTab = 'formations'">
+          Formations
+        </button>
+        <button class="tab-btn"
+                [class.active]="activeTab === 'conges'"
+                (click)="activeTab = 'conges'">
+          Congés
+        </button>
+        <button class="tab-btn"
+                [class.active]="activeTab === 'evaluations'"
+                (click)="activeTab = 'evaluations'">
+          Évaluations
+        </button>
+      </div>
+
+      <div class="tab-body">
+        <div class="tab-empty" *ngIf="activeTab === 'competences'">
+          <span class="tab-empty-ico">🎯</span>
+          <p>Aucune compétence enregistrée</p>
+          <button class="tab-add-btn" (click)="editEmploye()">+ Ajouter</button>
+        </div>
+        <div class="tab-empty" *ngIf="activeTab === 'formations'">
+          <span class="tab-empty-ico">📚</span>
+          <p>Aucune formation enregistrée</p>
+          <button class="tab-add-btn" (click)="editEmploye()">+ Ajouter</button>
+        </div>
+        <div class="tab-empty" *ngIf="activeTab === 'conges'">
+          <span class="tab-empty-ico">🏖</span>
+          <p>Aucun historique de congés</p>
+        </div>
+        <div class="tab-empty" *ngIf="activeTab === 'evaluations'">
+          <span class="tab-empty-ico">⭐</span>
+          <p>Aucune évaluation enregistrée</p>
+        </div>
+      </div>
+    </div>
+
+  </ng-container>
+
+  <!-- Employé non trouvé -->
+  <div class="not-found" *ngIf="!loading && !employe">
+    <span class="not-found-ico">⚠</span>
+    <h2>Employé introuvable</h2>
+    <p>Cet employé n'existe pas ou a été supprimé.</p>
+    <button class="back-btn" (click)="goBack()">← Retour à la liste</button>
+  </div>
+
+</div>

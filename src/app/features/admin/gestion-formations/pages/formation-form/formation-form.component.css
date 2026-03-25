@@ -1,0 +1,151 @@
+.formation-form-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.back-button {
+  margin-left: -8px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 50px;
+}
+
+/* Formulaire */
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.description-field textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.domaine-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Statut */
+.status-field {
+  margin-top: 8px;
+}
+
+.status-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.status-label {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.status-help {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff3e0;
+  border-radius: 8px;
+  color: #ed6c02;
+  font-size: 13px;
+}
+
+.status-help mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Aperçu */
+.preview-card {
+  margin-top: 24px;
+}
+
+.preview-header h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: #1e293b;
+}
+
+.preview-meta {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.preview-domaine, .preview-duree {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.preview-domaine mat-icon, .preview-duree mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.preview-description {
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid #1976d2;
+}
+
+.preview-description p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .formation-form-container {
+    padding: 12px;
+  }
+
+  .header h1 {
+    font-size: 20px;
+  }
+
+  .preview-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .status-toggle {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

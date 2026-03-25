@@ -1,0 +1,237 @@
+<div class="formation-list-container">
+  <!-- En-tête -->
+  <div class="header">
+    <div>
+      <h1>Gestion des formations</h1>
+      <p class="subtitle">Gérez le catalogue des formations et suivez les inscriptions</p>
+    </div>
+    <button mat-raised-button color="primary" routerLink="nouveau">
+      <mat-icon>add</mat-icon>
+      Nouvelle formation
+    </button>
+  </div>
+
+  <!-- Cartes de statistiques -->
+  <div class="stats-grid">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon-bg" style="background: #1976d2;">📚</div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.total }}</span>
+          <span class="stat-label">Formations</span>
+          <span class="stat-sub">dont {{ stats.actives }} actives</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon-bg" style="background: #28a745;">⏱️</div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.dureeMoyenne }}h</span>
+          <span class="stat-label">Durée moyenne</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-icon-bg" style="background: #ffc107;">👥</div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.totalParticipants }}</span>
+          <span class="stat-label">Participants</span>
+          <span class="stat-sub">{{ stats.participantsMoyens }} par formation</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card domain-card">
+      <mat-card-content>
+        <div class="stat-icon-bg" style="background: #6f42c1;">🏷️</div>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.technique + stats.softSkills + stats.management + stats.langues + stats.securite }}</span>
+          <span class="stat-label">Par domaine</span>
+          <div class="domain-tags">
+            <span class="domain-tag" *ngIf="stats.technique > 0">Tech: {{ stats.technique }}</span>
+            <span class="domain-tag" *ngIf="stats.softSkills > 0">Soft: {{ stats.softSkills }}</span>
+            <span class="domain-tag" *ngIf="stats.management > 0">Mgmt: {{ stats.management }}</span>
+            <span class="domain-tag" *ngIf="stats.langues > 0">Lang: {{ stats.langues }}</span>
+            <span class="domain-tag" *ngIf="stats.securite > 0">Sec: {{ stats.securite }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Filtres -->
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <div class="filters-grid">
+        <mat-form-field appearance="outline" class="search-field">
+          <mat-label>Rechercher une formation</mat-label>
+          <input matInput [(ngModel)]="searchText" (input)="applyFilter()" placeholder="Titre, description...">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Filtrer par domaine</mat-label>
+          <mat-select [(ngModel)]="selectedDomaine" (selectionChange)="applyFilter()">
+            <mat-option *ngFor="let domaine of domaines" [value]="domaine">
+              {{ domaine }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <button mat-stroked-button (click)="resetFilters()">
+          <mat-icon>refresh</mat-icon>
+          Réinitialiser
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Tableau des formations -->
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>Catalogue des formations</mat-card-title>
+      <mat-card-subtitle>{{ dataSource.data.length }} formation(s) trouvée(s)</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="loading-spinner" *ngIf="loading">
+        <mat-spinner diameter="40"></mat-spinner>
+      </div>
+
+      <div class="table-container" *ngIf="!loading">
+        <table mat-table [dataSource]="dataSource" matSort class="full-width-table">
+          
+          <!-- Titre Column -->
+          <ng-container matColumnDef="titre">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Formation</th>
+            <td mat-cell *matCellDef="let formation">
+              <div class="formation-title">{{ formation.titre }}</div>
+              <div class="formation-desc">{{ formation.description | slice:0:60 }}{{ formation.description.length > 60 ? '...' : '' }}</div>
+              <div class="formation-badges">
+                <span class="badge badge-duree" *ngIf="formation.dureeHeures">
+                  <mat-icon>schedule</mat-icon> {{ formatDuree(formation.dureeHeures) }}
+                </span>
+                <span class="badge badge-participants">
+                  <mat-icon>group</mat-icon> {{ formation.nombreParticipants || 0 }} participants
+                </span>
+              </div>
+              
+              <!-- Tags pour mobile -->
+              <div class="mobile-stats">
+                <span class="mobile-stat">{{ formatDuree(formation.dureeHeures) }}</span>
+                <span class="mobile-stat">{{ formation.nombreParticipants || 0 }} participants</span>
+              </div>
+              
+              <!-- Badge inactif -->
+              <div class="inactive-badge-mobile" *ngIf="!formation.actif">
+                <span>INACTIVE</span>
+              </div>
+              
+              <!-- Barre de progression participants -->
+              <div class="participants-progress desktop-only">
+                <mat-progress-bar 
+                  mode="determinate" 
+                  [value]="getParticipantPercentage(formation.nombreParticipants || 0)"
+                  color="primary">
+                </mat-progress-bar>
+              </div>
+             </td>
+          </ng-container>
+
+          <!-- Domaine Column -->
+          <ng-container matColumnDef="domaine">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Domaine</th>
+            <td mat-cell *matCellDef="let formation">
+              <mat-chip [color]="getDomaineColor(formation.domaine)" selected>
+                {{ formation.domaine }}
+              </mat-chip>
+             </td>
+          </ng-container>
+
+          <!-- Durée Column -->
+          <ng-container matColumnDef="duree">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Durée</th>
+            <td mat-cell *matCellDef="let formation">
+              {{ formatDuree(formation.dureeHeures) }}
+             </td>
+          </ng-container>
+
+          <!-- Participants Column -->
+          <ng-container matColumnDef="participants">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Participants</th>
+            <td mat-cell *matCellDef="let formation">
+              <div class="participants-cell">
+                <span class="participants-count">{{ formation.nombreParticipants || 0 }}</span>
+                <span class="participants-max">/ 50</span>
+                <mat-progress-bar 
+                  mode="determinate" 
+                  [value]="getParticipantPercentage(formation.nombreParticipants || 0)"
+                  class="participants-bar">
+                </mat-progress-bar>
+              </div>
+             </td>
+          </ng-container>
+
+          <!-- Statut Column -->
+          <ng-container matColumnDef="statut">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Statut</th>
+            <td mat-cell *matCellDef="let formation">
+              <mat-slide-toggle
+                [checked]="formation.actif"
+                (change)="toggleStatut(formation)"
+                [color]="'primary'">
+              </mat-slide-toggle>
+              <span class="statut-label" [class.inactive]="!formation.actif">
+                {{ formation.actif ? 'Actif' : 'Inactif' }}
+              </span>
+             </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let formation">
+              <button mat-icon-button [matMenuTriggerFor]="menu">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #menu="matMenu">
+                <button mat-menu-item [routerLink]="[formation.id]">
+                  <mat-icon>visibility</mat-icon>
+                  <span>Détails</span>
+                </button>
+                <button mat-menu-item [routerLink]="[formation.id, 'edit']">
+                  <mat-icon>edit</mat-icon>
+                  <span>Modifier</span>
+                </button>
+                <button mat-menu-item [routerLink]="[formation.id, 'participants']">
+                  <mat-icon>group_add</mat-icon>
+                  <span>Gérer les participants</span>
+                </button>
+                <button mat-menu-item (click)="deleteFormation(formation.id!, formation.titre)">
+                  <mat-icon color="warn">delete</mat-icon>
+                  <span class="text-warn">Désactiver</span>
+                </button>
+              </mat-menu>
+             </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"> </tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"> </tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell text-center" [attr.colspan]="displayedColumns.length">
+              <mat-icon>search_off</mat-icon>
+              <p>Aucune formation trouvée</p>
+              <button mat-button color="primary" routerLink="nouveau">Créer une formation</button>
+             </td>
+          </tr>
+        </table>
+
+        <mat-paginator [pageSizeOptions]="[5, 10, 25, 50]" showFirstLastButtons></mat-paginator>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

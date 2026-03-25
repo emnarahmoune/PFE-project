@@ -1,0 +1,310 @@
+.detail-container {
+  padding: 24px;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px;
+  gap: 16px;
+  color: #64748b;
+}
+
+/* Erreur */
+.error-container {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
+}
+
+.error-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  color: #f44336;
+  margin-bottom: 16px;
+}
+
+.error-container h2 {
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.error-container p {
+  margin-bottom: 24px;
+}
+
+/* En-tête */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  background: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.back-button {
+  margin-right: 8px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: #1e293b;
+  flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Grille d'informations */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+/* Cartes */
+mat-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+
+mat-card-header {
+  margin-bottom: 16px;
+}
+
+mat-card-header mat-icon {
+  color: #1976d2;
+}
+
+/* Informations */
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+}
+
+.info-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 16px;
+  color: #1e293b;
+  margin: 0;
+}
+
+.description {
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* Statistiques */
+.stats-row {
+  display: flex;
+  justify-content: space-around;
+  padding: 16px 0;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Graphiques */
+.chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px 0;
+}
+
+.chart-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chart-label {
+  font-size: 14px;
+  color: #475569;
+}
+
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-container mat-progress-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.progress-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  min-width: 45px;
+}
+
+/* Liste des employés */
+.employees-card {
+  margin-top: 24px;
+}
+
+.employees-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.employee-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.employee-item:hover {
+  background: #f1f5f9;
+}
+
+.employee-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.employee-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.level-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.level-progress mat-progress-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.level-value {
+  font-size: 12px;
+  color: #64748b;
+  min-width: 35px;
+}
+
+/* État vide */
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+}
+
+.empty-state mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  margin-bottom: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .detail-container {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .stats-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .detail-container {
+    padding: 12px;
+  }
+
+  .employee-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.content {
+  animation: fadeIn 0.3s ease-out;
+}

@@ -1,0 +1,75 @@
+<!-- src/app/features/auth/layouts/auth-layout/auth-layout.component.html -->
+<div class="auth-container">
+  <!-- Partie gauche - Illustration et branding -->
+  <div class="auth-left">
+    <div class="auth-content">
+      <!-- Logo et titre -->
+      <div class="brand">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <circle cx="20" cy="20" r="18" fill="white" opacity="0.2"/>
+              <path d="M20 12C16.69 12 14 14.69 14 18C14 21.31 16.69 24 20 24C23.31 24 26 21.31 26 18C26 14.69 23.31 12 20 12ZM20 22C17.79 22 16 20.21 16 18C16 15.79 17.79 14 20 14C22.21 14 24 15.79 24 18C24 20.21 22.21 22 20 22ZM20 26C15.58 26 12 27.79 12 30V32H28V30C28 27.79 24.42 26 20 26Z" fill="white"/>
+            </svg>
+          </div>
+          <span class="logo-text">RH Platform</span>
+        </div>
+        
+        <h1 class="app-title">Plateforme de Gestion RH Intelligente</h1>
+        <p class="app-description">
+          Solution complète pour gérer vos ressources humaines, 
+          optimiser les processus RH et prendre des décisions éclairées
+        </p>
+      </div>
+
+      <!-- Liste des fonctionnalités -->
+      <div class="features">
+        <div class="feature-item" *ngFor="let feature of features; let i = index" 
+             [style.animation-delay.s]="i * 0.1">
+          <div class="feature-icon">{{ feature.icon }}</div>
+          <div class="feature-text">
+            <h3>{{ feature.title }}</h3>
+            <p>{{ feature.description }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Témoignage -->
+      <div class="testimonial">
+        <div class="quote-icon">"</div>
+        <p class="testimonial-text">
+          Cette plateforme a transformé notre gestion RH. L'analyse prédictive 
+          nous permet d'anticiper et de retenir nos meilleurs talents.
+        </p>
+        <div class="testimonial-author">
+          <strong>Sarah Martin</strong>
+          <span>Directrice RH, TechCorp Solutions</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Décoration -->
+    <div class="decoration decoration-1"></div>
+    <div class="decoration decoration-2"></div>
+    <div class="decoration decoration-3"></div>
+  </div>
+
+  <!-- Partie droite - Formulaire -->
+  <div class="auth-right">
+    <div class="auth-form-container">
+      <router-outlet></router-outlet>
+    </div>
+
+    <!-- Footer -->
+    <footer class="auth-footer">
+      <p>&copy; {{ currentYear }} RH Platform. Tous droits réservés.</p>
+      <div class="footer-links">
+        <a href="#">Conditions d'utilisation</a>
+        <span>•</span>
+        <a href="#">Confidentialité</a>
+        <span>•</span>
+        <a href="#">Support</a>
+      </div>
+    </footer>
+  </div>
+</div>

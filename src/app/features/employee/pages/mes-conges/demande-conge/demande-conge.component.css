@@ -1,0 +1,232 @@
+.demande-conge-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.back-button {
+  margin-left: -8px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* Formulaire */
+.form-card {
+  height: fit-content;
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.date-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.date-field {
+  flex: 1;
+}
+
+.type-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-errors {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #dc3545;
+  font-size: 12px;
+  margin: -8px 0 16px 0;
+  padding: 4px 8px;
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: 4px;
+}
+
+.date-errors mat-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Récapitulatif */
+.recap-card {
+  height: fit-content;
+  position: sticky;
+  top: 84px;
+}
+
+.recap-item {
+  margin-bottom: 20px;
+}
+
+.recap-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recap-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.recap-value.highlight {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.type-badge {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid;
+}
+
+/* Solde info */
+.solde-info {
+  margin-top: 16px;
+}
+
+.solde-info h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.solde-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.solde-stat {
+  text-align: center;
+}
+
+.solde-label {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.solde-number {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.solde-number.highlight {
+  color: #28a745;
+}
+
+.warning-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px;
+  background: #fff3e0;
+  border-radius: 8px;
+  color: #ed6c02;
+  font-size: 13px;
+}
+
+.warning-message mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+/* Informations */
+.info-card {
+  margin-top: 0;
+}
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.info-item mat-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: #1976d2;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .demande-conge-container {
+    padding: 12px;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .date-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .recap-card {
+    position: static;
+  }
+
+  .header h1 {
+    font-size: 20px;
+  }
+}

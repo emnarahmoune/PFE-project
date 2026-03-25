@@ -1,0 +1,31 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()" class="auth-form">
+  <!-- En-tête du formulaire -->
+  <div class="auth-header">
+    <h2>{{ title }}</h2>
+    <p class="subtitle">{{ subtitle }}</p>
+  </div>
+
+  <!-- Zone pour le contenu principal (email, password, etc.) -->
+  <div class="form-content">
+    <ng-content select=".form-content"></ng-content>
+  </div>
+
+  <!-- Bouton de soumission -->
+  <div class="form-actions">
+    <button 
+      mat-raised-button 
+      color="primary" 
+      type="submit" 
+      class="submit-button"
+      [disabled]="form.invalid || loading"
+    >
+      <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
+      <span *ngIf="!loading">{{ submitLabel }}</span>
+    </button>
+  </div>
+
+  <!-- Zone pour les liens supplémentaires (inscription, mot de passe oublié) -->
+  <div class="additional-links">
+    <ng-content select=".links"></ng-content>
+  </div>
+</form>

@@ -1,0 +1,128 @@
+<div class="form-container">
+  <mat-card>
+    <!-- En-tête -->
+    <mat-card-header>
+      <mat-card-title>
+        {{ isEditMode ? 'Modifier la compétence' : 'Nouvelle compétence' }}
+      </mat-card-title>
+      <mat-card-subtitle>
+        {{ isEditMode ? 'Modifiez les informations de la compétence' : 'Créez une nouvelle compétence' }}
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Loader -->
+      <div class="loading-container" *ngIf="loading">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Chargement de la compétence...</p>
+      </div>
+
+      <!-- Formulaire -->
+      <form [formGroup]="competenceForm" (ngSubmit)="onSubmit()" *ngIf="!loading" class="competence-form">
+        
+        <!-- Champ Nom -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nom de la compétence</mat-label>
+          <input matInput formControlName="nom" placeholder="Ex: Java, Communication, Anglais...">
+          <mat-icon matSuffix>school</mat-icon>
+          <mat-hint>Minimum 2 caractères, maximum 100</mat-hint>
+          <mat-error *ngIf="nom?.invalid && nom?.touched">
+            {{ getNomErrorMessage() }}
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Champ Catégorie -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Catégorie</mat-label>
+          <mat-select formControlName="categorie">
+            <mat-option *ngFor="let cat of categories" [value]="cat.value">
+              <div class="category-option">
+                <mat-icon>{{ cat.icon }}</mat-icon>
+                <span>{{ cat.label }}</span>
+              </div>
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>category</mat-icon>
+          <mat-error *ngIf="categorie?.invalid && categorie?.touched">
+            La catégorie est requise
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Champ Description -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description</mat-label>
+          <textarea 
+            matInput 
+            formControlName="description" 
+            rows="5" 
+            placeholder="Décrivez la compétence, ses usages, les prérequis..."
+          ></textarea>
+          <mat-icon matSuffix>description</mat-icon>
+          <mat-hint>Minimum 10 caractères, maximum 500</mat-hint>
+          <mat-error *ngIf="description?.invalid && description?.touched">
+            {{ getDescriptionErrorMessage() }}
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Aperçu en temps réel (optionnel) -->
+        <div class="preview-section" *ngIf="competenceForm.valid">
+          <h3>Aperçu</h3>
+          <div class="preview-card">
+            <div class="preview-header">
+              <span class="preview-title">{{ competenceForm.get('nom')?.value || 'Nom' }}</span>
+              <mat-chip 
+                *ngIf="competenceForm.get('categorie')?.value" 
+                [color]="getCategorieColor(competenceForm.get('categorie')?.value)" 
+                selected>
+                {{ getCategorieLabel(competenceForm.get('categorie')?.value) }}
+              </mat-chip>
+            </div>
+            <p class="preview-description">
+              {{ competenceForm.get('description')?.value || 'Description...' }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button 
+            type="button" 
+            mat-stroked-button 
+            (click)="onCancel()"
+            [disabled]="submitting">
+            <mat-icon>cancel</mat-icon>
+            Annuler
+          </button>
+          
+          <button 
+            type="submit" 
+            mat-raised-button 
+            color="primary" 
+            [disabled]="competenceForm.invalid || submitting">
+            <mat-spinner diameter="20" *ngIf="submitting"></mat-spinner>
+            <mat-icon *ngIf="!submitting">save</mat-icon>
+            <span *ngIf="!submitting">
+              {{ isEditMode ? 'Modifier' : 'Créer' }}
+            </span>
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Informations complémentaires -->
+  <mat-card class="info-card" *ngIf="!loading">
+    <mat-card-header>
+      <mat-icon mat-card-avatar>info</mat-icon>
+      <mat-card-title>À savoir</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <ul class="info-list">
+        <li>Les compétences sont utilisées pour évaluer les employés</li>
+        <li>Elles peuvent être regroupées par catégorie pour faciliter la recherche</li>
+        <li>Une compétence peut être associée à plusieurs employés</li>
+        <li>Le niveau de maîtrise (débutant, intermédiaire, avancé, expert) sera défini lors de l'attribution</li>
+      </ul>
+    </mat-card-content>
+  </mat-card>
+</div>

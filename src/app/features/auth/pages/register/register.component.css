@@ -1,0 +1,60 @@
+.register-container {
+  max-width: 500px;
+  width: 100%;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+h2 {
+  margin: 0 0 0.5rem;
+  color: #333;
+}
+
+.subtitle {
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0;
+}
+
+.form-field {
+  flex: 1;
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.submit-button {
+  width: 100%;
+  height: 48px;
+  margin-top: 1rem;
+}
+
+.login-link {
+  margin-top: 1.5rem;
+  text-align: center;
+  color: #666;
+}
+
+a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.success-snackbar {
+  background: #4caf50;
+  color: white;
+}
