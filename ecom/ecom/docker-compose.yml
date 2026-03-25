@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    container_name: keycloak-rh
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=mysql
+      - KC_DB_URL=jdbc:mysql://host.docker.internal:3306/keycloak?useSSL=false
+      - KC_DB_USERNAME=root
+      - KC_DB_PASSWORD=ZAYNEBKH1234
+    ports:
+      - "8080:8080"
+    command:
+      - start-dev
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - rh-network
+
+  mysql-keycloak:
+    image: mysql:8.0
+    container_name: mysql-keycloak
+    environment:
+      - MYSQL_ROOT_PASSWORD=ZAYNEBKH1234
+      - MYSQL_DATABASE=keycloak
+    ports:
+      - "3307:3306"
+    volumes:
+      - keycloak-mysql-data:/var/lib/mysql
+    networks:
+      - rh-network
+
+volumes:
+  keycloak-mysql-data:
+
+networks:
+  rh-network:
+    driver: bridge
