@@ -1,13 +1,13 @@
 import { inject } from '@angular/core';
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { catchError, from, switchMap, throwError } from 'rxjs';
-import { KeycloakInitService } from '../services/keycloak-init.service';
+import { keycloakService } from '../services/keycloak-init.service';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const keycloakService = inject(KeycloakInitService);
 
+const token = keycloakService.getToken();
   // Ne pas intercepter les requêtes vers Keycloak lui-même
-  if (req.url.includes('localhost:8083')) {
+  if (req.url.includes('localhost:8080')) {
     return next(req);
   }
 

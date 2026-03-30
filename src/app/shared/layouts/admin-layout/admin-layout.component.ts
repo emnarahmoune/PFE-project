@@ -10,7 +10,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth.service';
-
+import { keycloakService } from 'src/app/core/services/keycloak-init.service';
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
@@ -34,16 +34,24 @@ export class AdminLayoutComponent {
   isSidebarOpen = true;
   currentYear = new Date().getFullYear();
 
-  menuItems = [
-    { path: '/admin/dashboard', icon: 'dashboard', label: 'Dashboard' },
-    { path: '/admin/employes', icon: 'people', label: 'Employés' },
-    { path: '/admin/competences', icon: 'school', label: 'Compétences' },
-    { path: '/admin/formations', icon: 'menu_book', label: 'Formations' },
-    { path: '/admin/conges', icon: 'event', label: 'Congés' },
-    { path: '/admin/indicateurs', icon: 'analytics', label: 'Indicateurs' },
-    { path: '/admin/scores', icon: 'warning', label: 'Scores risque' }
-  ];
 
+
+menuItems =keycloakService.isManager()
+  ? [
+      { path: '/manager/dashboard', icon: 'dashboard', label: 'Dashboard' },
+      { path: '/manager/equipe', icon: 'people', label: 'Mon équipe' },
+      { path: '/manager/conges', icon: 'event', label: 'Congés' },
+      { path: '/manager/stats', icon: 'analytics', label: 'Statistiques' }
+    ]
+  : [
+      { path: '/admin/dashboard', icon: 'dashboard', label: 'Dashboard' },
+      { path: '/admin/employes', icon: 'people', label: 'Employés' },
+      { path: '/admin/competences', icon: 'school', label: 'Compétences' },
+      { path: '/admin/formations', icon: 'menu_book', label: 'Formations' },
+      { path: '/admin/conges', icon: 'event', label: 'Congés' },
+      { path: '/admin/indicateurs', icon: 'analytics', label: 'Indicateurs' },
+      { path: '/admin/scores', icon: 'warning', label: 'Scores risque' }
+    ];
   constructor(
     private authService: AuthService,
     private router: Router

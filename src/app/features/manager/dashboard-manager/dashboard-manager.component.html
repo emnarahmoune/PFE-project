@@ -1,0 +1,253 @@
+<div class="db">
+
+  <!-- ── Topbar ──────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        PeopleOS
+      </div>
+      <span class="page-label">Tableau de bord — {{ currentMonth | titlecase }} {{ currentYear }}</span>
+    </div>
+    <div class="topbar-right">
+      <span class="tb-date">{{ currentDate | date:'EEEE d MMM':'':'fr' }}</span>
+      <button class="tb-btn" (click)="rafraichir()" [disabled]="refreshing">
+        <span class="tb-icon" [class.spin]="refreshing">↻</span>
+        {{ refreshing ? 'Actualisation…' : 'Actualiser' }}
+      </button>
+      <button class="tb-btn tb-btn-primary" (click)="exporterRapport()" [disabled]="loading">
+        <span class="tb-icon">↓</span>
+        Exporter
+      </button>
+    </div>
+  </header>
+
+  <!-- Barre de chargement -->
+  <div class="loader-bar" *ngIf="loading || refreshing">
+    <div class="loader-bar-fill"></div>
+  </div>
+
+  <div class="body">
+
+    <!-- Erreur -->
+    <div class="error-bar" *ngIf="errorMessage">
+      ⚠ {{ errorMessage }}
+    </div>
+
+    <!-- Loader principal -->
+    <div class="loader-center" *ngIf="loading && !errorMessage">
+      <div class="loader-spinner"></div>
+      <span class="loader-label">Chargement des données…</span>
+    </div>
+
+    <ng-container *ngIf="!loading">
+
+      <!-- ── KPI Strip ──────────────────────────────────── -->
+      <div>
+        <p class="section-label">Indicateurs clés</p>
+        <div class="kpi-strip">
+
+          <div class="kpi" *ngFor="let s of statCards">
+            <div class="kpi-top">
+              <span class="kpi-ico">{{ s.emojiIcon }}</span>
+              <span class="kpi-trend" [class]="s.trend" *ngIf="s.change">
+                {{ s.change }}
+              </span>
+            </div>
+            <span class="kpi-val">{{ s.value }}</span>
+            <span class="kpi-lbl">{{ s.title }}</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Ligne financière ───────────────────────────── -->
+      <div>
+        <p class="section-label">Finance & effectifs</p>
+        <div class="fin-row">
+
+          <div class="fin-card accent">
+            <span class="fin-lbl">Masse salariale</span>
+            <span class="fin-val">{{ getMasseSalarialeFormatee() }}</span>
+          </div>
+
+          <div class="fin-card">
+            <span class="fin-lbl">Salaire moyen</span>
+            <span class="fin-val">{{ getSalaireMoyenFormate() }}</span>
+          </div>
+
+          <div class="fin-card">
+            <span class="fin-lbl">Répartition par département</span>
+            <div class="dept-grid" style="margin-top:10px;">
+              <div class="dept-row" *ngFor="let dept of getDepartements()">
+                <span class="dept-name">{{ dept }}</span>
+                <div class="dept-bar-wrap">
+                  <div class="dept-bar-fill"
+                       [style.width.%]="getTauxRemplissage(dept)"></div>
+                </div>
+                <span class="dept-count">{{ stats.parDepartement[dept] || 0 }}</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Milieu : table + alertes ───────────────────── -->
+      <div>
+        <p class="section-label">Activité récente</p>
+        <div class="mid-grid">
+
+          <!-- Employés récents -->
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Derniers employés</div>
+                <div class="panel-sub">{{ recentEmployees.length }} embauches récentes</div>
+              </div>
+              <a class="panel-link" routerLink="/admin/employes">
+                Voir tous →
+              </a>
+            </div>
+            <table class="emp-table" *ngIf="recentEmployees.length > 0">
+              <thead>
+                <tr>
+                  <th>Employé</th>
+                  <th>Poste</th>
+                  <th>Dpt.</th>
+                  <th>Embauche</th>
+                  <th>Statut</th>
+                 </tr>
+              </thead>
+              <tbody>
+                <!-- ✅ CORRECTION: Suppression des ?. car ces propriétés sont définies -->
+                <tr *ngFor="let emp of recentEmployees">
+                  <td>
+                    <div class="emp-cell">
+                      <div class="emp-av" [style.background]="getAvatarBg(emp.departement)">
+                        {{ emp.prenom.charAt(0) }}{{ emp.nom.charAt(0) }}
+                      </div>
+                      <div>
+                        <div class="emp-n">{{ emp.prenom }} {{ emp.nom }}</div>
+                        <div class="emp-p">{{ emp.email }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ emp.poste }}</td>
+                  <td>{{ emp.departement }}</td>
+                  <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">
+                    {{ emp.dateEmbauche | date:'dd/MM/yy' }}
+                  </td>
+                  <td>
+                    <span class="badge" [class]="'badge-' + emp.statut.toLowerCase()">
+                      {{ emp.statut }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="empty" *ngIf="recentEmployees.length === 0">
+              Aucun employé récent
+            </div>
+          </div>
+
+          <!-- Alertes -->
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Alertes</div>
+                <div class="panel-sub">{{ alerts.length }} notification(s)</div>
+              </div>
+            </div>
+            <div class="alerts-list" *ngIf="alerts.length > 0">
+              <div class="alert-row" *ngFor="let a of alerts">
+                <div class="alert-ico" [class]="a.type">
+                  {{ getAlertEmoji(a.type) }}
+                </div>
+                <div>
+                  <div class="alert-msg">{{ a.message }}</div>
+                  <div class="alert-meta">
+                    <span>{{ a.time }}</span>
+                    <a *ngIf="a.lien" [routerLink]="a.lien" class="alert-lnk">Voir →</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="empty" *ngIf="alerts.length === 0">
+              Aucune alerte
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Bas : compétences + graphiques ────────────── -->
+      <div>
+        <p class="section-label">Compétences & analyses</p>
+        <div class="bottom-grid">
+
+          <!-- Top compétences -->
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Top compétences</div>
+                <div class="panel-sub">Les plus répandues</div>
+              </div>
+              <a class="panel-link" routerLink="/admin/competences">Gérer →</a>
+            </div>
+            <div class="comp-list" *ngIf="topCompetences.length > 0">
+              <div class="comp-item" *ngFor="let c of topCompetences">
+                <div class="comp-head">
+                  <span class="comp-name">{{ c.nom }}</span>
+                  <span class="comp-cnt">{{ c.count }}</span>
+                </div>
+                <div class="comp-bar">
+                  <div class="comp-bar-fill" [style.width.%]="c.pourcentage"></div>
+                </div>
+              </div>
+            </div>
+            <div class="empty" *ngIf="topCompetences.length === 0">
+              Aucune donnée
+            </div>
+          </div>
+
+          <!-- Graphique turnover -->
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Turnover</div>
+                <div class="panel-sub">6 derniers mois</div>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas baseChart
+                [data]="turnoverChartData"
+                [options]="turnoverChartOptions"
+                [type]="'bar'">
+              </canvas>
+            </div>
+          </div>
+
+          <!-- Répartition employés -->
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="panel-title">Répartition</div>
+                <div class="panel-sub">Par statut</div>
+              </div>
+            </div>
+            <div class="chart-wrap">
+              <canvas baseChart
+                [data]="employeesChartData"
+                [options]="employeesChartOptions"
+                [type]="'doughnut'">
+              </canvas>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </ng-container>
+  </div>
+</div>

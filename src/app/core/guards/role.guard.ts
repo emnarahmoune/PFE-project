@@ -1,13 +1,16 @@
-// core/guards/role.guard.ts
-import { inject } from '@angular/core';
-import { CanActivateFn, ActivatedRouteSnapshot } from '@angular/router';
-import { KeycloakInitService } from '../services/keycloak-init.service';
+import { CanActivateFn, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { keycloakService } from '../services/keycloak-init.service';
 
-export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot) => {
-  const keycloakService = inject(KeycloakInitService);
-  
-  const requiredRoles = route.data['roles'] as string[] || [];
-  const userRoles = keycloakService.getUserRoles();
-  
-  return requiredRoles.some(role => userRoles.includes(role));
+export const roleGuard = (requiredRoles: string[]): CanActivateFn => {
+  return () => {
+    const roles = keycloakService.getRoles();
+
+    if (!requiredRoles || requiredRoles.length === 0) {
+      return true;
+    }
+
+    return requiredRoles.some(role =>
+      roles.map(r => r.toLowerCase()).includes(role.toLowerCase())
+    );
+  };
 };

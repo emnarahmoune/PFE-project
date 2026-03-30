@@ -1,69 +1,53 @@
-import { Injectable } from '@angular/core';
-import { KeycloakService } from 'keycloak-angular';
+import Keycloak from 'keycloak-js';
 
-@Injectable({ providedIn: 'root' })
-export class KeycloakInitService {
-  private initialized = false;
+class KeycloakService {
 
-  constructor(private keycloak: KeycloakService) {}
+  private keycloak!: Keycloak.KeycloakInstance;
 
-  async init(): Promise<boolean> {
-    if (this.initialized) return true;
-    
-    try {
-      const authenticated = await this.keycloak.init({
-        config: {
-          url: 'http://localhost:8083',
-          realm: 'rh-platform',
-          clientId: 'rh-frontend'
-        },
-        initOptions: {
-          onLoad: 'check-sso',
-          silentCheckSsoRedirectUri: window.location.origin + '/assets/silent-check-sso.html',
-          checkLoginIframe: false,
-          pkceMethod: 'S256'
-        },
-        enableBearerInterceptor: true,
-        bearerExcludedUrls: ['/assets']
-      });
-      
-      this.initialized = true;
-      console.log('✅ Keycloak initialisé:', authenticated);
-      return authenticated;
-    } catch (error) {
-      console.error('❌ Keycloak init failed:', error);
-      return false;
-    }
-  }
+  init(): Promise<boolean> {
+    this.keycloak = new Keycloak({
+      url: 'http://localhost:8080',
+      realm: 'rh-platform',
+      clientId: 'rh-frontend'
+    });
 
-  async getToken(): Promise<string> {
-    try {
-      return await this.keycloak.getToken();
-    } catch (error) {
-      console.warn('⚠️ Impossible d\'obtenir le token:', error);
-      return '';
-    }
-  }
-
-  login(redirectUrl?: string): void {
-    this.keycloak.login({
-      redirectUri: window.location.origin + (redirectUrl || '/admin/dashboard')
+    return this.keycloak.init({
+      onLoad: 'check-sso', // ✔ pour afficher frontend
+      checkLoginIframe: false
     });
   }
 
+  // ✅ CORRIGÉ ICI
+  login(options?: Keycloak.KeycloakLoginOptions): void {
+    this.keycloak.login(options);
+  }
+
   logout(): void {
-    this.keycloak.logout(window.location.origin + '/auth/login');
+    this.keycloak.logout();
   }
 
-  async isLoggedIn(): Promise<boolean> {
-    try {
-      return await this.keycloak.isLoggedIn();
-    } catch {
-      return false;
-    }
+  getToken(): string {
+    return this.keycloak.token || '';
   }
 
-  getUserRoles(): string[] {
-    return this.keycloak.getUserRoles(true);
+  getUsername(): string {
+    return this.keycloak.tokenParsed?.['preferred_username'] || '';
+  }
+
+getRoles(): string[] {
+  const roles = this.keycloak.tokenParsed?.realm_access?.roles || [];
+
+  console.log("ROLES TOKEN:", roles); // 🔥 IMPORTANT
+
+  return roles;
+}
+  isAdmin(): boolean {
+    return this.getRoles().includes('admin');
+  }
+
+  isManager(): boolean {
+    return this.getRoles().includes('manager');
   }
 }
+
+export const keycloakService = new KeycloakService();
