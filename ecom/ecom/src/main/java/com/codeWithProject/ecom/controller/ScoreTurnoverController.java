@@ -1,6 +1,6 @@
 package com.codeWithProject.ecom.controller;
 
-import com.codeWithProject.ecom.controller.dto.ApiResponse;
+import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
 import com.codeWithProject.ecom.service.ScoreTurnoverService;
 import com.codeWithProject.ecom.service.dto.ScoreTurnoverDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,10 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Contrôleur REST pour la gestion des scores de turnover
- * Endpoints : /api/scores-turnover
- */
 @RestController
 @RequestMapping("/api/scores-turnover")
 @RequiredArgsConstructor
@@ -31,8 +27,6 @@ import java.util.Map;
 public class ScoreTurnoverController {
 
     private final ScoreTurnoverService scoreTurnoverService;
-
-    // ===== RECHERCHES GÉNÉRALES =====
 
     @GetMapping
     @Operation(summary = "Liste tous les scores de turnover")
@@ -60,8 +54,6 @@ public class ScoreTurnoverController {
         return ResponseEntity.ok(ApiResponse.success(scores, "Scores récupérés avec succès"));
     }
 
-    // ===== RECHERCHES PAR IDENTIFIANTS =====
-
     @GetMapping("/{id}")
     @Operation(summary = "Récupère un score par son ID")
     public ResponseEntity<ApiResponse<ScoreTurnoverDTO>> getScoreById(
@@ -74,8 +66,6 @@ public class ScoreTurnoverController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // ===== RECHERCHES PAR EMPLOYÉ =====
-
     @GetMapping("/employe/{employeId}")
     @Operation(summary = "Récupère tous les scores d'un employé")
     public ResponseEntity<ApiResponse<List<ScoreTurnoverDTO>>> getScoresByEmploye(
@@ -85,17 +75,6 @@ public class ScoreTurnoverController {
 
         List<ScoreTurnoverDTO> scores = scoreTurnoverService.findByEmployeId(employeId);
         return ResponseEntity.ok(ApiResponse.success(scores, "Scores de l'employé récupérés"));
-    }
-
-    @GetMapping("/employe/{employeId}/historique")
-    @Operation(summary = "Récupère l'historique des scores d'un employé")
-    public ResponseEntity<ApiResponse<List<ScoreTurnoverDTO>>> getHistoriqueEmploye(
-            @Parameter(description = "ID de l'employé") @PathVariable Long employeId) {
-
-        log.info("GET /api/scores-turnover/employe/{}/historique", employeId);
-
-        List<ScoreTurnoverDTO> historique = scoreTurnoverService.findHistoriqueEmploye(employeId);
-        return ResponseEntity.ok(ApiResponse.success(historique, "Historique des scores récupéré"));
     }
 
     @GetMapping("/employe/{employeId}/dernier")
@@ -109,8 +88,6 @@ public class ScoreTurnoverController {
                 .map(score -> ResponseEntity.ok(ApiResponse.success(score, "Dernier score trouvé")))
                 .orElse(ResponseEntity.notFound().build());
     }
-
-    // ===== RECHERCHES PAR NIVEAU DE RISQUE =====
 
     @GetMapping("/risque/{niveau}")
     @Operation(summary = "Récupère les scores par niveau de risque")
@@ -139,8 +116,6 @@ public class ScoreTurnoverController {
         return ResponseEntity.ok(ApiResponse.success(scores, "Scores critiques récupérés"));
     }
 
-    // ===== DERNIERS SCORES =====
-
     @GetMapping("/derniers")
     @Operation(summary = "Récupère les derniers scores de tous les employés")
     public ResponseEntity<ApiResponse<List<ScoreTurnoverDTO>>> getDerniersScores() {
@@ -148,8 +123,6 @@ public class ScoreTurnoverController {
         List<ScoreTurnoverDTO> scores = scoreTurnoverService.findDerniersScores();
         return ResponseEntity.ok(ApiResponse.success(scores, "Derniers scores récupérés"));
     }
-
-    // ===== CALCULS ET PRÉDICTIONS =====
 
     @PostMapping("/calculer/employe/{employeId}")
     @Operation(summary = "Calcule un nouveau score pour un employé")
@@ -178,22 +151,6 @@ public class ScoreTurnoverController {
                 .body(ApiResponse.created(scores, "Scores calculés pour tous les employés"));
     }
 
-    @PostMapping("/predire/employe/{employeId}")
-    @Operation(summary = "Prédit le risque de départ pour un employé")
-    public ResponseEntity<ApiResponse<ScoreTurnoverDTO>> predireRisque(
-            @Parameter(description = "ID de l'employé") @PathVariable Long employeId,
-            @RequestParam Long systemeBIId) {
-
-        log.info("POST /api/scores-turnover/predire/employe/{} - système BI: {}", employeId, systemeBIId);
-
-        ScoreTurnoverDTO score = scoreTurnoverService.predireRisque(employeId, systemeBIId);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.created(score, "Risque prédit avec succès"));
-    }
-
-    // ===== GESTION DES SCORES =====
-
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprime un score")
     public ResponseEntity<ApiResponse<Void>> deleteScore(
@@ -202,21 +159,8 @@ public class ScoreTurnoverController {
         log.info("DELETE /api/scores-turnover/{}", id);
 
         scoreTurnoverService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success("Score supprimé avec succès"));
+        return ResponseEntity.ok(ApiResponse.success(null, "Score supprimé avec succès"));
     }
-
-    @DeleteMapping("/obsoletes/{jours}")
-    @Operation(summary = "Supprime les scores obsolètes (plus de X jours)")
-    public ResponseEntity<ApiResponse<Void>> deleteScoresObsoletes(
-            @Parameter(description = "Nombre de jours") @PathVariable int jours) {
-
-        log.info("DELETE /api/scores-turnover/obsoletes/{}", jours);
-
-        scoreTurnoverService.deleteScoresObsoletes(jours);
-        return ResponseEntity.ok(ApiResponse.success("Scores obsolètes supprimés avec succès"));
-    }
-
-    // ===== STATISTIQUES =====
 
     @GetMapping("/stats/repartition-risques")
     @Operation(summary = "Récupère la répartition des risques actuels")
@@ -234,39 +178,11 @@ public class ScoreTurnoverController {
         return ResponseEntity.ok(ApiResponse.success(moyenne, "Score moyen actuel calculé"));
     }
 
-    @GetMapping("/stats/score-moyen-par-departement")
-    @Operation(summary = "Calcule le score moyen par département")
-    public ResponseEntity<ApiResponse<Map<String, Double>>> getScoreMoyenParDepartement() {
-        log.info("GET /api/scores-turnover/stats/score-moyen-par-departement");
-        Map<String, Double> stats = scoreTurnoverService.getScoreMoyenParDepartement();
-        return ResponseEntity.ok(ApiResponse.success(stats, "Score moyen par département calculé"));
-    }
-
-    @GetMapping("/stats/avec-actions")
-    @Operation(summary = "Récupère les scores avec actions recommandées")
-    public ResponseEntity<ApiResponse<List<ScoreTurnoverDTO>>> getScoresAvecActions() {
-        log.info("GET /api/scores-turnover/stats/avec-actions");
-        List<ScoreTurnoverDTO> scores = scoreTurnoverService.findScoresAvecActions();
-        return ResponseEntity.ok(ApiResponse.success(scores, "Scores avec actions recommandées récupérés"));
-    }
-
     @GetMapping("/stats/tableau-bord")
     @Operation(summary = "Récupère les statistiques pour le tableau de bord")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStatsTableauBord() {
         log.info("GET /api/scores-turnover/stats/tableau-bord");
         Map<String, Object> stats = scoreTurnoverService.getStatsTableauBord();
         return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques tableau de bord récupérées"));
-    }
-
-    @GetMapping("/employe/{employeId}/score-recent")
-    @Operation(summary = "Vérifie si un employé a un score récent")
-    public ResponseEntity<ApiResponse<Boolean>> hasScoreRecent(
-            @Parameter(description = "ID de l'employé") @PathVariable Long employeId,
-            @RequestParam(defaultValue = "30") int jours) {
-
-        log.info("GET /api/scores-turnover/employe/{}/score-recent?jours={}", employeId, jours);
-
-        boolean recent = scoreTurnoverService.hasScoreRecent(employeId, jours);
-        return ResponseEntity.ok(ApiResponse.success(recent, "Vérification de score récent effectuée"));
     }
 }

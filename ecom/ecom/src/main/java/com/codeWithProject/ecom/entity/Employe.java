@@ -6,18 +6,12 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Entité Employe - Classe centrale du système RH
- * Corrigée pour correspondre au diagramme de classes :
- * - Ajout des attributs : nom, prenom, email, telephone
- * - Suppression des colonnes hors diagramme : soldeConges (déplacé dans DemandeConge)
- */
 @Entity
 @Table(name = "employes",
         indexes = {
                 @Index(name = "idx_employe_matricule", columnList = "matricule"),
-                @Index(name = "idx_employe_statut",    columnList = "statut"),
-                @Index(name = "idx_employe_dept",      columnList = "departement")
+                @Index(name = "idx_employe_statut", columnList = "statut"),
+                @Index(name = "idx_employe_dept", columnList = "departement")
         }
 )
 @Data
@@ -30,8 +24,6 @@ public class Employe {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
-
-    /* ── Attributs du diagramme ────────────────────────────── */
 
     @Column(name = "matricule", nullable = false, unique = true, length = 50)
     private String matricule;
@@ -59,19 +51,18 @@ public class Employe {
 
     @Column(name = "statut", length = 50, nullable = false)
     @Builder.Default
-    private String statut = "ACTIF"; // ACTIF, INACTIF, EN_CONGE
+    private String statut = "ACTIF";
 
     @Column(name = "departement", length = 100)
     private String departement;
 
-    /* ── Solde congés (conservé car utilisé dans la logique métier) ── */
     @Column(name = "solde_conges")
     @Builder.Default
     private Integer soldeConges = 25;
 
     /* ── Relations ─────────────────────────────────────────── */
 
-    @OneToOne(mappedBy = "employe", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "employe", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @ToString.Exclude
     private Utilisateur utilisateur;
 
@@ -93,7 +84,7 @@ public class Employe {
     @ManyToMany
     @JoinTable(
             name = "employe_formation",
-            joinColumns        = @JoinColumn(name = "employe_id"),
+            joinColumns = @JoinColumn(name = "employe_id"),
             inverseJoinColumns = @JoinColumn(name = "formation_id")
     )
     @ToString.Exclude
@@ -106,6 +97,31 @@ public class Employe {
     private List<DemandeConge> demandesConge = new ArrayList<>();
 
     /* ── Méthodes métier ────────────────────────────────────── */
+
+    /**
+     * Crée et associe un Utilisateur pour cet employé
+     */
+    public Utilisateur createUtilisateur(String encodedPassword) {
+        if (this.utilisateur != null) {
+            return this.utilisateur;
+        }
+
+        // Créer une instance concrète de Utilisateur (plus abstract)
+        Utilisateur newUtilisateur = new Utilisateur();
+        newUtilisateur.setNom(this.nom);
+        newUtilisateur.setPrenom(this.prenom);
+        newUtilisateur.setEmail(this.email);
+        newUtilisateur.setTelephone(this.telephone);
+        newUtilisateur.setPassword(encodedPassword);
+        newUtilisateur.setActif(true);
+        newUtilisateur.setCompteVerrouille(false);
+        newUtilisateur.setNombreConnexions(0);
+        newUtilisateur.setTentativesEchec(0);
+        newUtilisateur.setEmploye(this);
+
+        this.utilisateur = newUtilisateur;
+        return newUtilisateur;
+    }
 
     public Integer getSoldeConges() {
         return soldeConges != null ? soldeConges : 0;
@@ -127,9 +143,13 @@ public class Employe {
     }
 
     public void mettreAJourProfil(String poste, Double salaire, String departement) {
-        if (poste       != null) this.poste       = poste;
-        if (salaire     != null) this.salaire      = salaire;
-        if (departement != null) this.departement  = departement;
+        if (poste != null) this.poste = poste;
+        if (salaire != null) this.salaire = salaire;
+        if (departement != null) this.departement = departement;
+
+        if (this.utilisateur != null) {
+            this.utilisateur.mettreAJourInformations(this.nom, this.prenom, this.telephone);
+        }
     }
 
     public List<DemandeConge> consulterConges() {
@@ -140,8 +160,6 @@ public class Employe {
         this.demandesConge.add(demande);
         demande.setEmploye(this);
     }
-
-    public void modifierDemandeConge(DemandeConge demande) { /* délégué à DemandeConge */ }
 
     public void annulerDemandeConge(DemandeConge demande) {
         demande.setStatut("ANNULE");
@@ -174,17 +192,15 @@ public class Employe {
         return this.demandesConge != null ? this.demandesConge.size() : 0;
     }
 
-    /* ── Lifecycle ──────────────────────────────────────────── */
-
     @PrePersist
     @PreUpdate
     protected void onPrePersistOrUpdate() {
-        if (this.statut  == null) this.statut  = "ACTIF";
+        if (this.statut == null) this.statut = "ACTIF";
         if (this.soldeConges == null) this.soldeConges = 25;
         if (this.matricule != null) this.matricule = this.matricule.trim().toUpperCase();
-        if (this.email     != null) this.email     = this.email.trim().toLowerCase();
-        if (this.nom       != null) this.nom       = this.nom.trim().toUpperCase();
-        if (this.prenom    != null) {
+        if (this.email != null) this.email = this.email.trim().toLowerCase();
+        if (this.nom != null) this.nom = this.nom.trim().toUpperCase();
+        if (this.prenom != null) {
             String p = this.prenom.trim();
             this.prenom = p.substring(0, 1).toUpperCase() + p.substring(1).toLowerCase();
         }

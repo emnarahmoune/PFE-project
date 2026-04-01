@@ -1,6 +1,6 @@
 package com.codeWithProject.ecom.controller;
 
-import com.codeWithProject.ecom.controller.dto.ApiResponse;
+import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
 import com.codeWithProject.ecom.service.AdministrateurRHService;
 import com.codeWithProject.ecom.service.dto.AdministrateurRHDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -152,7 +152,7 @@ public class AdministrateurRHController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprime un administrateur")
-    public ResponseEntity<ApiResponse<Void>> deleteAdministrateur(
+    public ResponseEntity<ApiResponse<String>> deleteAdministrateur(
             @Parameter(description = "ID de l'administrateur") @PathVariable Long id) {
 
         log.info("DELETE /api/admin/administrateurs/{}", id);

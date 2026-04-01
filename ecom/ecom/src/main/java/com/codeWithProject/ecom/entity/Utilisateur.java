@@ -7,9 +7,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
-/**
- * Entité Utilisateur - Classe mère pour tous les utilisateurs du système
- */
 @Entity
 @Table(name = "utilisateurs",
         indexes = {
@@ -27,7 +24,7 @@ import java.time.temporal.ChronoUnit;
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public abstract class Utilisateur {
+public class Utilisateur {  // ← Plus abstract !
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,7 +43,6 @@ public abstract class Utilisateur {
     @Column(name = "telephone", length = 20)
     private String telephone;
 
-    // Champ password pour l'authentification
     @Column(name = "password")
     private String password;
 
@@ -74,15 +70,13 @@ public abstract class Utilisateur {
     @Column(name = "type_utilisateur", insertable = false, updatable = false)
     private String typeUtilisateur;
 
-    // ===== RELATIONS =====
-
+    // ===== RELATION AVEC EMPLOYE =====
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employe_id", unique = true)
     @ToString.Exclude
     private Employe employe;
 
     // ===== MÉTHODES MÉTIER =====
-
     public boolean seConnecter(String email, String password) {
         if (!this.actif) {
             throw new IllegalStateException("Compte utilisateur désactivé. Contactez l'administrateur.");
@@ -231,11 +225,9 @@ public abstract class Utilisateur {
     }
 
     // ===== LIFECYCLE CALLBACKS =====
-
     @PrePersist
     @PreUpdate
     protected void onPrePersistOrUpdate() {
-        // Validation
         if (this.nom == null || this.nom.trim().isEmpty()) {
             throw new IllegalStateException("Le nom est obligatoire");
         }
@@ -249,7 +241,6 @@ public abstract class Utilisateur {
             throw new IllegalStateException("Format d'email invalide");
         }
 
-        // Initialisation
         if (this.dateCreation == null) {
             this.dateCreation = LocalDate.now();
         }
@@ -266,7 +257,6 @@ public abstract class Utilisateur {
             this.compteVerrouille = false;
         }
 
-        // Normalisation
         if (this.email != null) {
             this.email = this.email.trim().toLowerCase();
         }
@@ -274,8 +264,8 @@ public abstract class Utilisateur {
             this.nom = this.nom.trim().toUpperCase();
         }
         if (this.prenom != null) {
-            this.prenom = this.prenom.trim().substring(0, 1).toUpperCase() +
-                    this.prenom.trim().substring(1).toLowerCase();
+            String p = this.prenom.trim();
+            this.prenom = p.substring(0, 1).toUpperCase() + p.substring(1).toLowerCase();
         }
     }
-}  // ← ACCOLADE FERMANTE MANQUANTE AJOUTÉE ICI !
+}

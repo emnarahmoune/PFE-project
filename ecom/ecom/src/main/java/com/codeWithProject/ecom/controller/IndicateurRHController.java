@@ -1,6 +1,6 @@
 package com.codeWithProject.ecom.controller;
 
-import com.codeWithProject.ecom.controller.dto.ApiResponse;
+import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
 import com.codeWithProject.ecom.service.IndicateurRHService;
 import com.codeWithProject.ecom.service.dto.IndicateurRHDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,10 +22,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Contrôleur REST pour la gestion des indicateurs RH
- * Endpoints : /api/indicateurs
- */
 @RestController
 @RequestMapping("/api/indicateurs")
 @RequiredArgsConstructor
@@ -34,8 +30,6 @@ import java.util.Map;
 public class IndicateurRHController {
 
     private final IndicateurRHService indicateurRHService;
-
-    // ===== RECHERCHES GÉNÉRALES =====
 
     @GetMapping
     @Operation(summary = "Liste tous les indicateurs")
@@ -63,8 +57,6 @@ public class IndicateurRHController {
         return ResponseEntity.ok(ApiResponse.success(indicateurs, "Indicateurs récupérés avec succès"));
     }
 
-    // ===== RECHERCHES PAR IDENTIFIANTS =====
-
     @GetMapping("/{id}")
     @Operation(summary = "Récupère un indicateur par son ID")
     public ResponseEntity<ApiResponse<IndicateurRHDTO>> getIndicateurById(
@@ -76,8 +68,6 @@ public class IndicateurRHController {
                 .map(indicateur -> ResponseEntity.ok(ApiResponse.success(indicateur, "Indicateur trouvé")))
                 .orElse(ResponseEntity.notFound().build());
     }
-
-    // ===== RECHERCHES PAR ATTRIBUTS =====
 
     @GetMapping("/type/{type}")
     @Operation(summary = "Récupère les indicateurs par type")
@@ -143,8 +133,6 @@ public class IndicateurRHController {
         return ResponseEntity.ok(ApiResponse.success(alertes, "Indicateurs avec alerte récupérés"));
     }
 
-    // ===== CRUD =====
-
     @PostMapping
     @Operation(summary = "Crée un nouvel indicateur")
     public ResponseEntity<ApiResponse<IndicateurRHDTO>> createIndicateur(
@@ -178,10 +166,8 @@ public class IndicateurRHController {
         log.info("DELETE /api/indicateurs/{}", id);
 
         indicateurRHService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success("Indicateur supprimé avec succès"));
+        return ResponseEntity.ok(ApiResponse.success(null, "Indicateur supprimé avec succès"));
     }
-
-    // ===== CALCULS SPÉCIFIQUES =====
 
     @PostMapping("/calculer/turnover")
     @Operation(summary = "Calcule un indicateur de turnover")
@@ -211,47 +197,6 @@ public class IndicateurRHController {
         return ResponseEntity.ok(ApiResponse.success(indicateur, "Absentéisme calculé avec succès"));
     }
 
-    @PostMapping("/calculer/performance")
-    @Operation(summary = "Calcule un indicateur de performance")
-    public ResponseEntity<ApiResponse<IndicateurRHDTO>> calculerPerformance(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateCalcul,
-            @RequestParam(defaultValue = "MENSUEL") String periode,
-            @RequestParam(required = false) String departement) {
-
-        log.info("POST /api/indicateurs/calculer/performance - date: {}", dateCalcul);
-
-        IndicateurRHDTO indicateur = indicateurRHService.calculerPerformance(dateCalcul, periode, departement);
-        return ResponseEntity.ok(ApiResponse.success(indicateur, "Performance calculée avec succès"));
-    }
-
-    @PostMapping("/calculer/satisfaction")
-    @Operation(summary = "Calcule un indicateur de satisfaction")
-    public ResponseEntity<ApiResponse<IndicateurRHDTO>> calculerSatisfaction(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateCalcul,
-            @RequestParam(defaultValue = "TRIMESTRIEL") String periode,
-            @RequestParam(required = false) String departement) {
-
-        log.info("POST /api/indicateurs/calculer/satisfaction - date: {}", dateCalcul);
-
-        IndicateurRHDTO indicateur = indicateurRHService.calculerSatisfaction(dateCalcul, periode, departement);
-        return ResponseEntity.ok(ApiResponse.success(indicateur, "Satisfaction calculée avec succès"));
-    }
-
-    @PostMapping("/calculer/competences")
-    @Operation(summary = "Calcule un indicateur de couverture des compétences")
-    public ResponseEntity<ApiResponse<IndicateurRHDTO>> calculerCouvertureCompetences(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateCalcul,
-            @RequestParam(defaultValue = "SEMESTRIEL") String periode,
-            @RequestParam(required = false) String departement) {
-
-        log.info("POST /api/indicateurs/calculer/competences - date: {}", dateCalcul);
-
-        IndicateurRHDTO indicateur = indicateurRHService.calculerCouvertureCompetences(dateCalcul, periode, departement);
-        return ResponseEntity.ok(ApiResponse.success(indicateur, "Couverture des compétences calculée avec succès"));
-    }
-
-    // ===== STATISTIQUES =====
-
     @GetMapping("/stats/moyennes")
     @Operation(summary = "Récupère les moyennes des indicateurs par type")
     public ResponseEntity<ApiResponse<Map<String, Double>>> getMoyennesByType() {
@@ -270,36 +215,6 @@ public class IndicateurRHController {
 
         List<IndicateurRHDTO> historique = indicateurRHService.getHistoriqueIndicateur(type, limite);
         return ResponseEntity.ok(ApiResponse.success(historique, "Historique récupéré"));
-    }
-
-    @GetMapping("/stats/hausse/{type}")
-    @Operation(summary = "Récupère les indicateurs en hausse pour un type")
-    public ResponseEntity<ApiResponse<List<IndicateurRHDTO>>> getIndicateursEnHausse(
-            @Parameter(description = "Type d'indicateur") @PathVariable String type) {
-
-        log.info("GET /api/indicateurs/stats/hausse/{}", type);
-
-        List<IndicateurRHDTO> hausse = indicateurRHService.findEnHausse(type);
-        return ResponseEntity.ok(ApiResponse.success(hausse, "Indicateurs en hausse récupérés"));
-    }
-
-    @GetMapping("/stats/baisse/{type}")
-    @Operation(summary = "Récupère les indicateurs en baisse pour un type")
-    public ResponseEntity<ApiResponse<List<IndicateurRHDTO>>> getIndicateursEnBaisse(
-            @Parameter(description = "Type d'indicateur") @PathVariable String type) {
-
-        log.info("GET /api/indicateurs/stats/baisse/{}", type);
-
-        List<IndicateurRHDTO> baisse = indicateurRHService.findEnBaisse(type);
-        return ResponseEntity.ok(ApiResponse.success(baisse, "Indicateurs en baisse récupérés"));
-    }
-
-    @GetMapping("/stats/derniers")
-    @Operation(summary = "Récupère les derniers indicateurs de chaque type")
-    public ResponseEntity<ApiResponse<Map<String, IndicateurRHDTO>>> getDerniersIndicateurs() {
-        log.info("GET /api/indicateurs/stats/derniers");
-        Map<String, IndicateurRHDTO> derniers = indicateurRHService.getDerniersIndicateurs();
-        return ResponseEntity.ok(ApiResponse.success(derniers, "Derniers indicateurs récupérés"));
     }
 
     @GetMapping("/stats/tableau-bord")

@@ -214,7 +214,7 @@ public class EmployeController {
         log.info("DELETE /api/employes/{}", id);
 
         employeService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success("Employé supprimé avec succès"));
+        return ResponseEntity.ok(ApiResponse.success(null, "Employé supprimé avec succès"));
     }
 
     // ===== STATISTIQUES =====
@@ -260,9 +260,9 @@ public class EmployeController {
 
     @GetMapping("/stats/tableau-bord")
     @Operation(summary = "Récupère les statistiques pour le tableau de bord")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getStatsTableauBord() {
+    public ResponseEntity<ApiResponse<TableauBordEmployeDTO>> getStatsTableauBord() {
         log.info("GET /api/employes/stats/tableau-bord");
-        Map<String, Object> stats = employeService.getStatsTableauBord();
+        TableauBordEmployeDTO stats = employeService.getStatsTableauBord();
         return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques tableau de bord récupérées"));
     }
 
@@ -296,9 +296,17 @@ public class EmployeController {
             @AuthenticationPrincipal UserDetails userDetails) {
         log.info("GET /api/employes/mon-profil - Récupération du profil employé");
 
+        if (userDetails == null) {
+            log.error("UserDetails est null - Utilisateur non authentifié");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
+        }
+
         String email = userDetails.getUsername();
+        log.debug("Email récupéré depuis le token: {}", email);
+
         EmployeDTO employe = employeService.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec l'email: " + email));
 
         return ResponseEntity.ok(ApiResponse.success(employe, "Profil récupéré avec succès"));
     }
@@ -308,6 +316,12 @@ public class EmployeController {
     public ResponseEntity<ApiResponse<SoldeCongesDTO>> getMonSoldeConges(
             @AuthenticationPrincipal UserDetails userDetails) {
         log.info("GET /api/employes/mon-solde-conges");
+
+        if (userDetails == null) {
+            log.error("UserDetails est null - Utilisateur non authentifié");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
+        }
 
         String email = userDetails.getUsername();
         SoldeCongesDTO solde = employeService.getSoldeCongesByEmail(email);
@@ -321,6 +335,12 @@ public class EmployeController {
             @AuthenticationPrincipal UserDetails userDetails) {
         log.info("GET /api/employes/mes-competences");
 
+        if (userDetails == null) {
+            log.error("UserDetails est null - Utilisateur non authentifié");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
+        }
+
         String email = userDetails.getUsername();
         List<CompetenceEmployeDTO> competences = employeService.getCompetencesByEmail(email);
 
@@ -333,6 +353,12 @@ public class EmployeController {
             @AuthenticationPrincipal UserDetails userDetails) {
         log.info("GET /api/employes/mes-formations");
 
+        if (userDetails == null) {
+            log.error("UserDetails est null - Utilisateur non authentifié");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
+        }
+
         String email = userDetails.getUsername();
         List<FormationEmployeDTO> formations = employeService.getFormationsByEmail(email);
 
@@ -344,6 +370,12 @@ public class EmployeController {
     public ResponseEntity<ApiResponse<List<HistoriqueCongeDTO>>> getMonHistoriqueConges(
             @AuthenticationPrincipal UserDetails userDetails) {
         log.info("GET /api/employes/mon-historique-conges");
+
+        if (userDetails == null) {
+            log.error("UserDetails est null - Utilisateur non authentifié");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
+        }
 
         String email = userDetails.getUsername();
         List<HistoriqueCongeDTO> historique = employeService.getHistoriqueCongesByEmail(email);
@@ -358,6 +390,12 @@ public class EmployeController {
             @Valid @RequestBody UpdateProfilRequest request) {
         log.info("PATCH /api/employes/mon-profil - Mise à jour du profil");
 
+        if (userDetails == null) {
+            log.error("UserDetails est null - Utilisateur non authentifié");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
+        }
+
         String email = userDetails.getUsername();
         EmployeDTO updated = employeService.updateProfilByEmail(email, request);
 
@@ -371,10 +409,16 @@ public class EmployeController {
             @Valid @RequestBody ChangePasswordRequest request) {
         log.info("POST /api/employes/change-password - Changement de mot de passe");
 
+        if (userDetails == null) {
+            log.error("UserDetails est null - Utilisateur non authentifié");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
+        }
+
         String email = userDetails.getUsername();
         employeService.changePasswordByEmail(email, request);
 
-        return ResponseEntity.ok(ApiResponse.success("Mot de passe changé avec succès"));
+        return ResponseEntity.ok(ApiResponse.success(null, "Mot de passe changé avec succès"));
     }
 
     @PatchMapping("/change-email")
@@ -383,6 +427,12 @@ public class EmployeController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam String newEmail) {
         log.info("PATCH /api/employes/change-email - Nouvel email: {}", newEmail);
+
+        if (userDetails == null) {
+            log.error("UserDetails est null - Utilisateur non authentifié");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
+        }
 
         String email = userDetails.getUsername();
         EmployeDTO updated = employeService.changeEmailByEmail(email, newEmail);

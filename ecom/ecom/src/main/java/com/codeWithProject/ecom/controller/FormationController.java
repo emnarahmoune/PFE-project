@@ -1,6 +1,6 @@
 package com.codeWithProject.ecom.controller;
 
-import com.codeWithProject.ecom.controller.dto.ApiResponse;
+import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
 import com.codeWithProject.ecom.service.FormationService;
 import com.codeWithProject.ecom.service.dto.FormationDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -173,7 +173,7 @@ public class FormationController {
         log.info("DELETE /api/formations/{}", id);
 
         formationService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success("Formation supprimée avec succès"));
+        return ResponseEntity.ok(ApiResponse.success(null, "Formation supprimée avec succès"));
     }
 
     // ===== GESTION DES PARTICIPANTS =====

@@ -1,6 +1,6 @@
 package com.codeWithProject.ecom.controller;
 
-import com.codeWithProject.ecom.controller.dto.ApiResponse;
+import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
 import com.codeWithProject.ecom.service.exception.BusinessException;
 import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,9 +52,12 @@ public class GlobalExceptionHandler {
         log.warn("400 Validation [{}] : {}", req.getRequestURI(), errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.<Map<String, String>>builder()
-                        .success(false).message("Erreur de validation").data(errors)
-                        .timestamp(LocalDateTime.now().toString())
-                        .statusCode(HttpStatus.BAD_REQUEST.value()).build());
+                        .success(false)
+                        .message("Erreur de validation")
+                        .data(errors)
+                        .timestamp(LocalDateTime.now())
+                        .statusCode(HttpStatus.BAD_REQUEST.value())
+                        .build());
     }
 
     // ── 400 Contrainte SQL (NOT NULL, UNIQUE…) ─────────────────
@@ -68,13 +71,10 @@ public class GlobalExceptionHandler {
     }
 
     // ── 500 TransactionSystemException ────────────────────────
-    // Intercepte les erreurs au commit JPA (@PreUpdate, @PrePersist, contraintes)
-    // et expose la vraie cause racine au lieu d'un message générique
     @ExceptionHandler({TransactionSystemException.class, JpaSystemException.class})
     public ResponseEntity<ApiResponse<Void>> handleTransactionSystem(
             Exception ex, HttpServletRequest req) {
 
-        // Dérouler la chaîne de causes pour trouver la vraie exception
         Throwable cause = ex;
         while (cause.getCause() != null) {
             cause = cause.getCause();
@@ -83,7 +83,6 @@ public class GlobalExceptionHandler {
         String rootMsg = cause.getClass().getSimpleName() + " : " + cause.getMessage();
         log.error("500 TransactionSystem [{}] cause racine : {}", req.getRequestURI(), rootMsg, ex);
 
-        // Si c'est une erreur de validation @PreUpdate/@PrePersist → 400
         if (cause instanceof IllegalStateException
                 || cause instanceof IllegalArgumentException
                 || cause instanceof StringIndexOutOfBoundsException) {

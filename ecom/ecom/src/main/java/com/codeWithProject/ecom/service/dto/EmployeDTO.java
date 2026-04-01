@@ -26,6 +26,9 @@ public class EmployeDTO {
     private String departement;
     private Integer soldeConges;
 
+    // Champ password ajouté pour la création des comptes utilisateurs
+    private String password;
+
     private Long anciennete;
     private Double salaireAnnuel;
 

@@ -132,6 +132,7 @@ public class EmployeServiceImpl implements EmployeService {
     public EmployeDTO create(EmployeDTO dto) {
         log.debug("Création d'un employé: {}", dto.getMatricule());
 
+        // Validation
         if (dto.getMatricule() == null || dto.getMatricule().trim().isEmpty()) {
             throw new BusinessException("Le matricule est obligatoire");
         }
@@ -151,26 +152,41 @@ public class EmployeServiceImpl implements EmployeService {
             throw new BusinessException("Le salaire est obligatoire");
         }
 
+        // Vérifier unicité
         if (employeRepository.existsByMatricule(dto.getMatricule())) {
             throw new BusinessException("Un employé avec ce matricule existe déjà");
         }
+        if (utilisateurRepository.existsByEmail(dto.getEmail())) {
+            throw new BusinessException("Un utilisateur avec cet email existe déjà");
+        }
 
+        // Créer l'employé
         Employe employe = mapper.toEntity(dto);
 
+        // Gérer le service
         if (dto.getServiceId() != null) {
             com.codeWithProject.ecom.entity.Service service = serviceRepository.findById(dto.getServiceId())
                     .orElseThrow(() -> new ResourceNotFoundException("Service", dto.getServiceId()));
             employe.setService(service);
         }
 
+        // Gérer le manager
         if (dto.getManagerId() != null) {
             Manager manager = managerRepository.findById(dto.getManagerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Manager", dto.getManagerId()));
             employe.setManager(manager);
         }
 
+        // CRITICAL: Créer et associer l'utilisateur
+        String defaultPassword = dto.getPassword() != null ? dto.getPassword() : "default123";
+        String encodedPassword = passwordEncoder.encode(defaultPassword);
+        employe.createUtilisateur(encodedPassword);
+
+        // Sauvegarder (cascade sauvegardera aussi l'utilisateur)
         Employe saved = employeRepository.save(employe);
-        log.info("Employé créé avec succès - ID: {}", saved.getId());
+
+        log.info("Employé créé avec succès - ID: {}, Utilisateur associé ID: {}",
+                saved.getId(), saved.getUtilisateur() != null ? saved.getUtilisateur().getId() : null);
 
         return mapper.toDto(saved);
     }
@@ -182,6 +198,7 @@ public class EmployeServiceImpl implements EmployeService {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé", id));
 
+        // Mise à jour des champs
         if (dto.getMatricule() != null && !dto.getMatricule().equals(employe.getMatricule())) {
             if (employeRepository.existsByMatricule(dto.getMatricule())) {
                 throw new BusinessException("Un employé avec ce matricule existe déjà");
@@ -191,7 +208,12 @@ public class EmployeServiceImpl implements EmployeService {
 
         if (dto.getNom() != null) employe.setNom(dto.getNom());
         if (dto.getPrenom() != null) employe.setPrenom(dto.getPrenom());
-        if (dto.getEmail() != null) employe.setEmail(dto.getEmail());
+        if (dto.getEmail() != null) {
+            if (!dto.getEmail().equals(employe.getEmail()) && utilisateurRepository.existsByEmail(dto.getEmail())) {
+                throw new BusinessException("Un utilisateur avec cet email existe déjà");
+            }
+            employe.setEmail(dto.getEmail());
+        }
         if (dto.getTelephone() != null) employe.setTelephone(dto.getTelephone());
         if (dto.getPoste() != null) employe.setPoste(dto.getPoste());
         if (dto.getSalaire() != null) employe.setSalaire(dto.getSalaire());
@@ -199,6 +221,14 @@ public class EmployeServiceImpl implements EmployeService {
         if (dto.getStatut() != null) employe.setStatut(dto.getStatut());
         if (dto.getSoldeConges() != null) employe.setSoldeConges(dto.getSoldeConges());
         if (dto.getDateEmbauche() != null) employe.setDateEmbauche(dto.getDateEmbauche());
+
+        // Synchroniser avec l'utilisateur associé
+        if (employe.getUtilisateur() != null) {
+            employe.getUtilisateur().setNom(employe.getNom());
+            employe.getUtilisateur().setPrenom(employe.getPrenom());
+            employe.getUtilisateur().setEmail(employe.getEmail());
+            employe.getUtilisateur().setTelephone(employe.getTelephone());
+        }
 
         if (dto.getServiceId() != null) {
             com.codeWithProject.ecom.entity.Service service = serviceRepository.findById(dto.getServiceId())
@@ -250,6 +280,7 @@ public class EmployeServiceImpl implements EmployeService {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé", id));
 
+        // L'utilisateur sera supprimé automatiquement grâce à cascade et orphanRemoval
         employeRepository.delete(employe);
         log.info("Employé supprimé - ID: {}", id);
     }
@@ -310,40 +341,69 @@ public class EmployeServiceImpl implements EmployeService {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<String, Object> getStatsTableauBord() {
+    public TableauBordEmployeDTO getStatsTableauBord() {
+        log.info("Récupération des statistiques tableau de bord des employés");
+
         List<Object[]> stats = employeRepository.getStatsTableauBord();
+
         if (stats == null || stats.isEmpty()) {
-            return Map.of(
-                    "totalEmployes", 0L,
-                    "employesActifs", 0L,
-                    "employesInactifs", 0L,
-                    "employesEnConge", 0L,
-                    "salaireMoyen", 0.0,
-                    "masseSalariale", 0.0,
-                    "soldeCongesMoyen", 0.0
-            );
+            log.warn("Aucune donnée de statistiques trouvée");
+            return TableauBordEmployeDTO.builder()
+                    .total(0L)
+                    .actifs(0L)
+                    .inactifs(0L)
+                    .enConge(0L)
+                    .salaireMoyen(0.0)
+                    .masseSalariale(0.0)
+                    .soldeCongesMoyen(0.0)
+                    .build();
         }
+
         Object[] stat = stats.get(0);
 
-        return Map.of(
-                "totalEmployes", stat[0] != null ? stat[0] : 0L,
-                "employesActifs", stat[1] != null ? stat[1] : 0L,
-                "employesInactifs", stat[2] != null ? stat[2] : 0L,
-                "employesEnConge", stat[3] != null ? stat[3] : 0L,
-                "salaireMoyen", stat[4] != null ? stat[4] : 0.0,
-                "masseSalariale", stat[5] != null ? stat[5] : 0.0,
-                "soldeCongesMoyen", stat[6] != null ? stat[6] : 0.0
-        );
+        // Vérifier la longueur du tableau
+        if (stat.length < 7) {
+            log.error("Le résultat de la requête a {} colonnes, mais 7 sont attendues", stat.length);
+            return TableauBordEmployeDTO.builder()
+                    .total(0L)
+                    .actifs(0L)
+                    .inactifs(0L)
+                    .enConge(0L)
+                    .salaireMoyen(0.0)
+                    .masseSalariale(0.0)
+                    .soldeCongesMoyen(0.0)
+                    .build();
+        }
+
+        Long total = stat[0] != null ? ((Number) stat[0]).longValue() : 0L;
+        Long actifs = stat[1] != null ? ((Number) stat[1]).longValue() : 0L;
+        Long inactifs = stat[2] != null ? ((Number) stat[2]).longValue() : 0L;
+        Long enConge = stat[3] != null ? ((Number) stat[3]).longValue() : 0L;
+        Double salaireMoyen = stat[4] != null ? ((Number) stat[4]).doubleValue() : 0.0;
+        Double masseSalariale = stat[5] != null ? ((Number) stat[5]).doubleValue() : 0.0;
+        Double soldeCongesMoyen = stat[6] != null ? ((Number) stat[6]).doubleValue() : 0.0;
+
+        log.info("Statistiques récupérées: total={}, actifs={}, salaireMoyen={}", total, actifs, salaireMoyen);
+
+        return TableauBordEmployeDTO.builder()
+                .total(total)
+                .actifs(actifs)
+                .inactifs(inactifs)
+                .enConge(enConge)
+                .salaireMoyen(salaireMoyen)
+                .masseSalariale(masseSalariale)
+                .soldeCongesMoyen(soldeCongesMoyen)
+                .build();
     }
 
-    // ===== NOUVELLES MÉTHODES POUR L'ESPACE EMPLOYÉ =====
+    // ===== NOUVELLES MÉTHODES =====
 
     @Override
     @Transactional(readOnly = true)
     public Optional<EmployeDTO> findByEmail(String email) {
         log.debug("Recherche d'employé par email: {}", email);
         return utilisateurRepository.findByEmail(email)
-                .map(utilisateur -> utilisateur.getEmploye())
+                .map(Utilisateur::getEmploye)
                 .map(mapper::toDto);
     }
 
@@ -353,16 +413,13 @@ public class EmployeServiceImpl implements EmployeService {
         log.debug("Récupération du solde de congés pour: {}", email);
 
         Employe employe = utilisateurRepository.findByEmail(email)
-                .map(utilisateur -> utilisateur.getEmploye())
+                .map(Utilisateur::getEmploye)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
 
         Integer total = employe.getSoldeConges() != null ? employe.getSoldeConges() : 25;
-
         int annee = LocalDate.now().getYear();
         long pris = demandeCongeRepository.countCongesPrisAnnee(employe.getId(), annee);
-
         Integer restant = total - (int) pris;
-
         long enAttente = demandeCongeRepository.countByEmployeIdAndStatut(employe.getId(), "EN_ATTENTE");
 
         return SoldeCongesDTO.builder()
@@ -379,7 +436,7 @@ public class EmployeServiceImpl implements EmployeService {
         log.debug("Récupération des compétences pour: {}", email);
 
         Employe employe = utilisateurRepository.findByEmail(email)
-                .map(utilisateur -> utilisateur.getEmploye())
+                .map(Utilisateur::getEmploye)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
 
         return employeCompetenceRepository.findByEmployeId(employe.getId()).stream()
@@ -401,7 +458,7 @@ public class EmployeServiceImpl implements EmployeService {
         log.debug("Récupération des formations pour: {}", email);
 
         Employe employe = utilisateurRepository.findByEmail(email)
-                .map(utilisateur -> utilisateur.getEmploye())
+                .map(Utilisateur::getEmploye)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
 
         return formationRepository.findFormationsByEmployeId(employe.getId()).stream()
@@ -421,7 +478,7 @@ public class EmployeServiceImpl implements EmployeService {
         log.debug("Récupération de l'historique des congés pour: {}", email);
 
         Employe employe = utilisateurRepository.findByEmail(email)
-                .map(utilisateur -> utilisateur.getEmploye())
+                .map(Utilisateur::getEmploye)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
 
         return demandeCongeRepository.findByEmployeId(employe.getId()).stream()
@@ -447,6 +504,9 @@ public class EmployeServiceImpl implements EmployeService {
 
         if (request.getTelephone() != null) {
             user.setTelephone(request.getTelephone());
+            if (user.getEmploye() != null) {
+                user.getEmploye().setTelephone(request.getTelephone());
+            }
             utilisateurRepository.save(user);
         }
 
@@ -480,6 +540,9 @@ public class EmployeServiceImpl implements EmployeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
 
         user.setEmail(newEmail);
+        if (user.getEmploye() != null) {
+            user.getEmploye().setEmail(newEmail);
+        }
         utilisateurRepository.save(user);
 
         return mapper.toDto(user.getEmploye());

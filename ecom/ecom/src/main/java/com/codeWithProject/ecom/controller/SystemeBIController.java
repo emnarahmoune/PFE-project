@@ -1,11 +1,8 @@
 package com.codeWithProject.ecom.controller;
 
-import com.codeWithProject.ecom.controller.dto.ApiResponse;
+import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
 import com.codeWithProject.ecom.service.SystemeBIService;
-import com.codeWithProject.ecom.service.dto.FormationDTO;
-import com.codeWithProject.ecom.service.dto.IndicateurRHDTO;
-import com.codeWithProject.ecom.service.dto.ScoreTurnoverDTO;
-import com.codeWithProject.ecom.service.dto.SystemeBIDTO;
+import com.codeWithProject.ecom.service.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,10 +21,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Contrôleur REST pour la gestion du système BI
- * Endpoints : /api/systeme-bi
- */
 @RestController
 @RequestMapping("/api/systeme-bi")
 @RequiredArgsConstructor
@@ -36,8 +29,6 @@ import java.util.Map;
 public class SystemeBIController {
 
     private final SystemeBIService systemeBIService;
-
-    // ===== RECHERCHES GÉNÉRALES =====
 
     @GetMapping
     @Operation(summary = "Liste tous les systèmes BI")
@@ -65,8 +56,6 @@ public class SystemeBIController {
         return ResponseEntity.ok(ApiResponse.success(systemes, "Systèmes BI récupérés avec succès"));
     }
 
-    // ===== RECHERCHES PAR IDENTIFIANTS =====
-
     @GetMapping("/{id}")
     @Operation(summary = "Récupère un système BI par son ID")
     public ResponseEntity<ApiResponse<SystemeBIDTO>> getSystemeById(
@@ -91,8 +80,6 @@ public class SystemeBIController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // ===== RECHERCHES PAR STATUT =====
-
     @GetMapping("/statut/actifs")
     @Operation(summary = "Récupère les systèmes BI actifs")
     public ResponseEntity<ApiResponse<List<SystemeBIDTO>>> getSystemesActifs() {
@@ -108,8 +95,6 @@ public class SystemeBIController {
         List<SystemeBIDTO> maintenance = systemeBIService.findSystemesEnMaintenance();
         return ResponseEntity.ok(ApiResponse.success(maintenance, "Systèmes BI en maintenance récupérés"));
     }
-
-    // ===== CRUD =====
 
     @PostMapping
     @Operation(summary = "Crée un nouveau système BI")
@@ -135,19 +120,6 @@ public class SystemeBIController {
         SystemeBIDTO updated = systemeBIService.update(id, dto);
         return ResponseEntity.ok(ApiResponse.success(updated, "Système BI mis à jour avec succès"));
     }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Supprime un système BI")
-    public ResponseEntity<ApiResponse<Void>> deleteSysteme(
-            @Parameter(description = "ID du système BI") @PathVariable Long id) {
-
-        log.info("DELETE /api/systeme-bi/{}", id);
-
-        systemeBIService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success("Système BI supprimé avec succès"));
-    }
-
-    // ===== GESTION DU STATUT =====
 
     @PatchMapping("/{id}/activer")
     @Operation(summary = "Active un système BI")
@@ -182,7 +154,16 @@ public class SystemeBIController {
         return ResponseEntity.ok(ApiResponse.success(desactive, "Système BI désactivé avec succès"));
     }
 
-    // ===== OPÉRATIONS BI =====
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Supprime un système BI")
+    public ResponseEntity<ApiResponse<Void>> deleteSysteme(
+            @Parameter(description = "ID du système BI") @PathVariable Long id) {
+
+        log.info("DELETE /api/systeme-bi/{}", id);
+
+        systemeBIService.delete(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Système BI supprimé avec succès"));
+    }
 
     @PostMapping("/{id}/etl/executer")
     @Operation(summary = "Exécute l'ETL pour un système BI")
@@ -256,22 +237,6 @@ public class SystemeBIController {
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.created(scores, "Prédictions de turnover réalisées"));
     }
-
-    @PostMapping("/{id}/predire/turnover/employe/{employeId}")
-    @Operation(summary = "Prédit le turnover pour un employé spécifique")
-    public ResponseEntity<ApiResponse<ScoreTurnoverDTO>> predireTurnoverEmploye(
-            @Parameter(description = "ID du système BI") @PathVariable Long id,
-            @Parameter(description = "ID de l'employé") @PathVariable Long employeId) {
-
-        log.info("POST /api/systeme-bi/{}/predire/turnover/employe/{}", id, employeId);
-
-        ScoreTurnoverDTO score = systemeBIService.predireTurnoverEmploye(id, employeId);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.created(score, "Prédiction de turnover réalisée"));
-    }
-
-    // ===== STATISTIQUES =====
 
     @GetMapping("/stats/statut")
     @Operation(summary = "Compte les systèmes BI par statut")

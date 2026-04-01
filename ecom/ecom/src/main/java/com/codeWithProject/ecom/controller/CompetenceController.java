@@ -1,6 +1,6 @@
 package com.codeWithProject.ecom.controller;
 
-import com.codeWithProject.ecom.controller.dto.ApiResponse;
+import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
 import com.codeWithProject.ecom.service.CompetenceService;
 import com.codeWithProject.ecom.service.dto.CompetenceDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -162,7 +162,7 @@ public class CompetenceController {
         log.info("DELETE /api/competences/{}", id);
 
         competenceService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success("Compétence supprimée avec succès"));
+        return ResponseEntity.ok(ApiResponse.success(null, "Compétence supprimée avec succès"));
     }
 
     /**

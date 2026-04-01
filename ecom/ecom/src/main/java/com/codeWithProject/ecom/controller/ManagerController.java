@@ -1,6 +1,6 @@
 package com.codeWithProject.ecom.controller;
 
-import com.codeWithProject.ecom.controller.dto.ApiResponse;
+import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
 import com.codeWithProject.ecom.service.ManagerService;
 import com.codeWithProject.ecom.service.dto.ManagerDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,10 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Contrôleur REST pour la gestion des managers
- * Endpoints : /api/managers
- */
 @RestController
 @RequestMapping("/api/managers")
 @RequiredArgsConstructor
@@ -32,8 +28,6 @@ import java.util.Map;
 public class ManagerController {
 
     private final ManagerService managerService;
-
-    // ===== RECHERCHES GÉNÉRALES =====
 
     @GetMapping
     @Operation(summary = "Liste tous les managers")
@@ -61,8 +55,6 @@ public class ManagerController {
         return ResponseEntity.ok(ApiResponse.success(managers, "Managers récupérés avec succès"));
     }
 
-    // ===== RECHERCHES PAR IDENTIFIANTS =====
-
     @GetMapping("/{id}")
     @Operation(summary = "Récupère un manager par son ID")
     public ResponseEntity<ApiResponse<ManagerDTO>> getManagerById(
@@ -86,20 +78,6 @@ public class ManagerController {
                 .map(manager -> ResponseEntity.ok(ApiResponse.success(manager, "Manager trouvé")))
                 .orElse(ResponseEntity.notFound().build());
     }
-
-    @GetMapping("/matricule/{matricule}")
-    @Operation(summary = "Récupère un manager par le matricule de l'employé")
-    public ResponseEntity<ApiResponse<ManagerDTO>> getManagerByMatricule(
-            @Parameter(description = "Matricule de l'employé") @PathVariable String matricule) {
-
-        log.info("GET /api/managers/matricule/{}", matricule);
-
-        return managerService.findByEmployeMatricule(matricule)
-                .map(manager -> ResponseEntity.ok(ApiResponse.success(manager, "Manager trouvé")))
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    // ===== RECHERCHES PAR ATTRIBUTS =====
 
     @GetMapping("/departement/{departement}")
     @Operation(summary = "Récupère les managers par département")
@@ -127,24 +105,6 @@ public class ManagerController {
         List<ManagerDTO> sansEquipe = managerService.findManagersSansEquipe();
         return ResponseEntity.ok(ApiResponse.success(sansEquipe, "Managers sans équipe récupérés"));
     }
-
-    @GetMapping("/avec-demandes-en-attente")
-    @Operation(summary = "Récupère les managers avec des demandes en attente")
-    public ResponseEntity<ApiResponse<List<ManagerDTO>>> getManagersAvecDemandesEnAttente() {
-        log.info("GET /api/managers/avec-demandes-en-attente");
-        List<ManagerDTO> avecDemandes = managerService.findManagersAvecDemandesEnAttente();
-        return ResponseEntity.ok(ApiResponse.success(avecDemandes, "Managers avec demandes en attente récupérés"));
-    }
-
-    @GetMapping("/avec-demandes-urgentes")
-    @Operation(summary = "Récupère les managers avec des demandes urgentes")
-    public ResponseEntity<ApiResponse<List<ManagerDTO>>> getManagersAvecDemandesUrgentes() {
-        log.info("GET /api/managers/avec-demandes-urgentes");
-        List<ManagerDTO> avecUrgentes = managerService.findManagersAvecDemandesUrgentes();
-        return ResponseEntity.ok(ApiResponse.success(avecUrgentes, "Managers avec demandes urgentes récupérés"));
-    }
-
-    // ===== CRUD =====
 
     @PostMapping
     @Operation(summary = "Crée un nouveau manager")
@@ -201,10 +161,8 @@ public class ManagerController {
         log.info("DELETE /api/managers/{}", id);
 
         managerService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success("Manager supprimé avec succès"));
+        return ResponseEntity.ok(ApiResponse.success(null, "Manager supprimé avec succès"));
     }
-
-    // ===== GESTION DES ÉQUIPES =====
 
     @PostMapping("/{managerId}/employes/{employeId}")
     @Operation(summary = "Ajoute un employé à l'équipe du manager")
@@ -230,8 +188,6 @@ public class ManagerController {
         return ResponseEntity.ok(ApiResponse.success(updated, "Employé retiré de l'équipe avec succès"));
     }
 
-    // ===== RAPPORTS =====
-
     @GetMapping("/{id}/rapport-equipe")
     @Operation(summary = "Génère un rapport d'équipe pour un manager")
     public ResponseEntity<ApiResponse<String>> getRapportEquipe(
@@ -242,8 +198,6 @@ public class ManagerController {
         String rapport = managerService.genererRapportEquipe(id);
         return ResponseEntity.ok(ApiResponse.success(rapport, "Rapport d'équipe généré"));
     }
-
-    // ===== STATISTIQUES =====
 
     @GetMapping("/stats/globales")
     @Operation(summary = "Récupère les statistiques globales des managers")
@@ -267,25 +221,6 @@ public class ManagerController {
         log.info("GET /api/managers/stats/anciennete-moyenne");
         Double moyenne = managerService.calculerAncienneteMoyenne();
         return ResponseEntity.ok(ApiResponse.success(moyenne, "Ancienneté moyenne calculée"));
-    }
-
-    @GetMapping("/stats/tableau-bord")
-    @Operation(summary = "Récupère les statistiques pour le tableau de bord")
-    public ResponseEntity<ApiResponse<List<Object[]>>> getStatsManagers() {
-        log.info("GET /api/managers/stats/tableau-bord");
-        List<Object[]> stats = managerService.getStatsManagers();
-        return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques tableau de bord récupérées"));
-    }
-
-    @GetMapping("/recents")
-    @Operation(summary = "Récupère les managers récents")
-    public ResponseEntity<ApiResponse<List<ManagerDTO>>> getManagersRecents(
-            @RequestParam(defaultValue = "10") int limit) {
-
-        log.info("GET /api/managers/recents?limit={}", limit);
-
-        List<ManagerDTO> recents = managerService.findManagersRecents(limit);
-        return ResponseEntity.ok(ApiResponse.success(recents, "Managers récents récupérés"));
     }
 
     @GetMapping("/search")
