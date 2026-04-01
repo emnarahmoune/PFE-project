@@ -1,0 +1,153 @@
+<div class="liste-conges-container">
+
+  <!-- ── Header ── -->
+  <div class="page-header">
+    <div class="header-text">
+      <h1>Mes congés</h1>
+      <p>Gérez vos demandes de congé · {{ currentYear }}</p>
+    </div>
+    <button mat-raised-button color="primary" routerLink="/employee/mes-conges/nouveau">
+      <mat-icon>add</mat-icon>
+      Nouvelle demande
+    </button>
+  </div>
+
+  <!-- ── KPI cards ── -->
+  <div class="solde-grid">
+    <mat-card class="solde-card total">
+      <mat-icon>event_available</mat-icon>
+      <div class="solde-info">
+        <span class="solde-value">{{ soldeTotal }}</span>
+        <span class="solde-label">Jours total</span>
+      </div>
+    </mat-card>
+    <mat-card class="solde-card pris">
+      <mat-icon>event_busy</mat-icon>
+      <div class="solde-info">
+        <span class="solde-value">{{ soldePris }}</span>
+        <span class="solde-label">Jours pris</span>
+      </div>
+    </mat-card>
+    <mat-card class="solde-card restant">
+      <mat-icon>event_note</mat-icon>
+      <div class="solde-info">
+        <span class="solde-value">{{ soldeRestant }}</span>
+        <span class="solde-label">Jours restants</span>
+      </div>
+    </mat-card>
+    <mat-card class="solde-card attente">
+      <mat-icon>hourglass_empty</mat-icon>
+      <div class="solde-info">
+        <span class="solde-value">{{ soldeEnAttente }}</span>
+        <span class="solde-label">En attente</span>
+      </div>
+    </mat-card>
+  </div>
+
+  <!-- ── Progress bar ── -->
+  <mat-card class="progress-card">
+    <div class="progress-header">
+      <span>Utilisation du solde</span>
+      <span>{{ soldePris }} / {{ soldeTotal }} jours utilisés</span>
+    </div>
+    <mat-progress-bar mode="determinate" [value]="getSoldeProgress()"></mat-progress-bar>
+  </mat-card>
+
+  <!-- ── Table ── -->
+  <mat-card class="table-card">
+    <mat-card-header>
+      <mat-card-title>Historique des demandes</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+
+      <!-- Loading -->
+      <div class="loading-state" *ngIf="loading">
+        <mat-spinner diameter="36"></mat-spinner>
+        <p>Chargement…</p>
+      </div>
+
+      <!-- Empty -->
+      <div class="empty-state" *ngIf="!loading && conges.length === 0">
+        <mat-icon>event_busy</mat-icon>
+        <p>Aucune demande de congé</p>
+        <button mat-raised-button color="primary"
+                routerLink="/employee/mes-conges/nouveau">
+          Faire une demande
+        </button>
+      </div>
+
+      <!-- Table -->
+      <table mat-table [dataSource]="conges"
+             *ngIf="!loading && conges.length > 0">
+
+        <!-- Période -->
+        <ng-container matColumnDef="periode">
+          <th mat-header-cell *matHeaderCellDef>Période</th>
+          <td mat-cell *matCellDef="let c">
+            <div class="periode-cell">
+              <span class="date-debut">{{ formatDate(c.dateDebut) }}</span>
+              <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+              <span class="date-fin">{{ formatDate(c.dateFin) }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Type -->
+        <ng-container matColumnDef="type">
+          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <td mat-cell *matCellDef="let c">
+            <span class="type-badge">{{ getTypeLabel(c.type) }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Jours -->
+        <ng-container matColumnDef="jours">
+          <th mat-header-cell *matHeaderCellDef>Durée</th>
+          <td mat-cell *matCellDef="let c">
+            <strong>{{ c.joursOuvres ?? '—' }} j</strong>
+          </td>
+        </ng-container>
+
+        <!-- Statut -->
+        <ng-container matColumnDef="statut">
+          <th mat-header-cell *matHeaderCellDef>Statut</th>
+          <td mat-cell *matCellDef="let c">
+            <span class="statut-badge" [ngClass]="getStatutColor(c.statut)">
+              {{ getStatutLabel(c.statut) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Actions -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let c">
+            <button mat-icon-button color="primary"
+                    [routerLink]="['/employee/mes-conges', c.id]"
+                    matTooltip="Voir le détail">
+              <mat-icon>visibility</mat-icon>
+            </button>
+            <button mat-icon-button color="accent"
+                    *ngIf="peutModifier(c)"
+                    [routerLink]="['/employee/mes-conges', c.id, 'modifier']"
+                    matTooltip="Modifier">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn"
+                    *ngIf="peutAnnuler(c)"
+                    (click)="annulerConge(c)"
+                    matTooltip="Annuler la demande">
+              <mat-icon>cancel</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+
+    </mat-card-content>
+  </mat-card>
+
+</div>

@@ -1,0 +1,71 @@
+<div class="container" *ngIf="!loading && demande; else loadingTpl">
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Détail de la demande de congé</h2>
+      <span class="badge" [ngClass]="getStatutClass()">
+        {{ getStatutLabel() }}
+      </span>
+    </div>
+
+    <div class="card-body">
+      
+      <div class="row">
+        <div class="col">
+          <label>Type</label>
+          <p>{{ getTypeLabel() }}</p>
+        </div>
+
+        <div class="col">
+          <label>Date début</label>
+          <p>{{ getFormattedDate(demande.dateDebut) }}</p>
+        </div>
+
+        <div class="col">
+          <label>Date fin</label>
+          <p>{{ getFormattedDate(demande.dateFin) }}</p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>Durée</label>
+          <p>{{ getDuree() }}</p>
+        </div>
+
+        <div class="col">
+          <label>Date de demande</label>
+          <p>{{ getFormattedDate(demande.dateDemande) }}</p>
+        </div>
+      </div>
+
+      <div class="row full">
+        <label>Motif</label>
+        <p class="motif">{{ demande.motif || 'Aucun motif fourni' }}</p>
+      </div>
+
+    </div>
+
+    <div class="card-footer">
+      <button class="btn back" (click)="goBack()">⬅ Retour</button>
+
+      <button 
+        *ngIf="canAnnuler" 
+        class="btn cancel" 
+        (click)="annulerDemande()">
+        ❌ Annuler la demande
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loading">
+    <p>Chargement...</p>
+  </div>
+</ng-template>
+
+<div *ngIf="error" class="error">
+  {{ error }}
+</div>

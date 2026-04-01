@@ -107,7 +107,8 @@
                 <div class="comp-cell">
                   <span class="comp-nom">{{ comp.nom }}</span>
                   <span class="comp-desc" *ngIf="comp.description">
-                    {{ comp.description | slice:0:55 }}{{ (comp.description?.length ?? 0) > 55 ? '…' : '' }}
+                    <!-- ✅ LIGNE CORRIGÉE - Plus de warning NG8107 -->
+                    {{ comp.description | slice:0:55 }}{{ (comp.description.length > 55) ? '…' : '' }}
                   </span>
                 </div>
               </td>

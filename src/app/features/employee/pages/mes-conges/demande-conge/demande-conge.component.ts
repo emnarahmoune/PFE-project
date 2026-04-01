@@ -37,7 +37,7 @@ import { DemandeConge, CongeResponse } from '../../../models/conge.model';
     MatProgressSpinnerModule,
     MatDividerModule,
     MatChipsModule,
-    MatProgressBarModule  // ✅ AJOUT DE MatProgressBarModule
+    MatProgressBarModule
   ],
   templateUrl: './demande-conge.component.html',
   styleUrls: ['./demande-conge.component.css']
@@ -129,13 +129,11 @@ export class DemandeCongeComponent implements OnInit {
     return joursDemandes <= this.congesRestants;
   }
 
-  // ✅ AJOUT DE LA MÉTHODE getTypeLabel
   getTypeLabel(type: string): string {
     const found = this.typesConge.find(t => t.value === type);
     return found?.label || type;
   }
 
-  // ✅ AJOUT DE LA MÉTHODE formatDate
   formatDate(date: Date): string {
     if (!date) return '';
     return new Date(date).toLocaleDateString('fr-FR');
@@ -167,7 +165,10 @@ export class DemandeCongeComponent implements OnInit {
     }
 
     this.submitting = true;
+    
+    // ✅ CORRECTION: ajout de employeId avec une valeur par défaut (sera ignoré par le backend qui utilise le JWT)
     const demande: DemandeConge = {
+      employeId: 0,  // ← AJOUT OBLIGATOIRE
       type: this.demandeForm.value.type,
       dateDebut: this.demandeForm.value.dateDebut,
       dateFin: this.demandeForm.value.dateFin,

@@ -1,18 +1,26 @@
-// src/app/core/services/token.service.ts
 import { Injectable } from '@angular/core';
-import { User } from '../models/user.model';
 
-@Injectable({
-  providedIn: 'root'
-})
+export interface UtilisateurInfo {
+  id: number;
+  email: string;
+  nom: string;
+  prenom: string;
+  role: string;
+  typeUtilisateur?: string;
+  employeId: number | null;
+  matricule?: string;
+  departement?: string;
+  poste?: string;
+  soldeConges?: number;
+}
+
+@Injectable({ providedIn: 'root' })
 export class TokenService {
   private readonly TOKEN_KEY = 'rh_auth_token';
   private readonly USER_KEY = 'rh_current_user';
   private readonly REFRESH_TOKEN_KEY = 'rh_refresh_token';
 
   constructor() {}
-
-  // ===== TOKEN MANAGEMENT =====
 
   setToken(token: string): void {
     localStorage.setItem(this.TOKEN_KEY, token);
@@ -26,8 +34,6 @@ export class TokenService {
     localStorage.removeItem(this.TOKEN_KEY);
   }
 
-  // ===== REFRESH TOKEN =====
-
   setRefreshToken(token: string): void {
     localStorage.setItem(this.REFRESH_TOKEN_KEY, token);
   }
@@ -40,22 +46,26 @@ export class TokenService {
     localStorage.removeItem(this.REFRESH_TOKEN_KEY);
   }
 
-  // ===== USER MANAGEMENT =====
-
-  setUser(user: User): void {
+  setUser(user: UtilisateurInfo): void {
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
   }
 
-  getUser(): User | null {
+  getUser(): UtilisateurInfo | null {
     const userStr = localStorage.getItem(this.USER_KEY);
-    return userStr ? JSON.parse(userStr) : null;
+    if (userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch (e) {
+        console.error('Erreur parsing user:', e);
+        return null;
+      }
+    }
+    return null;
   }
 
   removeUser(): void {
     localStorage.removeItem(this.USER_KEY);
   }
-
-  // ===== UTILITIES =====
 
   clear(): void {
     this.removeToken();
@@ -67,7 +77,6 @@ export class TokenService {
     const token = this.getToken();
     if (!token) return false;
 
-    // Vérifier si le token n'est pas expiré
     try {
       const payload = this.decodeToken(token);
       const currentTime = Math.floor(Date.now() / 1000);

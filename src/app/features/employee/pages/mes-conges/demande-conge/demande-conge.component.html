@@ -1,13 +1,16 @@
 <div class="demande-conge-container">
+
+  <!-- Header -->
   <div class="header">
-    <button mat-icon-button routerLink="/employee/mes-conges" class="back-button">
+    <button class="back-button" routerLink="/employee/mes-conges">
       <mat-icon>arrow_back</mat-icon>
     </button>
     <h1>Demande de congé</h1>
   </div>
 
   <div class="content-grid">
-    <!-- Formulaire de demande -->
+
+    <!-- ── Formulaire ── -->
     <mat-card class="form-card">
       <mat-card-header>
         <mat-card-title>
@@ -19,7 +22,8 @@
 
       <mat-card-content>
         <form [formGroup]="demandeForm" (ngSubmit)="onSubmit()">
-          <!-- Type de congé -->
+
+          <!-- Type -->
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Type de congé</mat-label>
             <mat-select formControlName="type">
@@ -58,12 +62,14 @@
             </mat-form-field>
           </div>
 
-          <!-- Erreurs de dates -->
-          <div class="date-errors" *ngIf="demandeForm.hasError('dateInvalide') && demandeForm.get('dateFin')?.touched">
+          <!-- Erreurs dates -->
+          <div class="date-errors"
+               *ngIf="demandeForm.hasError('dateInvalide') && demandeForm.get('dateFin')?.touched">
             <mat-icon>error</mat-icon>
             <span>La date de fin doit être postérieure à la date de début</span>
           </div>
-          <div class="date-errors" *ngIf="demandeForm.hasError('datePassee') && demandeForm.get('dateDebut')?.touched">
+          <div class="date-errors"
+               *ngIf="demandeForm.hasError('datePassee') && demandeForm.get('dateDebut')?.touched">
             <mat-icon>error</mat-icon>
             <span>La date de début ne peut pas être dans le passé</span>
           </div>
@@ -71,7 +77,7 @@
           <!-- Commentaire -->
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Commentaire (optionnel)</mat-label>
-            <textarea matInput formControlName="commentaire" rows="3" 
+            <textarea matInput formControlName="commentaire" rows="3"
               placeholder="Informations complémentaires..."></textarea>
             <mat-icon matSuffix>chat</mat-icon>
           </mat-form-field>
@@ -84,16 +90,18 @@
               <mat-icon>close</mat-icon>
               Annuler
             </button>
-            <button mat-raised-button color="primary" type="submit" [disabled]="submitting || demandeForm.invalid">
-              <mat-spinner diameter="20" *ngIf="submitting"></mat-spinner>
+            <button mat-raised-button color="primary" type="submit"
+                    [disabled]="submitting || demandeForm.invalid">
+              <mat-spinner diameter="18" *ngIf="submitting"></mat-spinner>
               <span *ngIf="!submitting">Soumettre la demande</span>
             </button>
           </div>
+
         </form>
       </mat-card-content>
     </mat-card>
 
-    <!-- Récapitulatif -->
+    <!-- ── Récapitulatif ── -->
     <mat-card class="recap-card">
       <mat-card-header>
         <mat-card-title>
@@ -103,21 +111,27 @@
       </mat-card-header>
 
       <mat-card-content>
+
         <div class="recap-item" *ngIf="demandeForm.get('type')?.value">
           <span class="recap-label">Type</span>
-          <div class="recap-value type-badge" [style.border-left-color]="getTypeColor(demandeForm.get('type')?.value)">
-            <mat-icon [style.color]="getTypeColor(demandeForm.get('type')?.value)">
+          <div class="type-badge">
+            <mat-icon [style.color]="getTypeColor(demandeForm.get('type')?.value)" style="font-size:15px;width:15px;height:15px">
               {{ getTypeIcon(demandeForm.get('type')?.value) }}
             </mat-icon>
             <span>{{ getTypeLabel(demandeForm.get('type')?.value) }}</span>
           </div>
         </div>
 
-        <div class="recap-item" *ngIf="demandeForm.get('dateDebut')?.value && demandeForm.get('dateFin')?.value">
+        <div class="recap-item"
+             *ngIf="demandeForm.get('dateDebut')?.value && demandeForm.get('dateFin')?.value">
           <span class="recap-label">Période</span>
           <div class="recap-value">
             <mat-icon>calendar_today</mat-icon>
-            <span>{{ formatDate(demandeForm.get('dateDebut')?.value) }} - {{ formatDate(demandeForm.get('dateFin')?.value) }}</span>
+            <span>
+              {{ formatDate(demandeForm.get('dateDebut')?.value) }}
+              &rarr;
+              {{ formatDate(demandeForm.get('dateFin')?.value) }}
+            </span>
           </div>
         </div>
 
@@ -136,49 +150,54 @@
           <div class="solde-stats">
             <div class="solde-stat">
               <span class="solde-label">Total</span>
-              <span class="solde-number">{{ soldeConges }} jours</span>
+              <span class="solde-number">{{ soldeConges }}</span>
             </div>
             <div class="solde-stat">
               <span class="solde-label">Pris</span>
-              <span class="solde-number">{{ congesPris }} jours</span>
+              <span class="solde-number">{{ congesPris }}</span>
             </div>
             <div class="solde-stat">
               <span class="solde-label">Restant</span>
-              <span class="solde-number highlight">{{ congesRestants }} jours</span>
+              <span class="solde-number highlight">{{ congesRestants }}</span>
             </div>
           </div>
-          <mat-progress-bar 
-            mode="determinate" 
+          <mat-progress-bar
+            mode="determinate"
             [value]="(congesPris / soldeConges) * 100"
             color="primary">
           </mat-progress-bar>
         </div>
 
-        <div class="warning-message" *ngIf="!verifierSolde() && demandeForm.get('type')?.value === 'ANNUEL'">
+        <div class="warning-message"
+             *ngIf="!verifierSolde() && demandeForm.get('type')?.value === 'ANNUEL'">
           <mat-icon>warning</mat-icon>
-          <span>Attention : Cette demande dépasse votre solde de congés restant ({{ congesRestants }} jours)</span>
+          <span>
+            Solde insuffisant — il vous reste {{ congesRestants }} jour{{ congesRestants > 1 ? 's' : '' }}
+          </span>
         </div>
+
       </mat-card-content>
     </mat-card>
+
   </div>
 
-  <!-- Informations utiles -->
+  <!-- ── Informations ── -->
   <mat-card class="info-card">
     <mat-card-header>
       <mat-card-title>
         <mat-icon>info</mat-icon>
-        Informations
+        Informations utiles
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
       <div class="info-list">
         <div class="info-item">
           <mat-icon>schedule</mat-icon>
-          <span>Les demandes de congé sont traitées dans un délai de 48h</span>
+          <span>Les demandes de congé sont traitées dans un délai de 48h ouvrées</span>
         </div>
         <div class="info-item">
           <mat-icon>check_circle</mat-icon>
-          <span>Une fois validée, la demande est déduite de votre solde</span>
+          <span>Une fois validée, la demande est automatiquement déduite de votre solde</span>
         </div>
         <div class="info-item">
           <mat-icon>edit</mat-icon>
@@ -187,4 +206,5 @@
       </div>
     </mat-card-content>
   </mat-card>
+
 </div>

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { EmployeeLayoutComponent } from '../../shared/layouts/employee-layout/employee-layout.component';
+import { EmployeeLayoutComponent } from '../../../app/features/employee/layouts/employee-layout/employee-layout.component';
 import { DashboardEmployeeComponent } from './pages/dashboard-employee/dashboard-employee.component';
 import { MonProfilComponent } from './pages/mon-profil/mon-profil.component';
 import { ListeCongesComponent } from './pages/mes-conges/liste-conges/liste-conges.component';
@@ -12,12 +12,21 @@ export const employeeRoutes: Routes = [
     path: '',
     component: EmployeeLayoutComponent,
     children: [
-      { path: 'dashboard', component: DashboardEmployeeComponent },
-      { path: 'mon-profil', component: MonProfilComponent },
-      { path: 'mes-conges', component: ListeCongesComponent },
-      { path: 'mes-conges/nouveau', component: DemandeCongeComponent },
-      { path: 'mes-conges/:id', component: DetailCongeComponent },
-      { path: 'mes-formations', component: MesFormationsComponent },
+      // Dashboard
+      { path: 'dashboard',            component: DashboardEmployeeComponent },
+
+      // Mon profil
+      { path: 'mon-profil',           component: MonProfilComponent },
+
+      // Mes congés
+      { path: 'mes-conges',           component: ListeCongesComponent },
+      { path: 'mes-conges/nouveau',   component: DemandeCongeComponent },
+      { path: 'mes-conges/:id',       component: DetailCongeComponent },
+
+      // Mes formations
+      { path: 'mes-formations',       component: MesFormationsComponent },
+
+      // Redirection par défaut
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
   }

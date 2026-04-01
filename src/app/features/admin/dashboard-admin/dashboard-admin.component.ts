@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { NgChartsModule } from 'ng2-charts';
+import { BaseChartDirective } from 'ng2-charts'; // ✅ Remplacer NgChartsModule par BaseChartDirective
 import { ChartConfiguration, ChartData } from 'chart.js';
 import { Subject, takeUntil, finalize, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -10,7 +10,7 @@ import { DashboardService, DashboardStats, EmployeRecent, Alerte, Competence } f
 @Component({
   selector: 'app-dashboard-admin',
   standalone: true,
-  imports: [CommonModule, RouterModule, NgChartsModule],
+  imports: [CommonModule, RouterModule, BaseChartDirective], // ✅ Utiliser BaseChartDirective
   templateUrl: './dashboard-admin.component.html',
   styleUrls: ['./dashboard-admin.component.css']
 })
@@ -94,7 +94,6 @@ export class DashboardAdminComponent implements OnInit, OnDestroy {
     }]
   };
 
-  // ✅ CORRECTION: Utiliser ChartConfiguration<'doughnut'> pour le type
   employeesChartOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,

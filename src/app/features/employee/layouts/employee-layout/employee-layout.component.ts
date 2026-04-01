@@ -50,19 +50,13 @@ export class EmployeeLayoutComponent {
 
   logout() {
     this.authService.logout();
-    this.router.navigate(['/auth/login']);
   }
 
   getUserName(): string {
-    const user = this.authService.getCurrentUser();
-    return user ? `${user.prenom} ${user.nom}` : 'Employé';
+    return 'Zayneb Kh';
   }
 
   getUserInitials(): string {
-    const user = this.authService.getCurrentUser();
-    if (user) {
-      return `${user.prenom?.charAt(0) || ''}${user.nom?.charAt(0) || ''}`;
-    }
-    return 'E';
+    return 'ZK';
   }
 }

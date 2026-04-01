@@ -1,27 +1,37 @@
 <mat-sidenav-container class="layout-container" [class.sidebar-collapsed]="!isSidebarOpen">
-  
-  <!-- SIDEBAR -->
-  <mat-sidenav 
-    [opened]="isSidebarOpen" 
-    mode="side" 
+
+  <!-- ── SIDEBAR ── -->
+  <mat-sidenav
+    [opened]="isSidebarOpen"
+    mode="side"
     class="sidebar"
     [class.collapsed]="!isSidebarOpen">
-    
+
+    <!-- Header -->
     <div class="sidebar-header">
       <div class="logo-container">
-        <span class="logo-icon">👤</span>
-        <span *ngIf="isSidebarOpen" class="app-title">Espace Employé</span>
+        <div class="logo-mark">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="8" cy="5" r="3"/>
+            <path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+          </svg>
+        </div>
+        <span *ngIf="isSidebarOpen" class="app-title">HR<span>Space</span></span>
       </div>
-      <button mat-icon-button class="collapse-btn" (click)="toggleSidebar()">
+      <button class="collapse-btn" mat-icon-button (click)="toggleSidebar()">
         <mat-icon>{{ isSidebarOpen ? 'chevron_left' : 'chevron_right' }}</mat-icon>
       </button>
     </div>
 
+    <!-- Section label -->
+    <div class="nav-section-label" *ngIf="isSidebarOpen">Navigation</div>
+
+    <!-- Nav -->
     <mat-nav-list class="nav-menu">
       <div *ngFor="let item of menuItems" class="nav-item">
-        <a 
-          mat-list-item 
-          [routerLink]="item.path" 
+        <a
+          mat-list-item
+          [routerLink]="item.path"
           routerLinkActive="active"
           #rla="routerLinkActive"
           [class.active]="rla.isActive">
@@ -32,38 +42,42 @@
       </div>
     </mat-nav-list>
 
+    <!-- Footer -->
     <div class="sidebar-footer" *ngIf="isSidebarOpen">
       <mat-divider></mat-divider>
       <div class="version-info">
-        <span>Version 1.0.0</span>
+        <span>v1.0.0</span>
         <span>© {{ currentYear }}</span>
       </div>
     </div>
+
   </mat-sidenav>
 
-  <!-- MAIN CONTENT -->
+  <!-- ── MAIN CONTENT ── -->
   <mat-sidenav-content class="main-content">
-    
-    <!-- HEADER -->
-    <mat-toolbar color="primary" class="header">
-      <button mat-icon-button (click)="toggleSidebar()" class="menu-toggle">
+
+    <!-- Header / Toolbar -->
+    <mat-toolbar class="header">
+
+      <button mat-icon-button class="menu-toggle" (click)="toggleSidebar()">
         <mat-icon>menu</mat-icon>
       </button>
-      
+
       <span class="spacer"></span>
 
       <!-- Notifications -->
-      <button mat-icon-button [matMenuTriggerFor]="notifMenu" class="header-icon">
-        <mat-icon>notifications</mat-icon>
+      <button mat-icon-button class="header-icon" [matMenuTriggerFor]="notifMenu">
+        <mat-icon>notifications_none</mat-icon>
       </button>
       <mat-menu #notifMenu="matMenu">
-        <button mat-menu-item>
+        <button mat-menu-item disabled>
+          <mat-icon>notifications_off</mat-icon>
           <span>Aucune notification</span>
         </button>
       </mat-menu>
 
-      <!-- Profil utilisateur -->
-      <button mat-icon-button [matMenuTriggerFor]="userMenu" class="header-icon user-profile">
+      <!-- Avatar / Profil -->
+      <button mat-icon-button class="header-icon user-profile" [matMenuTriggerFor]="userMenu">
         <div class="avatar">{{ getUserInitials() }}</div>
       </button>
       <mat-menu #userMenu="matMenu">
@@ -71,23 +85,24 @@
           <strong>{{ getUserName() }}</strong>
           <span>Employé</span>
         </div>
-        <mat-divider></mat-divider>
         <button mat-menu-item routerLink="/employee/mon-profil">
-          <mat-icon>person</mat-icon>
+          <mat-icon>person_outline</mat-icon>
           <span>Mon profil</span>
         </button>
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="logout()">
-          <mat-icon>exit_to_app</mat-icon>
+          <mat-icon>logout</mat-icon>
           <span>Déconnexion</span>
         </button>
       </mat-menu>
+
     </mat-toolbar>
 
-    <!-- CONTENT AREA -->
+    <!-- Page content -->
     <div class="content-area">
       <router-outlet></router-outlet>
     </div>
 
   </mat-sidenav-content>
+
 </mat-sidenav-container>
