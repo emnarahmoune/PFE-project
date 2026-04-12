@@ -22,22 +22,11 @@ import { DemandeConge, CongeResponse } from '../../../models/conge.model';
   selector: 'app-demande-conge',
   standalone: true,
   imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatButtonModule,
-    MatIconModule,
-    MatSnackBarModule,
-    MatProgressSpinnerModule,
-    MatDividerModule,
-    MatChipsModule,
-    MatProgressBarModule
+    CommonModule, ReactiveFormsModule, RouterModule,
+    MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatDatepickerModule, MatNativeDateModule, MatButtonModule, MatIconModule,
+    MatSnackBarModule, MatProgressSpinnerModule, MatDividerModule,
+    MatChipsModule, MatProgressBarModule
   ],
   templateUrl: './demande-conge.component.html',
   styleUrls: ['./demande-conge.component.css']
@@ -49,6 +38,7 @@ export class DemandeCongeComponent implements OnInit {
   soldeConges = 25;
   congesPris = 0;
   congesRestants = 25;
+  errorMessage = '';
 
   typesConge = [
     { value: 'ANNUEL', label: 'Congé annuel', icon: 'beach_access', color: '#1976d2' },
@@ -88,6 +78,9 @@ export class DemandeCongeComponent implements OnInit {
       },
       error: (error: any) => {
         console.error('Erreur chargement solde:', error);
+        this.soldeConges = 25;
+        this.congesPris = 0;
+        this.congesRestants = 25;
       }
     });
   }
@@ -150,14 +143,28 @@ export class DemandeCongeComponent implements OnInit {
   }
 
   onSubmit(): void {
+    this.errorMessage = '';
+
     if (this.demandeForm.invalid) {
       this.markFormGroupTouched(this.demandeForm);
+      
+      if (this.demandeForm.get('type')?.hasError('required')) {
+        this.snackBar.open('Veuillez sélectionner un type de congé', 'Fermer', { duration: 3000 });
+      } else if (this.demandeForm.get('dateDebut')?.hasError('required')) {
+        this.snackBar.open('Veuillez sélectionner une date de début', 'Fermer', { duration: 3000 });
+      } else if (this.demandeForm.get('dateFin')?.hasError('required')) {
+        this.snackBar.open('Veuillez sélectionner une date de fin', 'Fermer', { duration: 3000 });
+      } else if (this.demandeForm.hasError('dateInvalide')) {
+        this.snackBar.open('La date de fin doit être postérieure à la date de début', 'Fermer', { duration: 3000 });
+      } else if (this.demandeForm.hasError('datePassee')) {
+        this.snackBar.open('La date de début ne peut pas être dans le passé', 'Fermer', { duration: 3000 });
+      }
       return;
     }
 
     if (!this.verifierSolde()) {
       this.snackBar.open(
-        `Solde insuffisant. Vous avez ${this.congesRestants} jours restants.`,
+        `❌ Solde insuffisant. Vous avez ${this.congesRestants} jours restants.`,
         'Fermer',
         { duration: 5000, panelClass: ['error-snackbar'] }
       );
@@ -166,34 +173,49 @@ export class DemandeCongeComponent implements OnInit {
 
     this.submitting = true;
     
-    // ✅ CORRECTION: ajout de employeId avec une valeur par défaut (sera ignoré par le backend qui utilise le JWT)
-    const demande: DemandeConge = {
-      employeId: 0,  // ← AJOUT OBLIGATOIRE
-      type: this.demandeForm.value.type,
+    const demande = {
       dateDebut: this.demandeForm.value.dateDebut,
       dateFin: this.demandeForm.value.dateFin,
-      commentaire: this.demandeForm.value.commentaire,
-      statut: 'EN_ATTENTE'
+      type: this.demandeForm.value.type,
+      commentaire: this.demandeForm.value.commentaire || ''
     };
 
+    console.log('📤 Envoi de la demande:', demande);
+
     this.congeService.soumettreDemande(demande).subscribe({
-      next: (response: CongeResponse) => {
+      next: (response: any) => {
         this.submitting = false;
-        if (response.success) {
-          this.snackBar.open('Demande de congé soumise avec succès', 'Fermer', { duration: 3000 });
-          this.router.navigate(['/employee/mes-conges']);
+        console.log('📥 Réponse du serveur:', response);
+        
+        if (response.success || response.statusCode === 200 || response.statusCode === 201) {
+          const message = response.message || '✅ Demande de congé soumise avec succès';
+          this.snackBar.open(message, 'Fermer', { duration: 3000, panelClass: ['success-snackbar'] });
+          
+          // ✅ Redirection après succès
+          setTimeout(() => {
+            this.router.navigate(['/employee/mes-conges']);
+          }, 1500);
         } else {
-          this.snackBar.open(response.message || 'Erreur lors de la soumission', 'Fermer', { duration: 5000 });
+          const errorMsg = response.message || response.error || 'Erreur lors de la soumission';
+          this.errorMessage = errorMsg;
+          this.snackBar.open(errorMsg, 'Fermer', { duration: 5000, panelClass: ['error-snackbar'] });
         }
       },
       error: (error: any) => {
         this.submitting = false;
-        console.error('Erreur soumission:', error);
-        this.snackBar.open(
-          error.error?.message || 'Erreur lors de la soumission de la demande',
-          'Fermer',
-          { duration: 5000 }
-        );
+        console.error('❌ Erreur complète:', error);
+        
+        let errorMessage = 'Erreur lors de la soumission de la demande';
+        if (error.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error.error?.error) {
+          errorMessage = error.error.error;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        this.errorMessage = errorMessage;
+        this.snackBar.open(errorMessage, 'Fermer', { duration: 5000, panelClass: ['error-snackbar'] });
       }
     });
   }

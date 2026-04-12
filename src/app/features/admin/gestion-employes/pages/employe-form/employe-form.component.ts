@@ -8,6 +8,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
 import { EmployeService } from '../../services/employe.service';
+import { ManagerService, Manager } from '../../../../../core/services/manager.service';
 import { Employe } from '../../models/employe.model';
 
 /* ─── Validators personnalisés ─────────────── */
@@ -41,9 +42,18 @@ export class EmployeFormComponent implements OnInit {
                   'Chef de projet','Analyste','Commercial','Comptable',
                   'Responsable RH','Directeur','Manager'];
 
+  rolesList = [
+    { value: 'user', label: 'Employé' },
+    { value: 'manager', label: 'Manager' },
+    { value: 'admin_rh', label: 'Admin RH' }
+  ];
+
+  managersList: Manager[] = [];
+
   constructor(
     private fb: FormBuilder,
     private svc: EmployeService,
+    private managerSvc: ManagerService,
     private route: ActivatedRoute,
     private router: Router,
     private snack: MatSnackBar
@@ -51,13 +61,13 @@ export class EmployeFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.buildForm();
+    this.loadManagers();
     const idParam = this.route.snapshot.params['id'];
     this.employeId = idParam ? +idParam : undefined;
     this.isEditMode = !!this.employeId;
     if (this.isEditMode) this.loadEmploye();
   }
 
-  /* ── Formulaire ──────────────────────────── */
   private buildForm(): void {
     this.employeForm = this.fb.group({
       matricule:   ['', [Validators.required, Validators.minLength(3), Validators.maxLength(20), noWhitespaceValidator]],
@@ -75,10 +85,22 @@ export class EmployeFormComponent implements OnInit {
       soldeConges: [25, [Validators.required, Validators.min(0), Validators.max(365)]],
       serviceId:   [null],
       managerId:   [null],
+      role:        ['user', [Validators.required]]
     });
   }
 
-  /* ── Chargement employé existant ─────────── */
+  loadManagers(): void {
+    this.managerSvc.getAll().subscribe({
+      next: (managers: Manager[]) => {
+        this.managersList = managers;
+      },
+      error: (err) => {
+        console.error('Erreur chargement managers', err);
+        this.managersList = [];
+      }
+    });
+  }
+
   loadEmploye(): void {
     this.loading = true;
     this.svc.getById(this.employeId!)
@@ -87,8 +109,6 @@ export class EmployeFormComponent implements OnInit {
         next: (res) => {
           if (res.success && res.data) {
             const e: Employe = res.data as Employe;
-            // patchValue explicite sur CHAQUE contrôle
-            // pour garantir la mise à jour de nom/prenom/email/telephone
             this.employeForm.patchValue({
               matricule:    e.matricule    ?? '',
               nom:          e.nom          ?? '',
@@ -103,6 +123,7 @@ export class EmployeFormComponent implements OnInit {
               soldeConges:  e.soldeConges  ?? 25,
               serviceId:    e.serviceId    ?? null,
               managerId:    e.managerId    ?? null,
+              role:         e.role         ?? 'user'
             });
           } else {
             this.toast(res.message || 'Employé introuvable', 'error');
@@ -116,7 +137,6 @@ export class EmployeFormComponent implements OnInit {
       });
   }
 
-  /* ── Soumission ─────────────────────────── */
   onSubmit(): void {
     if (this.employeForm.invalid) {
       this.markAllTouched();
@@ -147,7 +167,6 @@ export class EmployeFormComponent implements OnInit {
           }
         },
         error: (err) => {
-          // Affiche le message du backend si disponible
           const msg = err?.error?.message || err?.error?.errors?.join(', ')
                    || (this.isEditMode ? 'Erreur modification' : 'Erreur création');
           this.toast(msg, 'error');
@@ -155,7 +174,6 @@ export class EmployeFormComponent implements OnInit {
       });
   }
 
-  /* ── Payload vers l'API ─────────────────── */
   private toPayload(): Employe {
     const v = this.employeForm.value;
     const p: Employe = {
@@ -170,18 +188,17 @@ export class EmployeFormComponent implements OnInit {
       statut:       v.statut || 'ACTIF',
       departement:  v.departement,
       soldeConges:  Number(v.soldeConges) || 25,
+      role:         v.role,
+      serviceId:    v.serviceId || undefined,
+      managerId:    v.managerId || undefined
     };
-    if (v.serviceId) p.serviceId = v.serviceId;
-    if (v.managerId) p.managerId = v.managerId;
     return p;
   }
 
-  /* ── Setters UI ─────────────────────────── */
   setStatut(s: string): void {
     this.employeForm.get('statut')?.setValue(s);
   }
 
-  /* ── Step indicator ─────────────────────── */
   isStepTwoVisible(): boolean {
     const v = this.employeForm.value;
     return !!(v.matricule?.trim() && v.nom?.trim() && v.prenom?.trim());
@@ -192,7 +209,6 @@ export class EmployeFormComponent implements OnInit {
     return this.isStepTwoVisible() && !!(v.email && v.poste && v.departement);
   }
 
-  /* ── Messages d'erreur ─────────────────── */
   getErr(field: string): string {
     const ctrl = this.employeForm.get(field);
     if (!ctrl?.errors || !ctrl.touched) return '';

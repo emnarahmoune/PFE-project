@@ -1,0 +1,169 @@
+<!-- src/app/features/manager/conges/approbation-conge/approbation-conge.component.html -->
+
+<div class="approbation-conge-container">
+  
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>📋 Demandes de congé à valider</h1>
+      <p class="subtitle">Gérez les demandes de congé de vos collaborateurs</p>
+    </div>
+    <div class="header-stats" *ngIf="tasks.length > 0">
+      <span class="badge">{{ tasks.length }} demande(s) en attente</span>
+    </div>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div *ngIf="errorMessage" class="alert alert-danger">
+    <span>⚠️ {{ errorMessage }}</span>
+    <button class="btn-retry" (click)="loadTasks()">🔄 Réessayer</button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Chargement des demandes...</p>
+  </div>
+
+  <!-- Aucune tâche -->
+  <div *ngIf="!loading && !errorMessage && tasks.length === 0" class="empty-state">
+    <div class="empty-icon">✅</div>
+    <h3>Aucune demande en attente</h3>
+    <p>Toutes les demandes de congé ont été traitées</p>
+  </div>
+
+  <!-- Liste des tâches -->
+  <div *ngIf="!loading && tasks.length > 0" class="tasks-list">
+    <div *ngFor="let task of tasks" class="task-card">
+      <div class="task-header">
+        <div class="task-icon">📅</div>
+        <div class="task-info">
+          <h4>Demande de congé</h4>
+          <p class="task-date">Reçue le {{ task.createTime | date:'dd/MM/yyyy à HH:mm' }}</p>
+          <div class="task-details">
+            <span class="type-badge" [style.background]="getTypeColor(task.type)">
+              {{ getTypeLabel(task.type) }}
+            </span>
+            <span class="date-range">
+              📅 {{ formatDate(task.dateDebut) }} → {{ formatDate(task.dateFin) }}
+            </span>
+          </div>
+        </div>
+        <div class="task-status">
+          <span class="status-badge en-attente">⏳ En attente</span>
+        </div>
+      </div>
+      
+      <div class="task-body">
+        <div class="info-row">
+          <span class="info-label">👤 Employé :</span>
+          <span class="info-value">{{ task.employePrenom }} {{ task.employeNom }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">📊 Jours demandés :</span>
+          <span class="info-value">{{ task.nbJours }} jour(s)</span>
+        </div>
+        <div class="info-row" *ngIf="task.commentaire">
+          <span class="info-label">💬 Motif :</span>
+          <span class="info-value">{{ task.commentaire }}</span>
+        </div>
+      </div>
+      
+      <div class="task-actions">
+        <button class="btn-approve" (click)="openApproveModal(task)" [disabled]="isSubmitting">
+          ✅ Approuver
+        </button>
+        <button class="btn-reject" (click)="openRejectModal(task)" [disabled]="isSubmitting">
+          ❌ Refuser
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal d'approbation -->
+<div class="modal-overlay" *ngIf="showModal && actionType === 'approve'" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header success">
+      <h3>✅ Approuver la demande de congé</h3>
+      <button class="close-btn" (click)="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="demande-details">
+        <h4>Détails de la demande</h4>
+        <div class="detail-row">
+          <span class="detail-label">Employé :</span>
+          <span class="detail-value">{{ getEmployeInfo() }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Période :</span>
+          <span class="detail-value">{{ formatDate(selectedTask?.dateDebut) }} → {{ formatDate(selectedTask?.dateFin) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Nombre de jours :</span>
+          <span class="detail-value">{{ getNbJours() }} jour(s)</span>
+        </div>
+        <div class="detail-row" *ngIf="getMotif()">
+          <span class="detail-label">Motif :</span>
+          <span class="detail-value">{{ getMotif() }}</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Commentaire (optionnel)</label>
+        <textarea [(ngModel)]="commentaire" 
+                  placeholder="Ajoutez un commentaire..." 
+                  rows="3"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeModal()">Annuler</button>
+      <button class="btn-confirm-approve" [disabled]="isSubmitting" (click)="submitAction()">
+        <span *ngIf="!isSubmitting">✅ Confirmer l'approbation</span>
+        <span *ngIf="isSubmitting">Traitement...</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de rejet -->
+<div class="modal-overlay" *ngIf="showModal && actionType === 'reject'" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header danger">
+      <h3>❌ Refuser la demande de congé</h3>
+      <button class="close-btn" (click)="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="demande-details">
+        <h4>Détails de la demande</h4>
+        <div class="detail-row">
+          <span class="detail-label">Employé :</span>
+          <span class="detail-value">{{ getEmployeInfo() }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Période :</span>
+          <span class="detail-value">{{ formatDate(selectedTask?.dateDebut) }} → {{ formatDate(selectedTask?.dateFin) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Nombre de jours :</span>
+          <span class="detail-value">{{ getNbJours() }} jour(s)</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Motif du refus <span class="required">*</span></label>
+        <textarea [(ngModel)]="motifRefus" 
+                  placeholder="Expliquez pourquoi la demande est refusée..." 
+                  rows="3"></textarea>
+        <small class="error-msg" *ngIf="!motifRefus.trim() && motifRefus.length > 0">
+          Le motif est requis
+        </small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeModal()">Annuler</button>
+      <button class="btn-confirm-reject" [disabled]="isSubmitting" (click)="submitAction()">
+        <span *ngIf="!isSubmitting">❌ Confirmer le refus</span>
+        <span *ngIf="isSubmitting">Traitement...</span>
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,181 +1,125 @@
-<div class="emp-shell">
-
-  <!-- ── Sidebar ─────────────────────────── -->
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-icon">◈</div>
-      <span class="brand-name">PeopleOS</span>
-    </div>
-
-    <nav class="nav-links">
-      <a class="nav-item active" routerLink="/admin/employes">
-        <span class="nav-icon">👥</span>
-        <span>Équipe</span>
-      </a>
-      <a class="nav-item" routerLink="/admin/conges">
-        <span class="nav-icon">📅</span>
-        <span>Congés</span>
-      </a>
-      <a class="nav-item" routerLink="/admin/stats">
-        <span class="nav-icon">📊</span>
-        <span>Analyses</span>
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="user-chip">
-        <div class="user-avatar">AD</div>
-        <span class="user-label">Administrateur</span>
-      </div>
-    </div>
-  </aside>
-
-  <!-- ── Main ────────────────────────────── -->
-  <main class="main-content">
-
-    <!-- Topbar -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <h1 class="page-title">Équipe</h1>
-        <span class="count-badge" *ngIf="!loading">
-          {{ getFilteredData().length }} membre{{ getFilteredData().length > 1 ? 's' : '' }}
-        </span>
-      </div>
-      <div class="topbar-right">
-        <div class="search-wrap">
-          <span class="search-ico">⌕</span>
-          <input class="search-input"
-                 [(ngModel)]="searchText"
-                 (input)="applyFilter()"
-                 placeholder="Nom, poste, matricule…"
-                 autocomplete="off">
-        </div>
+<div class="employe-saas">
+  <!-- Hero section avec dégradé (comme formations) -->
+  <div class="hero-section">
+    <div class="hero-content">
+      <h1>👥 Gestion des employés</h1>
+      <p>Consultez, gérez et suivez l'ensemble de vos collaborateurs</p>
+      <div class="hero-actions">
         <button class="btn-primary" routerLink="nouveau">
-          <span>+</span> Ajouter
+          <span>+</span> Nouvel employé
         </button>
       </div>
-    </header>
+    </div>
+  </div>
 
-    <!-- Inner scrollable content -->
-    <div class="content-area">
-
-      <!-- Stats -->
-      <div class="stats-strip" *ngIf="!loading">
-        <div class="stat-pill">
-          <div class="stat-pill-left">
-            <span class="stat-val">{{ getCount('ACTIF') }}</span>
-            <span class="stat-lbl">Actifs</span>
-          </div>
-          <span class="stat-dot actif"></span>
-        </div>
-        <div class="stat-pill">
-          <div class="stat-pill-left">
-            <span class="stat-val">{{ getCount('CONGE') }}</span>
-            <span class="stat-lbl">En congé</span>
-          </div>
-          <span class="stat-dot conge"></span>
-        </div>
-        <div class="stat-pill">
-          <div class="stat-pill-left">
-            <span class="stat-val">{{ getCount('INACTIF') }}</span>
-            <span class="stat-lbl">Inactifs</span>
-          </div>
-          <span class="stat-dot inactif"></span>
-        </div>
-        <div class="stat-pill">
-          <div class="stat-pill-left">
-            <span class="stat-val">{{ formatEur(getMasseSalariale()) }}</span>
-            <span class="stat-lbl">Masse salariale</span>
-          </div>
+  <div class="main-content">
+    <!-- Cartes statistiques (4 cartes alignées) -->
+    <div class="stats-dashboard">
+      <div class="stat-block">
+        <div class="stat-icon purple">👥</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ getCount('ACTIF') }}</span>
+          <span class="stat-name">Employés actifs</span>
         </div>
       </div>
+      <div class="stat-block">
+        <div class="stat-icon blue">🏖️</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ getCount('CONGE') }}</span>
+          <span class="stat-name">En congé</span>
+        </div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-icon orange">⛔</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ getCount('INACTIF') }}</span>
+          <span class="stat-name">Inactifs</span>
+        </div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-icon green">💰</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ formatEur(getMasseSalariale()) }}</span>
+          <span class="stat-name">Masse salariale</span>
+        </div>
+      </div>
+    </div>
 
-      <!-- Filtres -->
-      <div class="filter-row">
-        <button class="filter-chip" [class.active]="selectedStatut === 'TOUS'"   (click)="setStatut('TOUS')">Tous</button>
-        <button class="filter-chip" [class.active]="selectedStatut === 'ACTIF'"  (click)="setStatut('ACTIF')">
-          <span class="dot actif"></span> Actif
-        </button>
-        <button class="filter-chip" [class.active]="selectedStatut === 'CONGE'"  (click)="setStatut('CONGE')">
-          <span class="dot conge"></span> Congé
-        </button>
-        <button class="filter-chip" [class.active]="selectedStatut === 'INACTIF'" (click)="setStatut('INACTIF')">
-          <span class="dot inactif"></span> Inactif
-        </button>
-        <div class="filter-sep"></div>
+    <!-- Barre de filtres -->
+    <div class="filter-toolbar">
+      <div class="search-box">
+        <input type="text"
+               [(ngModel)]="searchText"
+               (input)="applyFilter()"
+               placeholder="Rechercher un employé...">
+        <span class="search-icon">🔍</span>
+      </div>
+      <div class="domain-filters">
+        <button class="filter-chip" [class.active]="selectedStatut === 'TOUS'" (click)="setStatut('TOUS')">📌 Tous</button>
+        <button class="filter-chip" [class.active]="selectedStatut === 'ACTIF'" (click)="setStatut('ACTIF')">✅ Actif</button>
+        <button class="filter-chip" [class.active]="selectedStatut === 'CONGE'" (click)="setStatut('CONGE')">🏖️ Congé</button>
+        <button class="filter-chip" [class.active]="selectedStatut === 'INACTIF'" (click)="setStatut('INACTIF')">⛔ Inactif</button>
+      </div>
+      <div class="filter-group">
         <select class="dept-select" [(ngModel)]="selectedDepartement" (change)="applyFilter()">
           <option *ngFor="let dept of departements" [value]="dept">{{ dept }}</option>
         </select>
-        <button class="btn-refresh" (click)="loadEmployes()" title="Rafraîchir">↻</button>
+        <button class="reset-btn" (click)="resetFilters()">
+          <span>↺</span> Réinitialiser
+        </button>
+        <button class="icon-btn" (click)="loadEmployes()" title="Rafraîchir">
+          <span>⟳</span>
+        </button>
       </div>
+    </div>
 
-      <!-- Loader -->
-      <div class="loader-wrap" *ngIf="loading">
-        <div class="loader-ring"></div>
-        <p class="loader-text">Chargement…</p>
-      </div>
+    <!-- Loading -->
+    <div class="loading-area" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Chargement des employés...</span>
+    </div>
 
-      <!-- Grille de cartes -->
-      <div class="card-grid" *ngIf="!loading">
-
-        <div class="emp-card"
-             *ngFor="let emp of getPagedData()"
-             (click)="viewDetail(emp.id!)">
-
-          <div class="emp-card-header">
-            <div class="emp-avatar" [style.background]="getAvatarColor(emp.departement ?? '')">
-              {{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}
-            </div>
-            <div class="emp-status-badge" [class]="'badge-' + emp.statut.toLowerCase()">
-              {{ emp.statut }}
-            </div>
+    <!-- Grille de cartes employés -->
+    <div class="employe-grid" *ngIf="!loading">
+      <div class="employe-card" *ngFor="let emp of getPagedData()" (click)="viewDetail(emp.id!)">
+        <div class="card-header">
+          <div class="avatar" [style.background]="getAvatarColor(emp.departement ?? '')">
+            {{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}
           </div>
-
-          <div class="emp-card-body">
-            <h3 class="emp-name">{{ emp.prenom }} {{ emp.nom }}</h3>
-            <p class="emp-role">{{ emp.poste }}</p>
-            <div class="emp-tags">
-              <span class="tag">{{ emp.departement }}</span>
-              <span class="tag tag--mono">{{ emp.matricule }}</span>
-            </div>
-          </div>
-
-          <div class="emp-card-footer">
-            <span class="emp-salary">{{ formatEur(emp.salaire) }}</span>
-            <div class="card-actions" (click)="$event.stopPropagation()">
-              <button class="action-btn" title="Modifier"
-                      [routerLink]="[emp.id, 'edit']"
-                      (click)="$event.stopPropagation()">✎</button>
-              <!-- 🔴 MODIFICATION: Bouton "Supprimer" au lieu de "Désactiver" -->
-              <button class="action-btn action-btn--danger" title="Supprimer définitivement"
-                      (click)="$event.stopPropagation();
-                               deleteEmploye(emp.id!, (emp.prenom ?? '') + ' ' + (emp.nom ?? ''))">🗑️</button>
-            </div>
+          <div class="status-badge" [class]="'status-' + emp.statut.toLowerCase()">
+            {{ emp.statut }}
           </div>
         </div>
-
-        <!-- Aucun résultat -->
-        <div class="empty-state" *ngIf="getPagedData().length === 0">
-          <span class="empty-ico">🔍</span>
-          <p>Aucun employé trouvé</p>
-          <button class="filter-chip" (click)="searchText=''; setStatut('TOUS')">
-            Réinitialiser les filtres
-          </button>
+        <div class="card-body">
+          <h3 class="employe-name">{{ emp.prenom }} {{ emp.nom }}</h3>
+          <p class="employe-role">{{ emp.poste }}</p>
+          <div class="employe-tags">
+            <span class="tag">{{ emp.departement }}</span>
+            <span class="tag tag-monospace">{{ emp.matricule }}</span>
+          </div>
         </div>
-
+        <div class="card-footer">
+          <span class="salary">{{ formatEur(emp.salaire) }}</span>
+          <div class="actions" (click)="$event.stopPropagation()">
+            <button class="action-btn edit" [routerLink]="[emp.id, 'edit']" title="Modifier">✏️</button>
+            <button class="action-btn delete" (click)="deleteEmploye(emp.id!, (emp.prenom ?? '') + ' ' + (emp.nom ?? ''))" title="Supprimer">🗑️</button>
+          </div>
+        </div>
       </div>
 
-      <!-- Pagination -->
-      <div class="pagination-bar" *ngIf="!loading && getTotalPages() > 1">
-        <button class="page-btn"
-                [disabled]="currentPage === 0"
-                (click)="currentPage = currentPage - 1">←</button>
-        <span class="page-info">{{ currentPage + 1 }} / {{ getTotalPages() }}</span>
-        <button class="page-btn"
-                [disabled]="currentPage >= getTotalPages() - 1"
-                (click)="currentPage = currentPage + 1">→</button>
+      <!-- Empty state -->
+      <div class="empty-state" *ngIf="getPagedData().length === 0">
+        <span class="empty-icon">🔍</span>
+        <p>Aucun employé trouvé</p>
+        <button class="btn-secondary" (click)="resetFilters()">Réinitialiser les filtres</button>
       </div>
+    </div>
 
-    </div><!-- /content-area -->
-  </main>
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="!loading && getTotalPages() > 1">
+      <button class="page-btn" [disabled]="currentPage === 0" (click)="currentPage = currentPage - 1">←</button>
+      <span class="page-info">{{ currentPage + 1 }} / {{ getTotalPages() }}</span>
+      <button class="page-btn" [disabled]="currentPage >= getTotalPages() - 1" (click)="currentPage = currentPage + 1">→</button>
+    </div>
+  </div>
 </div>

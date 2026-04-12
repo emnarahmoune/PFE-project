@@ -1,0 +1,120 @@
+<!-- src/app/features/employee/pages/mes-notifications/mes-notifications.component.html -->
+
+<div class="notifications-container">
+  
+  <!-- En-tête -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>🔔 Mes notifications</h1>
+      <p class="subtitle">Consultez vos notifications et alertes</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-refresh" (click)="refresh()" [disabled]="loading">
+        <span>🔄</span> Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Cartes statistiques -->
+  <div class="stats-cards">
+    <div class="stat-card" (click)="changeFilter('all')" [class.active]="selectedFilter === 'all'">
+      <div class="stat-icon">📋</div>
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card unread" (click)="changeFilter('unread')" [class.active]="selectedFilter === 'unread'">
+      <div class="stat-icon">🔴</div>
+      <div class="stat-value">{{ stats.unread }}</div>
+      <div class="stat-label">Non lues</div>
+    </div>
+    <div class="stat-card success" (click)="changeFilter('SUCCESS')" [class.active]="selectedFilter === 'SUCCESS'">
+      <div class="stat-icon">✅</div>
+      <div class="stat-value">{{ stats.success }}</div>
+      <div class="stat-label">Succès</div>
+    </div>
+    <div class="stat-card error" (click)="changeFilter('ERROR')" [class.active]="selectedFilter === 'ERROR'">
+      <div class="stat-icon">❌</div>
+      <div class="stat-value">{{ stats.error }}</div>
+      <div class="stat-label">Erreurs</div>
+    </div>
+    <div class="stat-card info" (click)="changeFilter('INFO')" [class.active]="selectedFilter === 'INFO'">
+      <div class="stat-icon">ℹ️</div>
+      <div class="stat-value">{{ stats.info }}</div>
+      <div class="stat-label">Infos</div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions-bar" *ngIf="notifications.length > 0">
+    <div class="filter-buttons">
+      <button *ngFor="let filter of filters" 
+              class="filter-btn" 
+              [class.active]="selectedFilter === filter.value"
+              (click)="changeFilter(filter.value)">
+        <span>{{ filter.icon }}</span>
+        {{ filter.label }}
+      </button>
+    </div>
+    <div class="bulk-actions">
+      <button class="btn-mark-all" (click)="markAllAsRead()" [disabled]="stats.unread === 0">
+        📖 Tout marquer comme lu
+      </button>
+      <button class="btn-delete-all" (click)="deleteAllNotifications()" [disabled]="stats.total === 0">
+        🗑️ Tout supprimer
+      </button>
+    </div>
+  </div>
+
+  <!-- Chargement -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Chargement des notifications...</p>
+  </div>
+
+  <!-- Aucune notification -->
+  <div *ngIf="!loading && filteredNotifications.length === 0" class="empty-state">
+    <div class="empty-icon">🔔</div>
+    <h3>Aucune notification</h3>
+    <p *ngIf="selectedFilter === 'all'">Vous n'avez aucune notification pour le moment</p>
+    <p *ngIf="selectedFilter !== 'all'">Aucune notification ne correspond à ce filtre</p>
+    <button class="btn-clear-filter" *ngIf="selectedFilter !== 'all'" (click)="changeFilter('all')">
+      Voir toutes les notifications
+    </button>
+  </div>
+
+  <!-- Liste des notifications -->
+  <div *ngIf="!loading && filteredNotifications.length > 0" class="notifications-list">
+    <div *ngFor="let notification of filteredNotifications" 
+         class="notification-card" 
+         [class.unread]="!notification.lu"
+         (click)="markAsRead(notification)">
+      
+      <div class="notification-icon" [style.background]="getNotificationColor(notification.type)">
+        <span>{{ getNotificationIcon(notification.type) }}</span>
+      </div>
+      
+      <div class="notification-content">
+        <div class="notification-header">
+          <span class="notification-type" [class]="notification.type.toLowerCase()">
+            {{ notification.type }}
+          </span>
+          <span class="notification-date">{{ formatDate(notification.dateCreation) }}</span>
+        </div>
+        <p class="notification-message">{{ notification.message }}</p>
+        <div class="notification-footer" *ngIf="notification.relatedDemandeId">
+          <a [routerLink]="['/employee/mes-conges']" class="link">
+            📋 Voir la demande
+          </a>
+        </div>
+      </div>
+      
+      <div class="notification-actions">
+        <button class="btn-delete" (click)="deleteNotification(notification, $event)" 
+                title="Supprimer">
+          🗑️
+        </button>
+        <div *ngIf="!notification.lu" class="unread-dot"></div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -39,9 +39,16 @@
         </div>
       </div>
 
+      <!-- ✅ CORRECTION: Utiliser getMotif() au lieu de demande.motif -->
       <div class="row full">
-        <label>Motif</label>
-        <p class="motif">{{ demande.motif || 'Aucun motif fourni' }}</p>
+        <label>Motif / Commentaire</label>
+        <p class="motif">{{ getMotif() }}</p>
+      </div>
+
+      <!-- ✅ AFFICHER LE MOTIF DE REFUS SI PRÉSENT -->
+      <div class="row full" *ngIf="demande.motifRefus">
+        <label>Motif du refus</label>
+        <p class="motif-refus">{{ demande.motifRefus }}</p>
       </div>
 
     </div>

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -6,13 +6,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { EmployeeCongeService } from '../../../services/employee-conge.service';
 import { DemandeConge, CongeResponse } from '../../../models/conge.model';
+import { NotificationApiService } from '../../../../../core/services/notification-api.service';
 
 @Component({
   selector: 'app-liste-conges',
@@ -25,17 +26,18 @@ import { DemandeConge, CongeResponse } from '../../../models/conge.model';
     MatTooltipModule, MatDialogModule
   ],
   templateUrl: './liste-conges.component.html',
-  styleUrls: ['./liste-conges.component.css']
+  styleUrls: ['./liste-conges.component.scss']
 })
-export class ListeCongesComponent implements OnInit {
+export class ListeCongesComponent implements OnInit, OnDestroy {
 
   conges: DemandeConge[] = [];
   loading = true;
+  private previousStatuts = new Map<number, string>();
+  private pollingInterval: any;
+  private readonly POLLING_INTERVAL_MS = 10000;
 
-  // Année courante exposée au template
   currentYear: number = new Date().getFullYear();
 
-  // Solde
   soldeTotal     = 0;
   soldePris      = 0;
   soldeRestant   = 0;
@@ -46,12 +48,56 @@ export class ListeCongesComponent implements OnInit {
   constructor(
     private congeService: EmployeeCongeService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private notifApi: NotificationApiService
   ) {}
 
   ngOnInit(): void {
     this.loadConges();
     this.loadSolde();
+    this.startPolling();
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollingInterval) clearInterval(this.pollingInterval);
+  }
+
+  startPolling(): void {
+    this.pollingInterval = setInterval(() => {
+      this.checkForUpdates();
+    }, this.POLLING_INTERVAL_MS);
+  }
+
+  checkForUpdates(): void {
+    this.congeService.getMesConges().subscribe({
+      next: (response: CongeResponse) => {
+        if (response.success) {
+          const nouvellesDemandes = response.data as DemandeConge[];
+          this.detectStatutChanges(nouvellesDemandes);
+          this.conges = nouvellesDemandes;
+        }
+      },
+      error: (err: any) => console.error('Polling error:', err)
+    });
+  }
+
+  private detectStatutChanges(nouvelles: DemandeConge[]): void {
+    nouvelles.forEach(nouvelle => {
+      const ancienStatut = this.previousStatuts.get(nouvelle.id!);
+      if (ancienStatut && ancienStatut !== nouvelle.statut) {
+        if (nouvelle.statut === 'APPROUVE') {
+          const msg = `✅ Votre demande du ${this.formatDate(nouvelle.dateDebut)} au ${this.formatDate(nouvelle.dateFin)} a été approuvée !`;
+          this.notifApi.createNotification(msg, 'success', nouvelle.id).subscribe();
+          this.showToast(msg, 'success');
+        } else if (nouvelle.statut === 'REFUSE') {
+          const motif = nouvelle.motifRefus || 'aucun motif fourni';
+          const msg = `❌ Votre demande du ${this.formatDate(nouvelle.dateDebut)} au ${this.formatDate(nouvelle.dateFin)} a été refusée. Motif : ${motif}`;
+          this.notifApi.createNotification(msg, 'error', nouvelle.id).subscribe();
+          this.showToast(msg, 'error');
+        }
+      }
+      this.previousStatuts.set(nouvelle.id!, nouvelle.statut!);
+    });
   }
 
   loadConges(): void {
@@ -61,9 +107,12 @@ export class ListeCongesComponent implements OnInit {
         this.loading = false;
         if (response.success) {
           this.conges = response.data as DemandeConge[];
+          this.conges.forEach(c => {
+            this.previousStatuts.set(c.id!, c.statut!);
+          });
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         this.loading = false;
         console.error('Erreur chargement congés:', err);
         const message = err?.message?.includes('Refresh')
@@ -85,12 +134,8 @@ export class ListeCongesComponent implements OnInit {
           this.soldeEnAttente = data.enAttente  || 0;
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Erreur solde:', err);
-        const message = err?.message?.includes('Refresh')
-          ? 'Session expirée'
-          : 'Erreur chargement solde';
-        this.snackBar.open(message, 'Fermer', { duration: 3000 });
       }
     });
   }
@@ -101,15 +146,24 @@ export class ListeCongesComponent implements OnInit {
     this.congeService.annulerConge(conge.id!).subscribe({
       next: (response: CongeResponse) => {
         if (response.success) {
-          this.snackBar.open('Demande annulée', 'Fermer', { duration: 3000 });
+          this.showToast('✅ Demande annulée avec succès', 'success');
           this.loadConges();
           this.loadSolde();
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Erreur annulation:', err);
-        this.snackBar.open('Erreur lors de l\'annulation', 'Fermer', { duration: 3000 });
+        this.showToast('❌ Erreur lors de l\'annulation', 'error');
       }
+    });
+  }
+
+  private showToast(message: string, type: 'success' | 'error'): void {
+    this.snackBar.open(message, 'Fermer', {
+      duration: 4000,
+      panelClass: type === 'success' ? 'snackbar-success' : 'snackbar-error',
+      horizontalPosition: 'right',
+      verticalPosition: 'top'
     });
   }
 
@@ -123,13 +177,23 @@ export class ListeCongesComponent implements OnInit {
     }
   }
 
-  getStatutLabel(statut: string): string {
+  getStatutLabel(statut: string | undefined): string {
     switch (statut) {
-      case 'APPROUVE':   return 'Approuvé';
-      case 'EN_ATTENTE': return 'En attente';
-      case 'REFUSE':     return 'Refusé';
-      case 'ANNULE':     return 'Annulé';
-      default:           return statut;
+      case 'APPROUVE':   return '✅ Approuvé';
+      case 'EN_ATTENTE': return '⏳ En attente';
+      case 'REFUSE':     return '❌ Refusé';
+      case 'ANNULE':     return '🗑️ Annulé';
+      default:           return statut || 'Inconnu';
+    }
+  }
+
+  getStatutClass(statut: string | undefined): string {
+    switch (statut) {
+      case 'APPROUVE': return 'approuve';
+      case 'EN_ATTENTE': return 'en_attente';
+      case 'REFUSE': return 'refuse';
+      case 'ANNULE': return 'annule';
+      default: return '';
     }
   }
 
@@ -157,8 +221,19 @@ export class ListeCongesComponent implements OnInit {
     return new Date(date).toLocaleDateString('fr-FR');
   }
 
+  getMotifRefus(conge: DemandeConge): string {
+    if (conge.statut === 'REFUSE' && conge.motifRefus) {
+      return `Motif: ${conge.motifRefus}`;
+    }
+    return '';
+  }
+
   getSoldeProgress(): number {
     if (this.soldeTotal === 0) return 0;
     return Math.round((this.soldePris / this.soldeTotal) * 100);
+  }
+
+  trackById(index: number, item: DemandeConge): number {
+    return item.id!;
   }
 }

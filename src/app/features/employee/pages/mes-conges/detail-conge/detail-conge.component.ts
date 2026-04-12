@@ -8,8 +8,8 @@ import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-detail-conge',
-  standalone: true,  // ← AJOUTER CETTE LIGNE
-  imports: [CommonModule, RouterModule],  // ← AJOUTER LES IMPORTS NÉCESSAIRES
+  standalone: true,
+  imports: [CommonModule, RouterModule],
   templateUrl: './detail-conge.component.html',
   styleUrls: ['./detail-conge.component.css']
 })
@@ -132,7 +132,7 @@ export class DetailCongeComponent implements OnInit {
     if (this.isAdmin) {
       this.router.navigate(['/admin/conges']);
     } else {
-      this.router.navigate(['/employe/mes-conges']);
+      this.router.navigate(['/employee/mes-conges']);
     }
   }
 
@@ -154,7 +154,7 @@ export class DetailCongeComponent implements OnInit {
       case 'APPROUVE': return 'Approuvé';
       case 'REFUSE': return 'Refusé';
       case 'ANNULE': return 'Annulé';
-      default: return this.demande.statut;
+      default: return this.demande.statut || '';
     }
   }
 
@@ -166,7 +166,7 @@ export class DetailCongeComponent implements OnInit {
       case 'SANS_SOLDE': return 'Sans solde';
       case 'MATERNITE': return 'Congé maternité';
       case 'PATERNITE': return 'Congé paternité';
-      default: return this.demande.type;
+      default: return this.demande.type || '';
     }
   }
 
@@ -197,5 +197,11 @@ export class DetailCongeComponent implements OnInit {
     } catch (error) {
       return '';
     }
+  }
+
+  // ✅ CORRECTION: Ajouter la méthode getMotif()
+  getMotif(): string {
+    if (!this.demande) return 'Aucun motif fourni';
+    return this.demande.commentaire || this.demande.motifRefus || 'Aucun motif fourni';
   }
 }

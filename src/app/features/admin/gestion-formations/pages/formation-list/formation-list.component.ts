@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { MatSortModule, MatSort } from '@angular/material/sort';
@@ -16,12 +17,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormationService } from '../../services/formation.service';
 import { Formation } from '../../models/formation.model';
-// ✅ CORRECTION : Importer depuis le bon chemin
 import { ConfirmationDialogComponent } from '../../../../../shared/layouts/components/confirmation-dialog/confirmation-dialog.component';
-import { MatProgressSpinner } from "@angular/material/progress-spinner";
 
 @Component({
   selector: 'app-formation-list',
@@ -46,13 +46,16 @@ import { MatProgressSpinner } from "@angular/material/progress-spinner";
     MatSelectModule,
     MatProgressBarModule,
     MatSlideToggleModule,
-    MatProgressSpinner,
-    ConfirmationDialogComponent  // ✅ Ajout de l'import du composant dans les imports
+    MatProgressSpinnerModule,
+    MatTooltipModule
   ],
   templateUrl: './formation-list.component.html',
-  styleUrls: ['./formation-list.component.css']
+  styleUrls: ['./formation-list.component.scss']
 })
 export class FormationListComponent implements OnInit {
+  // Vue: 'grid' ou 'table'
+  viewMode: 'grid' | 'table' = 'grid';
+
   displayedColumns: string[] = ['titre', 'domaine', 'duree', 'participants', 'statut', 'actions'];
   dataSource = new MatTableDataSource<Formation>([]);
   loading = false;
@@ -95,7 +98,7 @@ export class FormationListComponent implements OnInit {
   }
 
   customFilterPredicate(): (data: Formation, filter: string) => boolean {
-    return (data: Formation, filter: string): boolean => {
+    return (data: Formation): boolean => {
       const searchMatch = !this.searchText || 
         data.titre.toLowerCase().includes(this.searchText.toLowerCase()) ||
         data.description.toLowerCase().includes(this.searchText.toLowerCase());
@@ -113,8 +116,7 @@ export class FormationListComponent implements OnInit {
         this.dataSource.data = response.data as Formation[];
         this.loading = false;
       },
-      error: (error) => {
-        console.error('Erreur chargement formations:', error);
+      error: () => {
         this.snackBar.open('Erreur lors du chargement des formations', 'Fermer', { duration: 3000 });
         this.loading = false;
       }
@@ -138,12 +140,12 @@ export class FormationListComponent implements OnInit {
           securite: stats.SECURITE || 0
         };
       },
-      error: (error) => console.error('Erreur chargement stats:', error)
+      error: () => {}
     });
   }
 
   applyFilter(): void {
-    this.dataSource.filter = 'apply';
+    this.dataSource.filter = this.searchText;
   }
 
   resetFilters(): void {
@@ -154,10 +156,10 @@ export class FormationListComponent implements OnInit {
 
   deleteFormation(id: number, titre: string): void {
     const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
-      width: '400px',
+      width: '440px',
       data: {
-        title: 'Confirmation de suppression',
-        message: `Êtes-vous sûr de vouloir désactiver la formation "${titre}" ?`,
+        title: 'Désactiver la formation',
+        message: `Êtes-vous sûr de vouloir désactiver "${titre}" ?`,
         confirmText: 'Désactiver',
         cancelText: 'Annuler'
       }
@@ -167,13 +169,12 @@ export class FormationListComponent implements OnInit {
       if (result) {
         this.formationService.delete(id).subscribe({
           next: () => {
-            this.snackBar.open('Formation désactivée avec succès', 'Fermer', { duration: 3000 });
+            this.snackBar.open('Formation désactivée', 'Fermer', { duration: 3000 });
             this.loadFormations();
             this.loadStats();
           },
-          error: (error) => {
-            console.error('Erreur suppression:', error);
-            this.snackBar.open('Erreur lors de la désactivation', 'Fermer', { duration: 3000 });
+          error: () => {
+            this.snackBar.open('Erreur', 'Fermer', { duration: 3000 });
           }
         });
       }
@@ -183,10 +184,10 @@ export class FormationListComponent implements OnInit {
   toggleStatut(formation: Formation): void {
     const action = formation.actif ? 'désactiver' : 'activer';
     const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
-      width: '400px',
+      width: '440px',
       data: {
         title: `Confirmation`,
-        message: `Êtes-vous sûr de vouloir ${action} la formation "${formation.titre}" ?`,
+        message: `${action} "${formation.titre}" ?`,
         confirmText: action === 'activer' ? 'Activer' : 'Désactiver',
         cancelText: 'Annuler'
       }
@@ -200,13 +201,12 @@ export class FormationListComponent implements OnInit {
         
         serviceCall.subscribe({
           next: () => {
-            this.snackBar.open(`Formation ${action}e avec succès`, 'Fermer', { duration: 3000 });
+            this.snackBar.open(`Formation ${action}e`, 'Fermer', { duration: 3000 });
             this.loadFormations();
             this.loadStats();
           },
-          error: (error) => {
-            console.error('Erreur changement statut:', error);
-            this.snackBar.open('Erreur lors du changement de statut', 'Fermer', { duration: 3000 });
+          error: () => {
+            this.snackBar.open('Erreur', 'Fermer', { duration: 3000 });
           }
         });
       }
@@ -214,14 +214,14 @@ export class FormationListComponent implements OnInit {
   }
 
   getDomaineColor(domaine: string): string {
-    switch(domaine) {
-      case 'TECHNIQUE': return 'primary';
-      case 'SOFT_SKILLS': return 'accent';
-      case 'MANAGEMENT': return 'info';
-      case 'LANGUES': return 'warn';
-      case 'SECURITE': return 'danger';
-      default: return '';
-    }
+    const colors: Record<string, string> = {
+      'TECHNIQUE': '#6366F1',
+      'SOFT_SKILLS': '#EC4899',
+      'MANAGEMENT': '#F59E0B',
+      'LANGUES': '#10B981',
+      'SECURITE': '#EF4444'
+    };
+    return colors[domaine] || '#6B7280';
   }
 
   formatDuree(heures: number): string {
@@ -229,10 +229,6 @@ export class FormationListComponent implements OnInit {
     const jours = Math.floor(heures / 24);
     const reste = heures % 24;
     return reste > 0 ? `${jours}j ${reste}h` : `${jours}j`;
-  }
-
-  getStatutColor(actif: boolean): string {
-    return actif ? 'primary' : 'warn';
   }
 
   getParticipantPercentage(nombre: number): number {

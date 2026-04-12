@@ -6,15 +6,15 @@ import { ManagerService } from '../../../core/services/manager.service';
 @Component({
   selector: 'app-dashboard-manager',
   standalone: true,
-  imports: [CommonModule, RouterModule], // ✅ Plus besoin de Chart.js
+  imports: [CommonModule, RouterModule],
   templateUrl: './dashboard-manager.component.html'
 })
 export class DashboardManagerComponent implements OnInit {
 
   stats: any = {};
   equipe: any[] = [];
-  conges: any[] = [];
-  
+  conges: any[] = []; // ✅ Déjà bien initialisé
+
   currentMonth: string = '';
   currentYear: number = 0;
   refreshing: boolean = false;
@@ -68,21 +68,26 @@ export class DashboardManagerComponent implements OnInit {
 
     this.managerService.getEquipe().subscribe({
       next: (data) => {
-        this.equipe = data;
+        this.equipe = Array.isArray(data) ? data : [];
         this.updateRecentEmployees();
       },
       error: (err) => {
         console.error('Erreur équipe:', err);
+        this.equipe = [];
       }
     });
 
     this.managerService.getConges().subscribe({
       next: (data) => {
-        this.conges = data;
+        // ✅ S'assurer que data est un tableau
+        this.conges = Array.isArray(data) ? data : [];
+        console.log('Congés chargés:', this.conges); // Debug
+        this.updateStatCards(); // Mettre à jour les cartes après chargement des congés
         this.updateAlerts();
       },
       error: (err) => {
         console.error('Erreur congés:', err);
+        this.conges = []; // Initialiser à tableau vide en cas d'erreur
       }
     });
 
@@ -124,6 +129,19 @@ export class DashboardManagerComponent implements OnInit {
   }
 
   updateStatCards() {
+    // ✅ S'assurer que conges est un tableau avant d'utiliser filter
+    const congesList = Array.isArray(this.conges) ? this.conges : [];
+    
+    // ✅ Corriger le statut selon ce que retourne votre backend
+    // Les statuts possibles: 'EN_ATTENTE', 'APPROUVE', 'REFUSE', 'ANNULE'
+    const congesEnCours = congesList.filter(c => {
+      // Adapter selon les statuts de votre backend
+      return c.statut === 'EN_ATTENTE' || c.statut === 'APPROUVE' && this.isCongeEnCours(c);
+    }).length;
+    
+    // Alternative: compter les congés approuvés seulement
+    const congesApprouves = congesList.filter(c => c.statut === 'APPROUVE').length;
+
     this.statCards = [
       {
         title: 'Total employés',
@@ -140,9 +158,9 @@ export class DashboardManagerComponent implements OnInit {
         change: ''
       },
       {
-        title: 'Congés en cours',
-        value: this.conges ? this.conges.filter(c => c.statut === 'En cours').length : 0,
-        emojiIcon: '🏖️',
+        title: 'Congés en attente',
+        value: congesList.filter(c => c.statut === 'EN_ATTENTE').length,
+        emojiIcon: '⏳',
         trend: '',
         change: ''
       },
@@ -154,6 +172,15 @@ export class DashboardManagerComponent implements OnInit {
         change: '+2%'
       }
     ];
+  }
+
+  // ✅ Méthode utilitaire pour vérifier si un congé est en cours
+  private isCongeEnCours(conge: any): boolean {
+    if (!conge.dateDebut || !conge.dateFin) return false;
+    const today = new Date();
+    const dateDebut = new Date(conge.dateDebut);
+    const dateFin = new Date(conge.dateFin);
+    return today >= dateDebut && today <= dateFin;
   }
 
   updateRecentEmployees() {
@@ -201,16 +228,27 @@ export class DashboardManagerComponent implements OnInit {
   updateAlerts() {
     this.alerts = [];
     
-    if (this.conges && this.conges.length > 0) {
-      const congesEnCours = this.conges.filter(c => c.statut === 'En cours');
-      if (congesEnCours.length > 0) {
-        this.alerts.push({
-          type: 'info',
-          message: `${congesEnCours.length} employé(s) en congés cette semaine`,
-          time: 'Aujourd\'hui',
-          lien: '/manager/conges'
-        });
-      }
+    const congesList = Array.isArray(this.conges) ? this.conges : [];
+    
+    // ✅ Adapter les statuts selon votre backend
+    const congesEnAttente = congesList.filter(c => c.statut === 'EN_ATTENTE');
+    if (congesEnAttente.length > 0) {
+      this.alerts.push({
+        type: 'warning',
+        message: `${congesEnAttente.length} demande(s) de congé en attente de validation`,
+        time: 'En attente',
+        lien: '/manager/conges'
+      });
+    }
+
+    const congesApprouves = congesList.filter(c => c.statut === 'APPROUVE');
+    if (congesApprouves.length > 0) {
+      this.alerts.push({
+        type: 'info',
+        message: `${congesApprouves.length} congé(s) approuvé(s) à planifier`,
+        time: 'À venir',
+        lien: '/manager/conges'
+      });
     }
 
     if (this.alerts.length === 0) {

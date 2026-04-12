@@ -3,15 +3,23 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { EmployeService } from '../../../services/employe.service';
 import { Employe } from '../../../models/employe.model';
+import { ManagerService, Manager } from '../../../../../../core/services/manager.service';
 import { ConfirmationDialogComponent } from '../../../../../../shared/layouts/components/confirmation-dialog/confirmation-dialog.component';
+
+interface ApiResponse {
+  success: boolean;
+  message?: string;
+  data?: any;
+}
 
 @Component({
   selector: 'app-employe-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule, MatSnackBarModule, MatDialogModule],
+  imports: [CommonModule, RouterModule, MatSnackBarModule, MatDialogModule, ReactiveFormsModule],
   templateUrl: './employe-detail.component.html',
   styleUrls: ['./employe-detail.component.css']
 })
@@ -20,6 +28,12 @@ export class EmployeDetailComponent implements OnInit {
   employe?: Employe;
   loading  = false;
   activeTab = 'competences';
+  managersList: Manager[] = [];
+  
+  // Pour l'édition du manager
+  editManagerMode = false;
+  managerForm!: FormGroup;
+  updatingManager = false;
 
   readonly avatarColors: Record<string, string> = {
     'RH':          '#8b5cf6',
@@ -36,26 +50,51 @@ export class EmployeDetailComponent implements OnInit {
     private router: Router,
     private svc:    EmployeService,
     private snack:  MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private managerSvc: ManagerService,
+    private fb: FormBuilder
   ) {}
 
   ngOnInit(): void {
-    // Rechargement automatique si on revient sur la page après un edit
+    this.initManagerForm();
+    this.loadManagers();
     this.route.params.subscribe(params => {
       const id = params['id'];
-      id ? this.loadEmploye(+id) : this.router.navigate(['/admin/employes']);
+      if (id) {
+        this.loadEmploye(+id);
+      } else {
+        this.router.navigate(['/admin/employes']);
+      }
     });
   }
 
-  /* ── Chargement ─────────────────────────── */
+  initManagerForm(): void {
+    this.managerForm = this.fb.group({
+      managerId: [null]
+    });
+  }
+
+  loadManagers(): void {
+    this.managerSvc.getAll().subscribe({
+      next: (managers: Manager[]) => {
+        this.managersList = managers;
+      },
+      error: (err: any) => {
+        console.error('Erreur chargement managers', err);
+        this.managersList = [];
+      }
+    });
+  }
+
   loadEmploye(id: number): void {
     this.loading = true;
     this.svc.getById(id)
       .pipe(finalize(() => this.loading = false))
       .subscribe({
-        next: (res) => {
+        next: (res: ApiResponse) => {
           if (res.success && res.data) {
             this.employe = res.data as Employe;
+            this.managerForm.patchValue({ managerId: this.employe.managerId });
           } else {
             this.toast(res.message || 'Employé introuvable', 'error');
             this.router.navigate(['/admin/employes']);
@@ -68,11 +107,43 @@ export class EmployeDetailComponent implements OnInit {
       });
   }
 
-  /* ── Suppression / désactivation ────────── */
+  // Mettre à jour le manager
+  updateManager(): void {
+    if (!this.employe?.id) return;
+    
+    this.updatingManager = true;
+    const newManagerId = this.managerForm.get('managerId')?.value;
+    
+    this.svc.updateManager(this.employe.id, newManagerId)
+      .pipe(finalize(() => this.updatingManager = false))
+      .subscribe({
+        next: (res: ApiResponse) => {
+          if (res.success) {
+            this.toast('Manager mis à jour avec succès', 'success');
+            this.editManagerMode = false;
+            // Recharger l'employé pour afficher le nouveau manager
+            if (this.employe?.id) {
+              this.loadEmploye(this.employe.id);
+            }
+          } else {
+            this.toast(res.message || 'Erreur lors de la mise à jour', 'error');
+          }
+        },
+        error: (err: any) => {
+          const msg = err?.error?.message || 'Erreur serveur';
+          this.toast(msg, 'error');
+        }
+      });
+  }
+
+  cancelEditManager(): void {
+    this.editManagerMode = false;
+    this.managerForm.patchValue({ managerId: this.employe?.managerId });
+  }
+
   deleteEmploye(): void {
     if (!this.employe?.id) return;
 
-    // Fix aria-hidden : enlever le focus du bouton avant d'ouvrir le dialog
     (document.activeElement as HTMLElement)?.blur();
 
     const ref = this.dialog.open(ConfirmationDialogComponent, {
@@ -87,10 +158,10 @@ export class EmployeDetailComponent implements OnInit {
       }
     });
 
-    ref.afterClosed().subscribe(confirmed => {
+    ref.afterClosed().subscribe((confirmed: boolean) => {
       if (!confirmed) return;
       this.svc.delete(this.employe!.id!).subscribe({
-        next: (res) => {
+        next: (res: ApiResponse) => {
           if (res.success) {
             this.toast('Employé désactivé avec succès', 'success');
             this.router.navigate(['/admin/employes']);
@@ -98,10 +169,8 @@ export class EmployeDetailComponent implements OnInit {
             this.toast(res.message || 'Erreur de suppression', 'error');
           }
         },
-        error: (err) => {
-          const serverMsg: string =
-            err?.error?.message ||
-            err?.error?.error   ||
+        error: (err: any) => {
+          const serverMsg = err?.error?.message || err?.error?.error ||
             (typeof err?.error === 'string' ? err.error : null) ||
             `Erreur serveur (${err?.status ?? 'inconnu'})`;
           console.error('❌ Erreur suppression:', err);
@@ -111,7 +180,6 @@ export class EmployeDetailComponent implements OnInit {
     });
   }
 
-  /* ── Navigation ─────────────────────────── */
   editEmploye(): void {
     this.router.navigate(['/admin/employes', this.employe?.id, 'edit']);
   }
@@ -120,7 +188,6 @@ export class EmployeDetailComponent implements OnInit {
     this.router.navigate(['/admin/employes']);
   }
 
-  /* ── Utilitaires d'affichage ────────────── */
   getAvatarColor(): string {
     return this.avatarColors[this.employe?.departement ?? ''] ?? '#6366f1';
   }
@@ -154,6 +221,20 @@ export class EmployeDetailComponent implements OnInit {
     if (yrs === 0) return `${mths} mois`;
     if (mths === 0) return `${yrs} an${yrs > 1 ? 's' : ''}`;
     return `${yrs} an${yrs > 1 ? 's' : ''} ${mths} mois`;
+  }
+
+  getRoleLabel(role?: string): string {
+    switch (role) {
+      case 'admin_rh': return 'Administrateur RH';
+      case 'manager':  return 'Manager';
+      default:         return 'Employé';
+    }
+  }
+
+  getManagerNom(managerId?: number | null): string {
+    if (!managerId) return '—';
+    const manager = this.managersList.find(m => m.id === managerId);
+    return manager ? `${manager.prenom} ${manager.nom}` : `Manager #${managerId}`;
   }
 
   private toast(msg: string, type: 'success'|'error'|'warn'): void {

@@ -9,12 +9,20 @@ export interface ManagerStats {
   turnover: number;
 }
 
+export interface Manager {
+  id: number;
+  nom: string;
+  prenom: string;
+  email: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class ManagerService {
 
-  private apiUrl = 'http://localhost:8082/api/manager'; // 🔥 ton backend
+  private apiUrl = 'http://localhost:8082/api/manager';
+  private adminUrl = 'http://localhost:8082/api/managers'; // 🔥 endpoint pour lister tous les managers
 
   constructor(private http: HttpClient) {}
 
@@ -29,7 +37,12 @@ export class ManagerService {
   getConges(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/conges`);
   }
+
   getAlertes(): Observable<string[]> {
-  return this.http.get<string[]>(`${this.apiUrl}/alertes`);
-}
+    return this.http.get<string[]>(`${this.apiUrl}/alertes`);
+  }
+
+  getAll(): Observable<Manager[]> {
+    return this.http.get<Manager[]>(this.adminUrl);
+  }
 }

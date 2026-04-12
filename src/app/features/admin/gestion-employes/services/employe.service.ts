@@ -109,6 +109,34 @@ export class EmployeService {
     );
   }
 
+  // ===== NOUVELLE MÉTHODE : MISE À JOUR DU MANAGER =====
+  // Version CORRIGÉE : utilise la même signature que update (endpoint, id, data)
+
+  /**
+   * Met à jour le manager d'un employé
+   * @param employeId ID de l'employé
+   * @param managerId ID du nouveau manager (peut être null pour supprimer)
+   */
+  updateManager(employeId: number, managerId: number | null): Observable<EmployeResponse> {
+    const payload = { managerId: managerId };
+    // Utilise la même signature que update : (endpoint, id, data)
+    return this.api.put<EmployeResponse>(`${this.endpoint}/${employeId}/manager`, employeId, payload).pipe(
+      map(response => {
+        if (response && response.success) {
+          console.log(`✅ Manager mis à jour pour l'employé ${employeId}`);
+        }
+        return response;
+      }),
+      catchError(this.handleError<EmployeResponse>('updateManager', {
+        success: false,
+        message: 'Erreur lors de la mise à jour du manager',
+        data: {} as Employe,
+        timestamp: new Date().toISOString(),
+        statusCode: 500
+      }))
+    );
+  }
+
   // ===== RECHERCHES SPÉCIFIQUES =====
 
   findByDepartement(departement: string): Observable<EmployeResponse> {
@@ -188,7 +216,6 @@ export class EmployeService {
   getStats(): Observable<EmployeStats> {
     return this.api.get<any>(`${this.endpoint}/stats/tableau-bord`).pipe(
       map(response => {
-        // Adapter selon la structure de votre réponse API
         if (response && response.data) {
           return response.data as EmployeStats;
         }

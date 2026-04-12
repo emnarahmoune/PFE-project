@@ -9,6 +9,8 @@ import { finalize } from 'rxjs';
 import { EmployeService } from '../../services/employe.service';
 import { Employe } from '../../models/employe.model';
 import { ConfirmationDialogComponent } from '../../../../../shared/layouts/components/confirmation-dialog/confirmation-dialog.component';
+import { AuthService } from '../../../../../core/services/auth.service';
+import { ManagerAssignmentService } from '../../../../../core/services/manager-assignment.service';
 
 @Component({
   selector: 'app-employe-list',
@@ -18,7 +20,7 @@ import { ConfirmationDialogComponent } from '../../../../../shared/layouts/compo
     MatSnackBarModule, MatDialogModule
   ],
   templateUrl: './employe-list.component.html',
-  styleUrls: ['./employe-list.component.css']
+  styleUrls: ['./employe-list.component.scss']
 })
 export class EmployeListComponent implements OnInit {
 
@@ -30,8 +32,17 @@ export class EmployeListComponent implements OnInit {
   currentPage      = 0;
   readonly pageSize = 12;
 
+  userNom    = '';
+  userPrenom = '';
+  userRole   = '';
+
   statuts      = ['TOUS', 'ACTIF', 'INACTIF', 'CONGE'];
   departements = ['TOUS','RH','Technique','Commercial','Finance','Marketing','Direction','Logistique'];
+
+  managersList: any[] = [];
+  showAssignModal = false;
+  selectedEmploye: Employe | null = null;
+  selectedManagerId: number | null = null;
 
   readonly avatarColors: Record<string, string> = {
     'RH':          '#8b5cf6',
@@ -47,14 +58,38 @@ export class EmployeListComponent implements OnInit {
     private svc:    EmployeService,
     private snack:  MatSnackBar,
     private dialog: MatDialog,
-    private router: Router
+    private router: Router,
+    private auth:   AuthService,
+    private managerAssignmentSvc: ManagerAssignmentService
   ) {}
 
   ngOnInit(): void {
+    this.loadUserInfo();
     this.loadEmployes();
+    this.loadManagers();
   }
 
-  /* ── Chargement ─────────────────────────── */
+  loadUserInfo(): void {
+    const user = this.auth.getCurrentUser();
+    if (user) {
+      this.userNom = user.nom || '';
+      this.userPrenom = user.prenom || '';
+      this.userRole = user.role || user.typeUtilisateur || 'EMPLOYE';
+    }
+  }
+
+  loadManagers(): void {
+    this.managerAssignmentSvc.getAllManagers().subscribe({
+      next: (res: any) => {
+        this.managersList = res.data || [];
+      },
+      error: (err) => {
+        console.error('Erreur chargement managers', err);
+        this.managersList = [];
+      }
+    });
+  }
+
   loadEmployes(): void {
     this.loading = true;
     this.svc.getAll()
@@ -72,7 +107,43 @@ export class EmployeListComponent implements OnInit {
       });
   }
 
-  /* ── Filtrage côté client ───────────────── */
+  openAssignModal(employe: Employe): void {
+    this.selectedEmploye = employe;
+    this.selectedManagerId = employe.managerId || null;
+    this.showAssignModal = true;
+  }
+
+  closeAssignModal(): void {
+    this.showAssignModal = false;
+    this.selectedEmploye = null;
+    this.selectedManagerId = null;
+  }
+
+  assignManager(): void {
+    if (!this.selectedEmploye || !this.selectedManagerId) {
+      this.toast('Veuillez sélectionner un manager', 'error');
+      return;
+    }
+
+    this.loading = true;
+    this.managerAssignmentSvc.assignManager(this.selectedEmploye.id!, this.selectedManagerId).subscribe({
+      next: (res) => {
+        this.loading = false;
+        if (res.success) {
+          this.toast(`✅ Manager assigné à ${this.selectedEmploye!.prenom} ${this.selectedEmploye!.nom}`, 'success');
+          this.closeAssignModal();
+          this.loadEmployes();
+        } else {
+          this.toast(res.message || 'Erreur lors de l\'assignation', 'error');
+        }
+      },
+      error: (err) => {
+        this.loading = false;
+        this.toast(err.error?.message || 'Erreur lors de l\'assignation', 'error');
+      }
+    });
+  }
+
   getFilteredData(): Employe[] {
     const search = this.searchText.trim().toLowerCase();
     return this.dataSource.data.filter(e => {
@@ -98,7 +169,6 @@ export class EmployeListComponent implements OnInit {
   applyFilter(): void   { this.currentPage = 0; }
   setStatut(s: string): void { this.selectedStatut = s; this.currentPage = 0; }
 
-  /* ── Stats affichées ────────────────────── */
   getCount(statut: string): number {
     return this.dataSource.data.filter(e => e.statut === statut).length;
   }
@@ -109,7 +179,6 @@ export class EmployeListComponent implements OnInit {
       .reduce((sum, e) => sum + (e.salaire ?? 0), 0);
   }
 
-  /* ── Navigation ─────────────────────────── */
   viewDetail(id: number): void {
     this.router.navigate(['/admin/employes', id]);
   }
@@ -118,7 +187,6 @@ export class EmployeListComponent implements OnInit {
     return this.avatarColors[dept] ?? '#6366f1';
   }
 
-  /** Formate un montant en EUR sans dépendance de locale Angular */
   formatEur(value: number | null | undefined): string {
     if (value == null) return '0 €';
     return new Intl.NumberFormat('fr-FR', {
@@ -129,9 +197,7 @@ export class EmployeListComponent implements OnInit {
     }).format(value);
   }
 
-  /* ── Suppression physique (hard delete) ── */
   deleteEmploye(id: number, nom: string): void {
-    // Fix aria-hidden : déplacer le focus avant d'ouvrir le dialog
     (document.activeElement as HTMLElement)?.blur();
 
     const ref = this.dialog.open(ConfirmationDialogComponent, {
@@ -140,7 +206,7 @@ export class EmployeListComponent implements OnInit {
       restoreFocus: false,
       data: {
         title:       '⚠️ Supprimer définitivement',
-        message:     `Êtes-vous sûr de vouloir SUPPRIMER DÉFINITIVEMENT ${nom} ?\n\nCette action est irréversible et supprimera toutes les données associées (congés, formations, etc.).`,
+        message:     `Êtes-vous sûr de vouloir SUPPRIMER DÉFINITIVEMENT ${nom} ?\n\nCette action est irréversible et supprimera toutes les données associées.`,
         confirmText: 'Supprimer définitivement',
         cancelText:  'Annuler'
       }
@@ -148,22 +214,14 @@ export class EmployeListComponent implements OnInit {
 
     ref.afterClosed().subscribe(confirmed => {
       if (!confirmed) return;
-      
-      // Afficher un loader local
       this.loading = true;
-      
       this.svc.delete(id).subscribe({
         next: (res) => {
           if (res.success) {
-            // 🔴 MODIFICATION: Supprimer l'employé de la liste locale (suppression physique)
             const updatedData = this.dataSource.data.filter(e => e.id !== id);
             this.dataSource.data = updatedData;
-            this.currentPage = 0; // Réinitialiser la pagination
-            
-            this.toast(`Employé ${nom} supprimé définitivement avec succès`, 'success');
-            
-            // Recharger les statistiques (optionnel)
-            // this.loadEmployes(); // Décommenter si besoin de recharger complètement
+            this.currentPage = 0;
+            this.toast(`Employé ${nom} supprimé avec succès`, 'success');
           } else {
             this.toast(res.message || 'Erreur de suppression', 'error');
           }
@@ -171,20 +229,8 @@ export class EmployeListComponent implements OnInit {
         },
         error: (err) => {
           this.loading = false;
-          const serverMsg: string =
-            err?.error?.message ||
-            err?.error?.error   ||
-            (typeof err?.error === 'string' ? err.error : null) ||
-            `Erreur serveur (${err?.status ?? 'inconnu'})`;
-          
-          console.error('❌ Erreur delete:', err);
-          
-          // Message d'erreur plus spécifique pour les contraintes de clés étrangères
-          if (err?.status === 409 || serverMsg.includes('contrainte') || serverMsg.includes('foreign key')) {
-            this.toast('Impossible de supprimer : cet employé a des données associées (congés, formations, etc.)', 'error');
-          } else {
-            this.toast(serverMsg, 'error');
-          }
+          const serverMsg = err?.error?.message || err?.error?.error || `Erreur serveur (${err?.status ?? 'inconnu'})`;
+          this.toast(serverMsg, 'error');
         }
       });
     });
@@ -197,5 +243,12 @@ export class EmployeListComponent implements OnInit {
       horizontalPosition: 'right',
       verticalPosition: 'top'
     });
+  }
+
+  resetFilters(): void {
+    this.searchText = '';
+    this.selectedStatut = 'TOUS';
+    this.selectedDepartement = 'TOUS';
+    this.applyFilter();
   }
 }

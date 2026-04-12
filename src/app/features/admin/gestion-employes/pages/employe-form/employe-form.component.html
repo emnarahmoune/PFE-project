@@ -206,6 +206,42 @@
       </div>
     </div>
 
+    <!-- ── Section 4 : Compte utilisateur ── -->
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-num">4</span>
+        <span class="section-title">Compte utilisateur</span>
+        <span class="section-desc">Rôle &amp; hiérarchie</span>
+      </div>
+      <div class="section-fields">
+
+        <div class="field-group">
+          <label class="field-label" for="role">Rôle <span class="req">*</span></label>
+          <select id="role" class="field-select"
+                  formControlName="role"
+                  [class.invalid]="hasErr('role')">
+            <option *ngFor="let r of rolesList" [value]="r.value">{{ r.label }}</option>
+          </select>
+          <span class="field-error" *ngIf="hasErr('role')">{{ getErr('role') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="managerId">
+            Manager
+            <span class="optional-badge">Optionnel</span>
+          </label>
+          <select id="managerId" class="field-select"
+                  formControlName="managerId"
+                  [class.invalid]="hasErr('managerId')">
+            <option [ngValue]="null">— Aucun manager —</option>
+            <option *ngFor="let m of managersList" [ngValue]="m.id">{{ m.nom }} {{ m.prenom }}</option>
+          </select>
+          <span class="field-error" *ngIf="hasErr('managerId')">{{ getErr('managerId') }}</span>
+        </div>
+
+      </div>
+    </div>
+
     <!-- ── Actions ───────────────────────── -->
     <div class="form-actions">
       <span class="actions-hint">

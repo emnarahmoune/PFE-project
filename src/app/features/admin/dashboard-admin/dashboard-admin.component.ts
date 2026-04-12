@@ -1,30 +1,37 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { BaseChartDirective } from 'ng2-charts'; // ✅ Remplacer NgChartsModule par BaseChartDirective
+import { RouterModule, Router } from '@angular/router';
+import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartData } from 'chart.js';
 import { Subject, takeUntil, finalize, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { DashboardService, DashboardStats, EmployeRecent, Alerte, Competence } from '../../../core/services/dashboard.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-dashboard-admin',
   standalone: true,
-  imports: [CommonModule, RouterModule, BaseChartDirective], // ✅ Utiliser BaseChartDirective
+  imports: [CommonModule, RouterModule, BaseChartDirective],
   templateUrl: './dashboard-admin.component.html',
-  styleUrls: ['./dashboard-admin.component.css']
+  styleUrls: ['./dashboard-admin.component.scss'] // ou .css si vous avez gardé le CSS
 })
 export class DashboardAdminComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  currentDate  = new Date();
-  currentYear  = this.currentDate.getFullYear();
+  currentDate = new Date();
+  currentYear = this.currentDate.getFullYear();
   currentMonth = this.currentDate.toLocaleString('fr-FR', { month: 'long' });
+  welcomeMessage = '';
 
-  loading       = true;
-  refreshing    = false;
+  loading = true;
+  refreshing = false;
   errorMessage: string | null = null;
+
+  userNom = '';
+  userPrenom = '';
+  userEmail = '';
+  userRole = '';
 
   stats: DashboardStats = {
     employesActifs: 0, totalEmployes: 0, turnover: 0, absenteisme: 0,
@@ -37,10 +44,9 @@ export class DashboardAdminComponent implements OnInit, OnDestroy {
   alerts: Alerte[] = [];
   topCompetences: Competence[] = [];
 
-  // ── Couleurs avatars par département ──────────────────────
   private readonly deptColors: Record<string, string> = {
-    'RH':         '#5B3FA6', 'Technique':  '#0C6E8C', 'Commercial': '#B45309',
-    'Finance':    '#1A5C3A', 'Marketing':  '#9C2461', 'Direction':  '#1B3A6B',
+    'RH': '#5B3FA6', 'Technique': '#0C6E8C', 'Commercial': '#B45309',
+    'Finance': '#1A5C3A', 'Marketing': '#9C2461', 'Direction': '#1B3A6B',
     'Logistique': '#3D5A9E',
   };
 
@@ -52,45 +58,38 @@ export class DashboardAdminComponent implements OnInit, OnDestroy {
     return Object.keys(this.stats.parDepartement).slice(0, 5);
   }
 
-  // ── Graphique turnover ────────────────────────────────────
   turnoverChartData: ChartData<'bar'> = {
     labels: [],
     datasets: [{
       data: [],
       label: 'Turnover (%)',
       backgroundColor: '#4A72B0',
-      borderRadius: 4,
-      borderWidth: 0
+      borderRadius: 6,
+      borderWidth: 0,
+      hoverBackgroundColor: '#1B3A6B'
     }]
   };
 
   turnoverChartOptions: ChartConfiguration<'bar'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { 
-      legend: { display: false } 
+    plugins: {
+      legend: { display: false },
+      tooltip: { backgroundColor: '#0F1923', titleColor: '#fff', bodyColor: '#B8C4CC' }
     },
     scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: '#E8EAE6' },
-        ticks: { font: { family: 'JetBrains Mono', size: 11 }, color: '#7A8C9A' }
-      },
-      x: {
-        grid: { display: false },
-        ticks: { font: { family: 'Instrument Sans', size: 12 }, color: '#7A8C9A' }
-      }
+      y: { beginAtZero: true, grid: { color: '#E8EAE6' }, ticks: { font: { family: 'Inter', size: 11 } } },
+      x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 12 } } }
     }
   };
 
-  // ── Graphique répartition ─────────────────────────────────
   employeesChartData: ChartData<'doughnut'> = {
     labels: [],
     datasets: [{
       data: [],
       backgroundColor: ['#1A5C3A', '#B45309', '#8B1A1A', '#1B3A6B'],
       borderWidth: 0,
-      hoverOffset: 4
+      hoverOffset: 8
     }]
   };
 
@@ -98,30 +97,56 @@ export class DashboardAdminComponent implements OnInit, OnDestroy {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        position: 'bottom',
-        labels: { font: { family: 'Instrument Sans', size: 12 }, color: '#3D4F5F', boxWidth: 12, padding: 16 }
-      }
+      legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 12 }, color: '#4B5563', boxWidth: 12, padding: 16 } }
     },
     cutout: '65%'
   };
 
-  constructor(private dashboardService: DashboardService) {}
+  constructor(
+    private dashboardService: DashboardService,
+    private authService: AuthService,
+    private router: Router
+  ) {}
 
-  ngOnInit(): void  { this.loadDashboardData(); }
-  ngOnDestroy(): void { this.destroy$.next(); this.destroy$.complete(); }
+  ngOnInit(): void {
+    this.loadUserInfo();
+    this.setWelcomeMessage();
+    this.loadDashboardData();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  loadUserInfo(): void {
+    const user = this.authService.getCurrentUser();
+    if (user) {
+      this.userNom = user.nom || '';
+      this.userPrenom = user.prenom || '';
+      this.userEmail = user.email || '';
+      this.userRole = user.role || user.typeUtilisateur || 'EMPLOYE';
+    }
+  }
+
+  setWelcomeMessage(): void {
+    const hour = new Date().getHours();
+    if (hour < 12) this.welcomeMessage = 'Bonjour';
+    else if (hour < 18) this.welcomeMessage = 'Bon après‑midi';
+    else this.welcomeMessage = 'Bonsoir';
+  }
 
   loadDashboardData(): void {
     this.loading = true;
     this.errorMessage = null;
 
     forkJoin({
-      stats:      this.dashboardService.getDashboardStats().pipe(catchError(() => of(this.stats))),
-      employes:   this.dashboardService.getEmployesRecents(5).pipe(catchError(() => of([]))),
-      alertes:    this.dashboardService.getAlertes().pipe(catchError(() => of([]))),
-      turnover:   this.dashboardService.getTurnoverData().pipe(catchError(() => of({ labels: [], data: [] }))),
-      repartition:this.dashboardService.getRepartitionEmployes().pipe(catchError(() => of({ labels: [], data: [] }))),
-      competences:this.dashboardService.getTopCompetences(5).pipe(catchError(() => of([])))
+      stats: this.dashboardService.getDashboardStats().pipe(catchError(() => of(this.stats))),
+      employes: this.dashboardService.getEmployesRecents(5).pipe(catchError(() => of([]))),
+      alertes: this.dashboardService.getAlertes().pipe(catchError(() => of([]))),
+      turnover: this.dashboardService.getTurnoverData().pipe(catchError(() => of({ labels: [], data: [] }))),
+      repartition: this.dashboardService.getRepartitionEmployes().pipe(catchError(() => of({ labels: [], data: [] }))),
+      competences: this.dashboardService.getTopCompetences(5).pipe(catchError(() => of([])))
     }).pipe(
       takeUntil(this.destroy$),
       finalize(() => { this.loading = false; this.refreshing = false; })
@@ -130,8 +155,8 @@ export class DashboardAdminComponent implements OnInit, OnDestroy {
         this.stats = data.stats || this.stats;
         this.buildStatCards();
         this.recentEmployees = data.employes || [];
-        this.alerts          = data.alertes  || [];
-        this.topCompetences  = data.competences || [];
+        this.alerts = data.alertes || [];
+        this.topCompetences = data.competences || [];
 
         if (data.turnover?.labels) {
           this.turnoverChartData = {
@@ -144,10 +169,7 @@ export class DashboardAdminComponent implements OnInit, OnDestroy {
           this.employeesChartData = {
             ...this.employeesChartData,
             labels: data.repartition.labels,
-            datasets: [{ 
-              ...this.employeesChartData.datasets[0], 
-              data: data.repartition.data
-            }]
+            datasets: [{ ...this.employeesChartData.datasets[0], data: data.repartition.data }]
           };
         }
       },
@@ -158,23 +180,23 @@ export class DashboardAdminComponent implements OnInit, OnDestroy {
   }
 
   buildStatCards(): void {
-    const t = this.stats.turnover    || 0;
+    const t = this.stats.turnover || 0;
     const a = this.stats.absenteisme || 0;
     this.statCards = [
-      { title: 'Employés actifs',     value: this.stats.employesActifs,   emojiIcon: '👤', trend: 'stable', change: null },
-      { title: 'Taux de turnover',    value: t.toFixed(1) + '%',          emojiIcon: '↕',  trend: t > 10 ? 'up' : 'down', change: t > 10 ? '↑ élevé' : '↓ normal' },
-      { title: 'Absentéisme',         value: a.toFixed(1) + '%',          emojiIcon: '📅', trend: a > 5  ? 'up' : 'down', change: a > 5  ? '↑ haut'  : '↓ bas' },
-      { title: 'Congés en attente',   value: this.stats.demandesConge,    emojiIcon: '🏖',  trend: 'stable', change: null },
-      { title: 'Formations actives',  value: this.stats.formationsEnCours,emojiIcon: '📚', trend: 'stable', change: null },
-      { title: 'Risques de départ',   value: this.stats.scoresRisque,     emojiIcon: '⚠',  trend: this.stats.scoresRisque > 5 ? 'up' : 'stable', change: this.stats.scoresRisque > 5 ? '↑ alerte' : null },
+      { title: 'Employés actifs', value: this.stats.employesActifs, icon: '👥', trend: 'stable', change: null, link: '/admin/employes' },
+      { title: 'Turnover', value: t.toFixed(1) + '%', icon: '🔄', trend: t > 10 ? 'up' : 'down', change: t > 10 ? '↑ élevé' : '↓ normal', link: '/admin/indicateurs' },
+      { title: 'Absentéisme', value: a.toFixed(1) + '%', icon: '📅', trend: a > 5 ? 'up' : 'down', change: a > 5 ? '↑ haut' : '↓ bas', link: '/admin/indicateurs' },
+      { title: 'Congés en attente', value: this.stats.demandesConge, icon: '🏖️', trend: 'stable', change: null, link: '/admin/conges' },
+      { title: 'Formations actives', value: this.stats.formationsEnCours, icon: '📚', trend: 'stable', change: null, link: '/admin/formations' },
+      { title: 'Risques de départ', value: this.stats.scoresRisque, icon: '⚠️', trend: this.stats.scoresRisque > 5 ? 'up' : 'stable', change: this.stats.scoresRisque > 5 ? '↑ alerte' : null, link: '/admin/scores' }
     ];
   }
 
-  rafraichir(): void  { this.refreshing = true; this.loadDashboardData(); }
+  rafraichir(): void { this.refreshing = true; this.loadDashboardData(); }
   exporterRapport(): void { this.dashboardService.exporterRapport(); }
 
   getAlertEmoji(type: string): string {
-    return ({ danger: '🔴', warning: '🟡', info: '🔵', success: '🟢' })[type] ?? '⚪';
+    return { danger: '🔴', warning: '🟡', info: '🔵', success: '🟢' }[type] ?? '⚪';
   }
 
   getMasseSalarialeFormatee(): string {
@@ -191,4 +213,22 @@ export class DashboardAdminComponent implements OnInit, OnDestroy {
     const max = Math.max(...Object.values(this.stats.parDepartement).map(Number), 1);
     return Math.round(((this.stats.parDepartement[dept] || 0) / max) * 100);
   }
+
+  // ✅ Méthode publique pour la navigation
+  navigateTo(link: string): void {
+    if (link) {
+      this.router.navigate([link]);
+    }
+  }
+
+  goToProfile(): void {
+    this.router.navigate(['/admin/profile']);
+  }
+  openNotifications(): void {
+  // Vous pouvez rediriger vers une page des notifications, ou ouvrir un modal
+  // Par exemple :
+  this.router.navigate(['/admin/notifications']);
+  // Ou simplement logger pour l'instant
+  console.log('Ouverture du panneau des notifications');
+}
 }

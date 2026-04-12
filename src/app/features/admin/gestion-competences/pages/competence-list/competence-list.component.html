@@ -1,174 +1,127 @@
-<div class="pg">
-
-  <!-- ── Topbar ─────────────────────────────────────────── -->
-  <header class="topbar">
-    <div class="topbar-left">
-      <button class="back-btn" routerLink="/admin/dashboard">← Dashboard</button>
-      <span class="page-title">Compétences</span>
-      <span class="count-pill" *ngIf="!loading">{{ getFilteredData().length }} résultat{{ getFilteredData().length > 1 ? 's' : '' }}</span>
+<div class="competence-saas">
+  <!-- Hero section avec dégradé (identique formations) -->
+  <div class="hero-section">
+    <div class="hero-content">
+      <h1>🎓 Catalogue des compétences</h1>
+      <p>Gérez les compétences techniques, soft skills, linguistiques et managériales</p>
+      <div class="hero-actions">
+        <button class="btn-primary" routerLink="nouveau">
+          <span>+</span> Nouvelle compétence
+        </button>
+      </div>
     </div>
-    <div class="topbar-right">
-      <button class="btn btn-primary" routerLink="nouveau">+ Nouvelle compétence</button>
-    </div>
-  </header>
+  </div>
 
-  <div class="body">
-
-    <!-- ── KPI Strip ─────────────────────────────────────── -->
-    <div>
-      <p class="slbl">Répartition du catalogue</p>
-      <div class="kpi-strip">
-        <div class="kpi">
-          <div class="kpi-top"><div class="kpi-ico total">📋</div></div>
-          <span class="kpi-val">{{ stats.total }}</span>
-          <span class="kpi-lbl">Total</span>
+  <div class="main-content">
+    <!-- Cartes statistiques (4 cartes alignées) -->
+    <div class="stats-dashboard">
+      <div class="stat-block">
+        <div class="stat-icon purple">📚</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ stats.total }}</span>
+          <span class="stat-name">Total compétences</span>
         </div>
-        <div class="kpi">
-          <div class="kpi-top"><div class="kpi-ico tech">⚙</div></div>
-          <span class="kpi-val">{{ stats.technique }}</span>
-          <span class="kpi-lbl">Techniques</span>
+      </div>
+      <div class="stat-block">
+        <div class="stat-icon blue">⚙️</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ stats.technique }}</span>
+          <span class="stat-name">Techniques</span>
         </div>
-        <div class="kpi">
-          <div class="kpi-top"><div class="kpi-ico soft">🤝</div></div>
-          <span class="kpi-val">{{ stats.softSkill }}</span>
-          <span class="kpi-lbl">Soft skills</span>
+      </div>
+      <div class="stat-block">
+        <div class="stat-icon pink">🤝</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ stats.softSkill }}</span>
+          <span class="stat-name">Soft skills</span>
         </div>
-        <div class="kpi">
-          <div class="kpi-top"><div class="kpi-ico lang">🌐</div></div>
-          <span class="kpi-val">{{ stats.linguistique }}</span>
-          <span class="kpi-lbl">Linguistiques</span>
-        </div>
-        <div class="kpi">
-          <div class="kpi-top"><div class="kpi-ico mgmt">📊</div></div>
-          <span class="kpi-val">{{ stats.management }}</span>
-          <span class="kpi-lbl">Management</span>
+      </div>
+      <div class="stat-block">
+        <div class="stat-icon green">🌐</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ stats.linguistique + stats.management }}</span>
+          <span class="stat-name">Autres domaines</span>
         </div>
       </div>
     </div>
 
-    <!-- ── Filtres ────────────────────────────────────────── -->
-    <div class="filters-row">
-      <div class="search-wrap">
-        <span class="search-ico">⌕</span>
-        <input class="search-input"
+    <!-- Barre de filtres -->
+    <div class="filter-toolbar">
+      <div class="search-box">
+        <input type="text"
                [(ngModel)]="searchText"
                (input)="applyFilter()"
-               placeholder="Nom, description…"
-               autocomplete="off">
+               placeholder="Rechercher une compétence...">
+        <span class="search-icon">🔍</span>
       </div>
-
-      <button class="filter-chip" [class.active]="selectedCategorie === 'TOUTES'"
-              (click)="setCategorie('TOUTES')">Toutes</button>
-      <button class="filter-chip" [class.active]="selectedCategorie === 'TECHNIQUE'"
-              (click)="setCategorie('TECHNIQUE')">⚙ Technique</button>
-      <button class="filter-chip" [class.active]="selectedCategorie === 'SOFT_SKILL'"
-              (click)="setCategorie('SOFT_SKILL')">🤝 Soft skill</button>
-      <button class="filter-chip" [class.active]="selectedCategorie === 'LINGUISTIQUE'"
-              (click)="setCategorie('LINGUISTIQUE')">🌐 Linguistique</button>
-      <button class="filter-chip" [class.active]="selectedCategorie === 'MANAGEMENT'"
-              (click)="setCategorie('MANAGEMENT')">📊 Management</button>
-
-      <div class="filter-sep"></div>
-      <button class="btn-reset" (click)="resetFilters()">↺ Réinitialiser</button>
+      <div class="domain-filters">
+        <button *ngFor="let cat of categories"
+                class="filter-chip"
+                [class.active]="selectedCategorie === cat.value"
+                (click)="setCategorie(cat.value)">
+          {{ cat.icon }} {{ cat.label }}
+        </button>
+      </div>
+      <div class="filter-group">
+        <button class="reset-btn" (click)="resetFilters()">
+          <span>↺</span> Réinitialiser
+        </button>
+        <button class="icon-btn" (click)="refresh()" title="Rafraîchir">
+          <span>⟳</span>
+        </button>
+      </div>
     </div>
 
-    <!-- ── Tableau ────────────────────────────────────────── -->
-    <div class="panel">
+    <!-- Loading -->
+    <div class="loading-area" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Chargement des compétences...</span>
+    </div>
 
-      <!-- Loader -->
-      <div class="loader-wrap" *ngIf="loading">
-        <div class="loader-ring"></div>
-        <span class="loader-lbl">Chargement…</span>
-      </div>
-
-      <ng-container *ngIf="!loading">
-        <table class="tbl" *ngIf="getPagedData().length > 0">
-          <thead>
-            <tr>
-              <th (click)="sortBy('nom')">
-                Compétence {{ getSortIcon('nom') }}
-              </th>
-              <th (click)="sortBy('categorie')">
-                Catégorie {{ getSortIcon('categorie') }}
-              </th>
-              <th (click)="sortBy('nombreEmployes')">
-                Employés {{ getSortIcon('nombreEmployes') }}
-              </th>
-              <th (click)="sortBy('niveauMoyen')">
-                Niveau moyen {{ getSortIcon('niveauMoyen') }}
-              </th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let comp of getPagedData()">
-
-              <td>
-                <div class="comp-cell">
-                  <span class="comp-nom">{{ comp.nom }}</span>
-                  <span class="comp-desc" *ngIf="comp.description">
-                    <!-- ✅ LIGNE CORRIGÉE - Plus de warning NG8107 -->
-                    {{ comp.description | slice:0:55 }}{{ (comp.description.length > 55) ? '…' : '' }}
-                  </span>
-                </div>
-              </td>
-
-              <td>
-                <span class="cat-badge" [class]="'cat-' + comp.categorie">
-                  {{ comp.categorie | replace:'_':' ' }}
-                </span>
-              </td>
-
-              <td>
-                <span class="emp-cnt">{{ comp.nombreEmployes ?? 0 }}</span>
-              </td>
-
-              <td>
-                <div class="level-cell">
-                  <div class="level-bar">
-                    <div class="level-bar-fill"
-                         [style.width.%]="getNiveauMoyenPourcentage(comp.niveauMoyen)">
-                    </div>
-                  </div>
-                  <span class="level-txt">{{ comp.niveauMoyen ?? 0 }}/4</span>
-                </div>
-              </td>
-
-              <td>
-                <div class="actions-cell">
-                  <button class="act-btn" title="Voir" [routerLink]="[comp.id]">👁</button>
-                  <button class="act-btn" title="Modifier" [routerLink]="[comp.id, 'edit']">✎</button>
-                  <button class="act-btn danger" title="Supprimer"
-                          (click)="deleteCompetence(comp.id!, comp.nom)">🗑</button>
-                </div>
-              </td>
-
-            </tr>
-          </tbody>
-        </table>
-
-        <!-- Empty state -->
-        <div class="empty" *ngIf="getPagedData().length === 0">
-          <span class="empty-ico">🔍</span>
-          <p>Aucune compétence trouvée</p>
-          <button class="btn-reset" (click)="resetFilters()">Réinitialiser les filtres</button>
-        </div>
-
-        <!-- Pagination -->
-        <div class="pag-bar" *ngIf="getTotalPages() > 1">
-          <span class="pag-info">
-            Page {{ currentPage + 1 }} / {{ getTotalPages() }} —
-            {{ getFilteredData().length }} résultat{{ getFilteredData().length > 1 ? 's' : '' }}
-          </span>
-          <div class="pag-btns">
-            <button class="pag-btn" [disabled]="currentPage === 0"
-                    (click)="currentPage = currentPage - 1">←</button>
-            <button class="pag-btn" [disabled]="currentPage >= getTotalPages() - 1"
-                    (click)="currentPage = currentPage + 1">→</button>
+    <!-- Grille de compétences -->
+    <div class="competence-grid" *ngIf="!loading">
+      <div class="competence-card" *ngFor="let comp of getPagedData()">
+        <div class="card-header" [style.border-left-color]="getCategoryColor(comp.categorie)">
+          <div class="card-icon">{{ getCategoryIcon(comp.categorie) }}</div>
+          <h3 class="card-title">{{ comp.nom }}</h3>
+          <div class="card-menu">
+            <button [matMenuTriggerFor]="cardMenu" class="menu-dots">⋯</button>
+            <mat-menu #cardMenu="matMenu">
+              <button mat-menu-item [routerLink]="[comp.id]">👁️ Détails</button>
+              <button mat-menu-item [routerLink]="[comp.id, 'edit']">✏️ Modifier</button>
+              <button mat-menu-item (click)="deleteCompetence(comp.id!, comp.nom)">🗑️ Supprimer</button>
+            </mat-menu>
           </div>
         </div>
-      </ng-container>
+        <p class="card-desc" *ngIf="comp.description">{{ comp.description | slice:0:100 }}{{ comp.description.length > 100 ? '…' : '' }}</p>
+        <div class="card-meta">
+          <span class="meta-item"><span class="emoji">👥</span> {{ comp.nombreEmployes || 0 }} employé(s)</span>
+          <span class="domain-badge" [style.background]="getCategoryColor(comp.categorie) + '15'" [style.color]="getCategoryColor(comp.categorie)">{{ comp.categorie | replace:'_':' ' }}</span>
+        </div>
+        <div class="level-section">
+          <div class="level-header">
+            <span>Niveau moyen</span>
+            <span class="level-value">{{ comp.niveauMoyen ?? 0 }}/4</span>
+          </div>
+          <div class="level-bar">
+            <div class="level-fill" [style.width.%]="getNiveauMoyenPourcentage(comp.niveauMoyen)" [style.background]="getCategoryColor(comp.categorie)"></div>
+          </div>
+        </div>
+      </div>
 
+      <!-- Empty state -->
+      <div class="empty-state" *ngIf="getPagedData().length === 0">
+        <span class="empty-icon">🔍</span>
+        <p>Aucune compétence trouvée</p>
+        <button class="btn-secondary" (click)="resetFilters()">Réinitialiser les filtres</button>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="!loading && getTotalPages() > 1">
+      <button class="page-btn" [disabled]="currentPage === 0" (click)="previousPage()">←</button>
+      <span class="page-info">{{ currentPage + 1 }} / {{ getTotalPages() }}</span>
+      <button class="page-btn" [disabled]="currentPage >= getTotalPages() - 1" (click)="nextPage()">→</button>
     </div>
   </div>
 </div>

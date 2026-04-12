@@ -1,13 +1,12 @@
 <mat-sidenav-container class="layout-container" [class.sidebar-collapsed]="!isSidebarOpen">
 
-  <!-- ── SIDEBAR ── -->
+  <!-- SIDEBAR -->
   <mat-sidenav
     [opened]="isSidebarOpen"
     mode="side"
     class="sidebar"
     [class.collapsed]="!isSidebarOpen">
 
-    <!-- Header -->
     <div class="sidebar-header">
       <div class="logo-container">
         <div class="logo-mark">
@@ -23,10 +22,8 @@
       </button>
     </div>
 
-    <!-- Section label -->
-    <div class="nav-section-label" *ngIf="isSidebarOpen">Navigation</div>
+    <div class="nav-section-label" *ngIf="isSidebarOpen">Menu principal</div>
 
-    <!-- Nav -->
     <mat-nav-list class="nav-menu">
       <div *ngFor="let item of menuItems" class="nav-item">
         <a
@@ -42,9 +39,15 @@
       </div>
     </mat-nav-list>
 
-    <!-- Footer -->
     <div class="sidebar-footer" *ngIf="isSidebarOpen">
       <mat-divider></mat-divider>
+      <div class="user-info-footer">
+        <div class="avatar-small">{{ getUserInitials() }}</div>
+        <div class="user-details">
+          <span class="user-name">{{ getUserName() }}</span>
+          <span class="user-role">{{ userRole }}</span>
+        </div>
+      </div>
       <div class="version-info">
         <span>v1.0.0</span>
         <span>© {{ currentYear }}</span>
@@ -53,43 +56,70 @@
 
   </mat-sidenav>
 
-  <!-- ── MAIN CONTENT ── -->
+  <!-- MAIN CONTENT -->
   <mat-sidenav-content class="main-content">
 
-    <!-- Header / Toolbar -->
-    <mat-toolbar class="header">
+    <!-- HEADER / TOPBAR -->
+    <mat-toolbar class="topbar">
 
       <button mat-icon-button class="menu-toggle" (click)="toggleSidebar()">
         <mat-icon>menu</mat-icon>
       </button>
 
+      <div class="topbar-title">
+        <span class="current-page">{{ getCurrentPageTitle() }}</span>
+      </div>
+
       <span class="spacer"></span>
 
-      <!-- Notifications -->
-      <button mat-icon-button class="header-icon" [matMenuTriggerFor]="notifMenu">
-        <mat-icon>notifications_none</mat-icon>
-      </button>
-      <mat-menu #notifMenu="matMenu">
-        <button mat-menu-item disabled>
-          <mat-icon>notifications_off</mat-icon>
-          <span>Aucune notification</span>
-        </button>
-      </mat-menu>
+<!-- NOTIFICATIONS AVEC MENU DÉROULANT -->
+<button mat-icon-button class="topbar-icon" [matMenuTriggerFor]="notifMenu" matTooltip="Notifications">
+  <mat-icon>notifications_none</mat-icon>
+  <span class="notif-badge" *ngIf="notificationCount > 0">{{ notificationCount }}</span>
+</button>
 
-      <!-- Avatar / Profil -->
-      <button mat-icon-button class="header-icon user-profile" [matMenuTriggerFor]="userMenu">
-        <div class="avatar">{{ getUserInitials() }}</div>
+<mat-menu #notifMenu="matMenu" class="notif-menu" xPosition="before">
+  <div class="notif-header">
+    <span>Notifications</span>
+    <button mat-button (click)="markAllNotificationsRead()" *ngIf="notificationCount > 0" class="mark-all-btn">
+      Tout marquer lu
+    </button>
+  </div>
+  <div *ngFor="let notif of recentNotifications" class="notif-item" [class.unread]="!notif.lu">
+    <div class="notif-message">{{ notif.message }}</div>
+    <div class="notif-date">{{ notif.dateCreation | date:'dd/MM/yyyy HH:mm' }}</div>
+    <div class="notif-actions" *ngIf="!notif.lu">
+      <button mat-icon-button (click)="markNotificationRead(notif.id)" class="read-btn" title="Marquer comme lue">✔</button>
+    </div>
+  </div>
+  <div class="notif-footer" *ngIf="recentNotifications.length === 0">
+    Aucune notification
+  </div>
+  <div class="notif-footer" *ngIf="recentNotifications.length > 0">
+    <a (click)="goToNotifications()">Voir toutes</a>
+  </div>
+</mat-menu>
+
+      <!-- User menu -->
+      <button mat-button class="user-btn" [matMenuTriggerFor]="userMenu">
+        <div class="user-avatar">{{ getUserInitials() }}</div>
+        <span class="user-name">{{ getUserName() }}</span>
+        <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
       </button>
-      <mat-menu #userMenu="matMenu">
-        <div class="user-info">
-          <strong>{{ getUserName() }}</strong>
-          <span>Employé</span>
+
+      <mat-menu #userMenu="matMenu" class="user-menu-panel">
+        <div class="user-info-header">
+          <div class="avatar-large">{{ getUserInitials() }}</div>
+          <div>
+            <div class="user-fullname">{{ getUserName() }}</div>
+            <div class="user-email">{{ userEmail }}</div>
+          </div>
         </div>
-        <button mat-menu-item routerLink="/employee/mon-profil">
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="goToProfile()">
           <mat-icon>person_outline</mat-icon>
           <span>Mon profil</span>
         </button>
-        <mat-divider></mat-divider>
         <button mat-menu-item (click)="logout()">
           <mat-icon>logout</mat-icon>
           <span>Déconnexion</span>
@@ -98,7 +128,7 @@
 
     </mat-toolbar>
 
-    <!-- Page content -->
+    <!-- PAGE CONTENT -->
     <div class="content-area">
       <router-outlet></router-outlet>
     </div>

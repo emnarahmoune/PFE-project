@@ -50,11 +50,18 @@ export class EmployeeCongeService {
     return this.api.get<CongeResponse>(`${this.endpoint}/mon-solde-conges`);
   }
 
+
+
+  
   // ===== ADMIN =====
   
   getAllDemandesAdmin(): Observable<CongeResponse> {
     return this.api.get<CongeResponse>(`${this.endpoint}/admin/all`);
   }
+   
+   getNotifications(): Observable<CongeResponse> {
+    return this.api.get<CongeResponse>(`${this.endpoint}/notifications`);
+}
 
   getDemandesEnAttenteAdmin(): Observable<CongeResponse> {
     return this.api.get<CongeResponse>(`${this.endpoint}/statut/EN_ATTENTE`);

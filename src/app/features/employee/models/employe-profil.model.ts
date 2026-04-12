@@ -1,3 +1,5 @@
+// employe-profil.model.ts
+
 export interface EmployeProfil {
   id: number;
   matricule: string;
@@ -16,6 +18,9 @@ export interface EmployeProfil {
   dateCreation: Date;
   adresse?: string;
 }
+
+// ✅ Ajouter cet alias pour compatibilité
+export type Employe = EmployeProfil;
 
 export interface SoldeConges {
   total: number;

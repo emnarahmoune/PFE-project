@@ -1,269 +1,119 @@
-<div class="profil-container">
-  <div class="header">
-    <h1>Mon profil</h1>
-    <p>Gérez vos informations personnelles</p>
+<div class="profil-modern">
+  <!-- En-tête -->
+  <div class="page-header">
+    <div>
+      <h1>Mon profil</h1>
+      <p>Consultez et gérez vos informations personnelles et professionnelles</p>
+    </div>
   </div>
 
   <div class="profil-grid">
-    <!-- Carte d'identité -->
-    <mat-card class="identity-card">
-      <mat-card-header>
-        <div class="avatar-large">
-          <span>{{ (profil?.prenom?.charAt(0) || '') + (profil?.nom?.charAt(0) || '') }}</span>
+    <!-- Colonne gauche : infos personnelles + sécurité -->
+    <div class="glass-card">
+      <div class="card-header">
+        <div class="header-title">
+          <mat-icon>person_outline</mat-icon>
+          <span>Informations personnelles</span>
         </div>
-        <div class="identity-info">
-          <h2>{{ profil?.prenom }} {{ profil?.nom }}</h2>
-          <p class="matricule">Matricule: {{ profil?.matricule }}</p>
-          <p class="poste">{{ profil?.poste }}</p>
-          <mat-chip [color]="profil?.statut === 'ACTIF' ? 'primary' : 'warn'" selected>
-            {{ profil?.statut === 'ACTIF' ? 'Actif' : 'Inactif' }}
-          </mat-chip>
-        </div>
-      </mat-card-header>
-      <mat-card-content>
-        <mat-divider></mat-divider>
-        <div class="info-row">
-          <span class="info-label">Département</span>
-          <span class="info-value">{{ profil?.departement }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Service</span>
-          <span class="info-value">{{ profil?.serviceLibelle || 'Non affecté' }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Manager</span>
-          <span class="info-value">{{ profil?.managerNom || 'Non affecté' }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Date d'embauche</span>
-          <span class="info-value">{{ formatDate(profil?.dateEmbauche) }}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Ancienneté</span>
-          <span class="info-value">{{ calculerAnciennete() }}</span>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <!-- Carte des informations personnelles -->
-    <mat-card class="info-card">
-      <mat-card-header>
-        <mat-card-title>
-          <mat-icon>person</mat-icon>
-          Informations personnelles
-        </mat-card-title>
-        <button mat-icon-button (click)="toggleEditMode()" *ngIf="!editMode">
+        <button mat-icon-button (click)="toggleEditMode()" *ngIf="!editMode" class="edit-btn" matTooltip="Modifier">
           <mat-icon>edit</mat-icon>
         </button>
-      </mat-card-header>
-      <mat-card-content>
+      </div>
+
+      <div class="card-body">
+        <!-- Mode affichage -->
         <div *ngIf="!editMode" class="info-display">
           <div class="info-row">
-            <span class="info-label">Email</span>
-            <span class="info-value">{{ profil?.email }}</span>
+            <div class="info-label"><mat-icon>email</mat-icon> Email</div>
+            <div class="info-value">{{ profil?.email }}</div>
           </div>
           <div class="info-row">
-            <span class="info-label">Téléphone</span>
-            <span class="info-value">{{ profil?.telephone || 'Non renseigné' }}</span>
+            <div class="info-label"><mat-icon>phone</mat-icon> Téléphone</div>
+            <div class="info-value">{{ profil?.telephone || 'Non renseigné' }}</div>
+          </div>
+          <div class="info-row">
+            <div class="info-label"><mat-icon>home</mat-icon> Adresse</div>
+            <div class="info-value">{{ profil?.adresse || 'Non renseignée' }}</div>
           </div>
         </div>
 
+        <!-- Mode édition -->
         <form [formGroup]="profilForm" *ngIf="editMode" (ngSubmit)="saveProfil()">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Téléphone</mat-label>
             <input matInput formControlName="telephone" placeholder="+33 6 12 34 56 78">
             <mat-icon matSuffix>phone</mat-icon>
-            <mat-error *ngIf="profilForm.get('telephone')?.invalid">
-              Format de téléphone invalide
-            </mat-error>
           </mat-form-field>
-
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Adresse</mat-label>
-            <textarea matInput formControlName="adresse" rows="3" placeholder="Votre adresse"></textarea>
+            <textarea matInput formControlName="adresse" rows="3"></textarea>
           </mat-form-field>
-
           <div class="form-actions">
             <button mat-button type="button" (click)="toggleEditMode()">Annuler</button>
-            <button mat-raised-button color="primary" type="submit" [disabled]="profilForm.invalid">
-              Enregistrer
-            </button>
+            <button mat-raised-button color="primary" type="submit" [disabled]="profilForm.invalid">Enregistrer</button>
           </div>
         </form>
 
-        <mat-divider></mat-divider>
+        <mat-divider class="my-4"></mat-divider>
 
         <div class="security-section">
-          <h3>Sécurité</h3>
-          <button mat-stroked-button (click)="openChangePasswordDialog()">
-            <mat-icon>lock</mat-icon>
-            Changer mon mot de passe
+          <h3><mat-icon>lock_outline</mat-icon> Sécurité</h3>
+          <button mat-stroked-button (click)="openChangePasswordDialog()" class="security-btn">
+            <mat-icon>vpn_key</mat-icon> Changer mon mot de passe
           </button>
         </div>
-      </mat-card-content>
-    </mat-card>
+      </div>
+    </div>
 
-    <!-- Carte du solde de congés -->
-    <mat-card class="solde-card">
-      <mat-card-header>
-        <mat-card-title>
-          <mat-icon>event</mat-icon>
-          Solde de congés
-        </mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="solde-values">
-          <div class="solde-item">
-            <span class="solde-label">Total</span>
-            <span class="solde-number">{{ soldeConges?.total || 0 }} jours</span>
-          </div>
-          <div class="solde-item">
-            <span class="solde-label">Pris</span>
-            <span class="solde-number">{{ soldeConges?.pris || 0 }} jours</span>
-          </div>
-          <div class="solde-item">
-            <span class="solde-label">Restant</span>
-            <span class="solde-number highlight">{{ soldeConges?.restant || 0 }} jours</span>
+    <!-- Colonne droite : infos professionnelles + avatar -->
+    <div class="glass-card">
+      <div class="card-header">
+        <div class="header-title">
+          <mat-icon>work_outline</mat-icon>
+          <span>Informations professionnelles</span>
+        </div>
+        <div class="status-badge" [class.active]="profil?.statut === 'ACTIF'">
+          {{ profil?.statut === 'ACTIF' ? 'Actif' : 'Inactif' }}
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Avatar + identité -->
+        <div class="identity-row">
+          <div class="avatar-large">{{ getUserInitials() }}</div>
+          <div>
+            <h2>{{ profil?.prenom }} {{ profil?.nom }}</h2>
+            <p class="matricule">{{ profil?.matricule }}</p>
+            <p class="poste">{{ profil?.poste }}</p>
           </div>
         </div>
-        <mat-progress-bar 
-          mode="determinate" 
-          [value]="getCongesProgress()"
-          color="primary">
-        </mat-progress-bar>
-        <p class="solde-note" *ngIf="soldeConges?.enAttente">
-          * {{ soldeConges?.enAttente }} demande(s) en attente
-        </p>
-      </mat-card-content>
-    </mat-card>
+
+        <mat-divider class="my-4"></mat-divider>
+
+        <!-- Grille d'informations -->
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Département</span>
+            <span class="info-value">{{ profil?.departement }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Service</span>
+            <span class="info-value">{{ profil?.serviceLibelle || 'Non affecté' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Manager</span>
+            <span class="info-value">{{ profil?.managerNom || 'Non affecté' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Date d'embauche</span>
+            <span class="info-value">{{ formatDate(profil?.dateEmbauche) }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Ancienneté</span>
+            <span class="info-value">{{ calculerAnciennete() }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-
-  <!-- Onglets pour compétences, formations, historique -->
-  <mat-card class="tabs-card">
-    <mat-tab-group>
-      <!-- Compétences -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon>school</mat-icon>
-          Compétences
-        </ng-template>
-        <div class="tab-content">
-          <div *ngIf="competences.length === 0" class="empty-state">
-            <mat-icon>school</mat-icon>
-            <p>Aucune compétence enregistrée</p>
-          </div>
-          <table mat-table [dataSource]="competences" *ngIf="competences.length > 0">
-            <ng-container matColumnDef="nom">
-              <th mat-header-cell *matHeaderCellDef>Compétence</th>
-              <td mat-cell *matCellDef="let c">{{ c.nom }} </td>
-            </ng-container>
-            <ng-container matColumnDef="categorie">
-              <th mat-header-cell *matHeaderCellDef>Catégorie</th>
-              <td mat-cell *matCellDef="let c">{{ c.categorie }} </td>
-            </ng-container>
-            <ng-container matColumnDef="niveau">
-              <th mat-header-cell *matHeaderCellDef>Niveau</th>
-              <td mat-cell *matCellDef="let c">
-                <mat-chip [color]="getNiveauColor(c.niveau)" selected>
-                  {{ c.niveau }}
-                </mat-chip>
-               </td>
-            </ng-container>
-            <ng-container matColumnDef="certifie">
-              <th mat-header-cell *matHeaderCellDef>Certifié</th>
-              <td mat-cell *matCellDef="let c">
-                <mat-icon *ngIf="c.certifie" color="primary">check_circle</mat-icon>
-                <mat-icon *ngIf="!c.certifie" color="warn">cancel</mat-icon>
-               </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="displayedColumnsCompetences"> </tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumnsCompetences;"> </tr>
-          </table>
-        </div>
-      </mat-tab>
-
-      <!-- Formations -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon>menu_book</mat-icon>
-          Formations
-        </ng-template>
-        <div class="tab-content">
-          <div *ngIf="formations.length === 0" class="empty-state">
-            <mat-icon>menu_book</mat-icon>
-            <p>Aucune formation suivie</p>
-          </div>
-          <table mat-table [dataSource]="formations" *ngIf="formations.length > 0">
-            <ng-container matColumnDef="titre">
-              <th mat-header-cell *matHeaderCellDef>Formation</th>
-              <td mat-cell *matCellDef="let f">{{ f.titre }} </td>
-            </ng-container>
-            <ng-container matColumnDef="domaine">
-              <th mat-header-cell *matHeaderCellDef>Domaine</th>
-              <td mat-cell *matCellDef="let f">{{ f.domaine }} </td>
-            </ng-container>
-            <ng-container matColumnDef="statut">
-              <th mat-header-cell *matHeaderCellDef>Statut</th>
-              <td mat-cell *matCellDef="let f">
-                <mat-chip [color]="getFormationStatutColor(f.statut)" selected>
-                  {{ f.statut }}
-                </mat-chip>
-               </td>
-            </ng-container>
-            <ng-container matColumnDef="progression">
-              <th mat-header-cell *matHeaderCellDef>Progression</th>
-              <td mat-cell *matCellDef="let f">
-                <div class="progress-cell">
-                  <mat-progress-bar mode="determinate" [value]="f.progression"></mat-progress-bar>
-                  <span>{{ f.progression }}%</span>
-                </div>
-               </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="displayedColumnsFormations"> </tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumnsFormations;"> </tr>
-          </table>
-        </div>
-      </mat-tab>
-
-      <!-- Historique congés -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon>history</mat-icon>
-          Historique des congés
-        </ng-template>
-        <div class="tab-content">
-          <div *ngIf="historiqueConges.length === 0" class="empty-state">
-            <mat-icon>event_busy</mat-icon>
-            <p>Aucune demande de congé</p>
-          </div>
-          <table mat-table [dataSource]="historiqueConges" *ngIf="historiqueConges.length > 0">
-            <ng-container matColumnDef="dates">
-              <th mat-header-cell *matHeaderCellDef>Période</th>
-              <td mat-cell *matCellDef="let c">
-                {{ formatDate(c.dateDebut) }} - {{ formatDate(c.dateFin) }}
-               </td>
-            </ng-container>
-            <ng-container matColumnDef="type">
-              <th mat-header-cell *matHeaderCellDef>Type</th>
-              <td mat-cell *matCellDef="let c">{{ c.type }} </td>
-            </ng-container>
-            <ng-container matColumnDef="jours">
-              <th mat-header-cell *matHeaderCellDef>Jours</th>
-              <td mat-cell *matCellDef="let c">{{ c.joursOuvres }} </td>
-            </ng-container>
-            <ng-container matColumnDef="statut">
-              <th mat-header-cell *matHeaderCellDef>Statut</th>
-              <td mat-cell *matCellDef="let c">
-                <mat-chip [color]="getStatutColor(c.statut)" selected>
-                  {{ c.statut }}
-                </mat-chip>
-               </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="displayedColumnsConges"> </tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumnsConges;"> </tr>
-          </table>
-        </div>
-      </mat-tab>
-    </mat-tab-group>
-  </mat-card>
 </div>

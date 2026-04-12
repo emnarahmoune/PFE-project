@@ -4,11 +4,13 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatIconModule } from '@angular/material/icon';
 import { CompetenceService } from '../../services/competence.service';
 import { Competence } from '../../models/competence.model';
 import { ConfirmationDialogComponent } from '../../../../../shared/layouts/components/confirmation-dialog/confirmation-dialog.component';
 
-// Pipe inline pour remplacer _ par espace dans les catégories
+// Pipe pour remplacer les underscores par des espaces
 @Pipe({ name: 'replace', standalone: true })
 export class ReplacePipe implements PipeTransform {
   transform(value: string | null | undefined, from: string, to: string): string {
@@ -21,44 +23,46 @@ export class ReplacePipe implements PipeTransform {
   selector: 'app-competence-list',
   standalone: true,
   imports: [
-    CommonModule, 
-    RouterModule, 
-    FormsModule, 
-    MatSnackBarModule, 
-    MatDialogModule, 
+    CommonModule,
+    RouterModule,
+    FormsModule,
+    MatSnackBarModule,
+    MatDialogModule,
+    MatMenuModule,   // ✅ AJOUTÉ
+    MatIconModule,   // ✅ AJOUTÉ
     ReplacePipe
   ],
   templateUrl: './competence-list.component.html',
-  styleUrls: ['./competence-list.component.css']
+  styleUrls: ['./competence-list.component.scss']
 })
 export class CompetenceListComponent implements OnInit {
-
   allData: Competence[] = [];
   loading = false;
   searchText = '';
   selectedCategorie = 'TOUTES';
   currentPage = 0;
-  readonly pageSize = 12;
+  readonly pageSize = 9; // Pour une grille 3x3
 
   // Tri
   sortField: keyof Competence | '' = '';
   sortDirection: 'asc' | 'desc' = 'asc';
 
-  stats = { 
-    total: 0, 
-    technique: 0, 
-    softSkill: 0, 
-    linguistique: 0, 
-    management: 0 
+  // Statistiques
+  stats = {
+    total: 0,
+    technique: 0,
+    softSkill: 0,
+    linguistique: 0,
+    management: 0
   };
 
-  // Catégories disponibles
+  // Catégories avec icônes et couleurs
   categories = [
-    { value: 'TOUTES', label: 'Toutes' },
-    { value: 'TECHNIQUE', label: 'Technique' },
-    { value: 'SOFT_SKILL', label: 'Soft Skill' },
-    { value: 'LINGUISTIQUE', label: 'Linguistique' },
-    { value: 'MANAGEMENT', label: 'Management' }
+    { value: 'TOUTES', label: 'Toutes', icon: '📌', color: '#6B7280' },
+    { value: 'TECHNIQUE', label: 'Technique', icon: '⚙️', color: '#3B82F6' },
+    { value: 'SOFT_SKILL', label: 'Soft skill', icon: '🤝', color: '#EC4899' },
+    { value: 'LINGUISTIQUE', label: 'Linguistique', icon: '🌐', color: '#10B981' },
+    { value: 'MANAGEMENT', label: 'Management', icon: '📊', color: '#F59E0B' }
   ];
 
   constructor(
@@ -72,18 +76,16 @@ export class CompetenceListComponent implements OnInit {
     this.loadStats();
   }
 
-  // ── Chargement depuis l'API ────────────────────────────────
-
+  // ── Chargement des données ──────────────────────────────────
   loadCompetences(): void {
     this.loading = true;
     this.svc.getAll().subscribe({
       next: (res) => {
-        this.allData = Array.isArray(res.data) ? res.data as Competence[] : [];
+        this.allData = Array.isArray(res.data) ? (res.data as Competence[]) : [];
         this.currentPage = 0;
         this.loading = false;
       },
-      error: (err) => {
-        console.error('Erreur chargement compétences:', err);
+      error: () => {
         this.snack.open('Erreur lors du chargement des compétences', '×', { duration: 3000 });
         this.loading = false;
       }
@@ -102,18 +104,15 @@ export class CompetenceListComponent implements OnInit {
           management: s.MANAGEMENT || s.management || 0
         };
       },
-      error: (err) => {
-        console.error('Erreur chargement statistiques:', err);
-      }
+      error: () => {}
     });
   }
 
-  // ── Filtrage + tri côté client ─────────────────────────────
-
+  // ── Filtrage et tri ─────────────────────────────────────────
   getFilteredData(): Competence[] {
     const search = this.searchText.trim().toLowerCase();
     let data = this.allData.filter(c => {
-      const matchSearch = !search || 
+      const matchSearch = !search ||
         (c.nom?.toLowerCase().includes(search) || false) ||
         (c.description?.toLowerCase().includes(search) || false);
       const matchCat = this.selectedCategorie === 'TOUTES' || c.categorie === this.selectedCategorie;
@@ -138,21 +137,20 @@ export class CompetenceListComponent implements OnInit {
   getPagedData(): Competence[] {
     const filtered = this.getFilteredData();
     const start = this.currentPage * this.pageSize;
-    const end = start + this.pageSize;
-    return filtered.slice(start, end);
+    return filtered.slice(start, start + this.pageSize);
   }
 
   getTotalPages(): number {
     return Math.ceil(this.getFilteredData().length / this.pageSize);
   }
 
-  applyFilter(): void { 
-    this.currentPage = 0; 
+  applyFilter(): void {
+    this.currentPage = 0;
   }
-  
-  setCategorie(categorie: string): void { 
-    this.selectedCategorie = categorie; 
-    this.currentPage = 0; 
+
+  setCategorie(cat: string): void {
+    this.selectedCategorie = cat;
+    this.currentPage = 0;
   }
 
   resetFilters(): void {
@@ -178,36 +176,18 @@ export class CompetenceListComponent implements OnInit {
     return this.sortDirection === 'asc' ? '↑' : '↓';
   }
 
-  // ── Calculs affichage ──────────────────────────────────────
-
   getNiveauMoyenPourcentage(niveau?: number): number {
     if (!niveau) return 0;
     return Math.round((niveau / 4) * 100);
   }
 
-  getNiveauLabel(niveau?: number): string {
-    if (!niveau) return 'Non défini';
-    const labels: { [key: number]: string } = {
-      1: 'Débutant',
-      2: 'Intermédiaire',
-      3: 'Avancé',
-      4: 'Expert'
-    };
-    return labels[niveau] || 'Non défini';
+  // ── Pagination ──────────────────────────────────────────────
+  previousPage(): void {
+    if (this.currentPage > 0) this.currentPage--;
   }
-
-  // ── Pagination ─────────────────────────────────────────────
 
   nextPage(): void {
-    if (this.currentPage + 1 < this.getTotalPages()) {
-      this.currentPage++;
-    }
-  }
-
-  previousPage(): void {
-    if (this.currentPage > 0) {
-      this.currentPage--;
-    }
+    if (this.currentPage + 1 < this.getTotalPages()) this.currentPage++;
   }
 
   goToPage(page: number): void {
@@ -220,11 +200,9 @@ export class CompetenceListComponent implements OnInit {
     const total = this.getTotalPages();
     const current = this.currentPage;
     const pages: number[] = [];
-    
+
     if (total <= 7) {
-      for (let i = 0; i < total; i++) {
-        pages.push(i);
-      }
+      for (let i = 0; i < total; i++) pages.push(i);
     } else {
       if (current <= 3) {
         for (let i = 0; i <= 4; i++) pages.push(i);
@@ -245,71 +223,48 @@ export class CompetenceListComponent implements OnInit {
     return pages;
   }
 
-  // ── Suppression ───────────────────────────────────────────
-
+  // ── Suppression ─────────────────────────────────────────────
   deleteCompetence(id: number, nom: string): void {
-    // Perdre le focus
     (document.activeElement as HTMLElement)?.blur();
-
     const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
       width: '440px',
-      autoFocus: true,
-      restoreFocus: false,
       data: {
         title: 'Supprimer la compétence',
         message: `Supprimer "${nom}" ? Cette action est irréversible.`,
         confirmText: 'Supprimer',
-        cancelText: 'Annuler',
-        confirmButtonColor: 'warn'
+        cancelText: 'Annuler'
       }
     });
-
     dialogRef.afterClosed().subscribe(confirmed => {
       if (!confirmed) return;
-      
       this.svc.delete(id).subscribe({
         next: () => {
-          // Suppression locale immédiate
           this.allData = this.allData.filter(c => c.id !== id);
-          this.stats.total = Math.max(0, this.stats.total - 1);
-          
-          // Mise à jour des stats par catégorie
-          const deletedComp = this.allData.find(c => c.id === id);
-          if (deletedComp) {
-            const category = deletedComp.categorie;
-            switch (category) {
-              case 'TECHNIQUE':
-                this.stats.technique = Math.max(0, this.stats.technique - 1);
-                break;
-              case 'SOFT_SKILL':
-                this.stats.softSkill = Math.max(0, this.stats.softSkill - 1);
-                break;
-              case 'LINGUISTIQUE':
-                this.stats.linguistique = Math.max(0, this.stats.linguistique - 1);
-                break;
-              case 'MANAGEMENT':
-                this.stats.management = Math.max(0, this.stats.management - 1);
-                break;
-            }
-          }
-          
-          this.snack.open('Compétence supprimée avec succès', '×', { duration: 3000 });
-          this.loadStats(); // Rafraîchir les stats depuis l'API pour garantir la cohérence
+          this.loadStats();
+          this.snack.open('Compétence supprimée', '×', { duration: 3000 });
         },
         error: (err) => {
-          const msg = err?.error?.message || 'Erreur lors de la suppression';
-          this.snack.open(msg, '×', { duration: 4000 });
-          console.error('Erreur suppression:', err);
+          this.snack.open(err?.error?.message || 'Erreur de suppression', '×', { duration: 4000 });
         }
       });
     });
   }
 
-  // ── Refresh data ───────────────────────────────────────────
-
+  // ── Rafraîchissement ────────────────────────────────────────
   refresh(): void {
     this.loadCompetences();
     this.loadStats();
     this.snack.open('Données actualisées', '×', { duration: 2000 });
+  }
+
+  // ── Utilitaires pour le template ────────────────────────────
+  getCategoryColor(categorie: string): string {
+    const found = this.categories.find(c => c.value === categorie);
+    return found ? found.color : '#6B7280';
+  }
+
+  getCategoryIcon(categorie: string): string {
+    const found = this.categories.find(c => c.value === categorie);
+    return found ? found.icon : '📌';
   }
 }

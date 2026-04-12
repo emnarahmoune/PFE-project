@@ -12,8 +12,10 @@ export interface Employe {
   statut: string;
   soldeConges?: number;
   serviceId?: number;
-  managerId?: number;
+  managerId?: number | null;      // peut être null
+  role?: string;                  // "user", "manager", "admin_rh"
   createdAt?: string;
+  managerNom?: string; 
   updatedAt?: string;
 }
 

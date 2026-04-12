@@ -75,30 +75,37 @@ export class KeycloakInitService {
     }
   }
 
-  private async cleanUrlAfterAuth(): Promise<void> {
-    const hasFragment = window.location.hash && (
-      window.location.hash.includes('state=') ||
-      window.location.hash.includes('session_state=') ||
-      window.location.hash.includes('code=')
-    );
+ private async cleanUrlAfterAuth(): Promise<void> {
+  const hasFragment = window.location.hash && (
+    window.location.hash.includes('state=') ||
+    window.location.hash.includes('session_state=') ||
+    window.location.hash.includes('code=')
+  );
+  
+  if (hasFragment) {
+    console.log('🧹 Nettoyage URL');
+    const userRoles = this.getUserRoles();
+    console.log('👤 Rôles détectés:', userRoles);
     
-    if (hasFragment) {
-      console.log('🧹 Nettoyage URL');
-      const userRoles = this.getUserRoles();
-      let targetPath = '/dashboard';
-      
-      if (userRoles.includes('admin')) {
-        targetPath = '/admin/dashboard';
-      } else if (userRoles.includes('manager')) {
-        targetPath = '/manager/dashboard';
-      } else if (userRoles.includes('user')) {
-        targetPath = '/employee/dashboard';
-      }
-      
-      window.history.replaceState({}, document.title, targetPath);
-      await this.router.navigateByUrl(targetPath);
+    let targetPath = '/dashboard';
+    
+    // Vérifier d'abord manager, puis admin
+    if (userRoles.includes('manager')) {
+      targetPath = '/manager/dashboard';
+      console.log('🎯 Manager détecté → /manager/dashboard');
+    } else if (userRoles.includes('ADMIN')) {
+      targetPath = '/admin/dashboard';
+      console.log('🎯 Admin détecté → /admin/dashboard');
+    } else if (userRoles.includes('user')) {
+      targetPath = '/employee/dashboard';
+      console.log('🎯 User détecté → /employee/dashboard');
     }
+    
+    console.log('🎯 Redirection finale vers:', targetPath);
+    window.history.replaceState({}, document.title, targetPath);
+    await this.router.navigateByUrl(targetPath);
   }
+}
 
   async getToken(): Promise<string> {
     try {
