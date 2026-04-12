@@ -16,13 +16,18 @@ import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
 import com.codeWithProject.ecom.service.mapper.DemandeCongeMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.camunda.bpm.engine.RuntimeService;
+import org.camunda.bpm.engine.TaskService;
+import org.camunda.bpm.engine.task.Task;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +44,10 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
     private final ManagerRepository managerRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final DemandeCongeMapper mapper;
+
+    // Services Camunda
+    private final RuntimeService runtimeService;
+    private final TaskService taskService;
 
     private Employe getEmployeByEmail(String email) {
         Utilisateur user = utilisateurRepository.findByEmail(email)
@@ -68,6 +77,56 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
             current = current.plusDays(1);
         }
         return jours;
+    }
+
+    private String getManagerEmailFromEmploye(Employe employe) {
+        if (employe.getManager() != null) {
+            Manager manager = employe.getManager();
+            String email = manager.getEmail();
+            if (email != null && !email.isEmpty()) {
+                log.debug("✅ Manager trouvé pour employé {}: {}", employe.getId(), email);
+                return email;
+            }
+        }
+
+        if (employe.getDepartement() != null && !employe.getDepartement().isEmpty()) {
+            Optional<Manager> deptManager = managerRepository.findByDepartement(employe.getDepartement())
+                    .stream().findFirst();
+            if (deptManager.isPresent() && deptManager.get().getEmail() != null) {
+                log.debug("✅ Manager du département {} trouvé: {}", employe.getDepartement(), deptManager.get().getEmail());
+                return deptManager.get().getEmail();
+            }
+        }
+
+        List<Manager> activeManagers = managerRepository.findManagersActifs();
+        if (!activeManagers.isEmpty()) {
+            String email = activeManagers.get(0).getEmail();
+            log.warn("⚠️ Aucun manager direct pour l'employé {}, utilisation du premier manager actif: {}",
+                    employe.getId(), email);
+            return email;
+        }
+
+        throw new BusinessException("❌ Aucun manager trouvé pour cet employé");
+    }
+
+    private String getAdminRHEmail() {
+        List<Utilisateur> adminRHUsers = utilisateurRepository.findByTypeUtilisateur("ADMIN_RH");
+
+        if (!adminRHUsers.isEmpty()) {
+            String email = adminRHUsers.get(0).getEmail();
+            log.debug("✅ Admin RH trouvé: {}", email);
+            return email;
+        }
+
+        List<Utilisateur> adminUsers = utilisateurRepository.findByTypeUtilisateur("ADMIN");
+        if (!adminUsers.isEmpty()) {
+            String email = adminUsers.get(0).getEmail();
+            log.debug("✅ Admin trouvé (utilisé comme RH): {}", email);
+            return email;
+        }
+
+        log.warn("⚠️ Aucun administrateur RH trouvé, utilisation d'un email par défaut");
+        return "admin@default.com";
     }
 
     @Override
@@ -248,9 +307,11 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public DemandeCongeDTO createForAuthenticatedUser(DemandeCongeDTO dto, String email) {
         Employe employe = getEmployeByEmail(email);
         dto.setEmployeId(employe.getId());
+
         if (dto.getDateDebut() == null || dto.getDateFin() == null) {
             throw new BusinessException("Les dates de début et de fin sont obligatoires");
         }
@@ -263,17 +324,65 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         if ("ANNUEL".equals(dto.getType())) {
             int joursDemandes = calculateJoursOuvres(dto.getDateDebut(), dto.getDateFin());
             if (employe.getSoldeConges() < joursDemandes) {
-                throw new BusinessException(String.format("Solde insuffisant. Disponible: %d, Demandé: %d", employe.getSoldeConges(), joursDemandes));
+                throw new BusinessException(String.format("Solde insuffisant. Disponible: %d, Demandé: %d",
+                        employe.getSoldeConges(), joursDemandes));
             }
         }
         if (checkConflitDates(employe.getId(), dto.getDateDebut(), dto.getDateFin(), null)) {
             throw new BusinessException("Une demande de congé existe déjà sur cette période");
         }
+
         DemandeConge demande = mapper.toEntity(dto);
         demande.setEmploye(employe);
         demande.setJoursOuvres(calculateJoursOuvres(dto.getDateDebut(), dto.getDateFin()));
         demande.soumettre();
         DemandeConge saved = demandeCongeRepository.save(demande);
+
+        try {
+            Map<String, Object> workflowVariables = new HashMap<>();
+            workflowVariables.put("employeId", String.valueOf(employe.getId()));
+            workflowVariables.put("montantConge", saved.getJoursOuvres());
+            workflowVariables.put("nbJours", saved.getJoursOuvres());
+            workflowVariables.put("demandeId", saved.getId());
+            workflowVariables.put("typeConge", saved.getType());
+            workflowVariables.put("dateDebut", saved.getDateDebut().toString());
+            workflowVariables.put("dateFin", saved.getDateFin().toString());
+
+            String managerEmail = getManagerEmailFromEmploye(employe);
+            workflowVariables.put("managerEmail", managerEmail);
+
+            String adminEmail = getAdminRHEmail();
+            workflowVariables.put("adminEmail", adminEmail);
+
+            log.info("🚀 Démarrage workflow Camunda - Manager: {}, Admin RH: {}", managerEmail, adminEmail);
+
+            var processInstance = runtimeService.startProcessInstanceByKey(
+                    "Process_13wxvdy",
+                    workflowVariables
+            );
+
+            saved.setProcessInstanceId(processInstance.getId());
+
+            List<Task> tasks = taskService.createTaskQuery()
+                    .processInstanceId(processInstance.getId())
+                    .list();
+
+            if (!tasks.isEmpty()) {
+                saved.setCurrentTaskId(tasks.get(0).getId());
+                log.info("📋 Tâche créée: '{}' pour assignee: '{}'", tasks.get(0).getName(), tasks.get(0).getAssignee());
+            } else {
+                log.warn("⚠️ Aucune tâche créée pour l'instance {}", processInstance.getId());
+            }
+
+            DemandeConge finalSaved = demandeCongeRepository.save(saved);
+            log.info("✅ Demande créée avec succès - ID: {}, ProcessInstanceId: {}",
+                    finalSaved.getId(), finalSaved.getProcessInstanceId());
+
+        } catch (Exception e) {
+            log.error("❌ Erreur lors du démarrage du workflow Camunda: {}", e.getMessage(), e);
+            throw new BusinessException("Erreur technique lors du traitement de la demande: " + e.getMessage());
+        }
+
         return mapper.toDto(saved);
     }
 
@@ -313,10 +422,24 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
             throw new BusinessException("Une demande de congé existe déjà sur cette période");
         }
         demande.modifier(newDebut, newFin, dto.getType() != null ? dto.getType() : demande.getType(), dto.getCommentaire());
+        demande.setJoursOuvres(calculateJoursOuvres(demande.getDateDebut(), demande.getDateFin()));
         return mapper.toDto(demandeCongeRepository.save(demande));
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    private void supprimerInstanceCamunda(String processInstanceId) {
+        if (processInstanceId != null) {
+            try {
+                runtimeService.deleteProcessInstance(processInstanceId, "Annulé par l'utilisateur");
+                log.info("🗑️ Instance Camunda {} supprimée", processInstanceId);
+            } catch (Exception e) {
+                log.warn("⚠️ Instance Camunda introuvable ou déjà supprimée: {}", e.getMessage());
+            }
+        }
+    }
+
     @Override
+    @Transactional(noRollbackFor = Exception.class)
     public DemandeCongeDTO annulerForAuthenticatedUser(Long id, String email) {
         Employe employe = getEmployeByEmail(email);
         DemandeConge demande = demandeCongeRepository.findById(id)
@@ -324,7 +447,14 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         if (!demande.getEmploye().getId().equals(employe.getId())) {
             throw new BusinessException("Vous ne pouvez pas annuler une demande qui ne vous appartient pas");
         }
+        if (!"EN_ATTENTE".equals(demande.getStatut())) {
+            throw new BusinessException("Seules les demandes en attente peuvent être annulées");
+        }
+
+        supprimerInstanceCamunda(demande.getProcessInstanceId());
+
         demande.annuler();
-        return mapper.toDto(demandeCongeRepository.save(demande));
+        DemandeConge saved = demandeCongeRepository.save(demande);
+        return mapper.toDto(saved);
     }
 }

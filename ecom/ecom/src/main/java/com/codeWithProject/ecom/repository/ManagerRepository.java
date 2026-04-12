@@ -14,7 +14,6 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
 
     // ===== RECHERCHES PAR IDENTIFIANTS =====
 
-    // ✅ CORRECTION: Utiliser @Query au lieu de findByUtilisateurId
     @Query("SELECT m FROM Manager m WHERE m.id = :id")
     Optional<Manager> findById(@Param("id") Long id);
 
@@ -22,6 +21,9 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
 
     @Query("SELECT m FROM Manager m WHERE m.employe.matricule = :matricule")
     Optional<Manager> findByEmployeMatricule(@Param("matricule") String matricule);
+
+    // ✅ CORRECTION: Manager hérite de Utilisateur, donc email est direct
+    Optional<Manager> findByEmail(String email);
 
     // ===== RECHERCHES PAR DÉPARTEMENT =====
     List<Manager> findByDepartement(String departement);
@@ -112,7 +114,6 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
     @Query("SELECT m.departement, COUNT(m) FROM Manager m GROUP BY m.departement")
     List<Object[]> countManagersByDepartement();
 
-    // ✅ CORRECTION: Requête native fonctionnelle
     @Query(value = "SELECT AVG(DATEDIFF(CURDATE(), date_nomination) / 365.25) FROM managers WHERE date_nomination IS NOT NULL", nativeQuery = true)
     Double calculateAncienneteMoyenne();
 
@@ -127,4 +128,11 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
             "LEFT JOIN m.employesGeres e LEFT JOIN m.demandesCongeAValider d " +
             "GROUP BY m.departement, m.id")
     List<Object[]> getStatsManagers();
+
+    // Dans ManagerRepository.java - AJOUTER cette méthode
+    @Query("SELECT m FROM Manager m WHERE m.email = :email")
+    Optional<Manager> findByUtilisateurEmail(@Param("email") String email);
+
+    // ✅ Garder cette méthode pour le manager par défaut
+    Optional<Manager> findFirstByOrderByIdAsc();
 }

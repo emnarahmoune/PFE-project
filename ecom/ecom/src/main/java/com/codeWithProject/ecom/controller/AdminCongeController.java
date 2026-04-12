@@ -1,0 +1,154 @@
+package com.codeWithProject.ecom.controller;
+
+import com.codeWithProject.ecom.controller.dto.ApiResponse;
+import com.codeWithProject.ecom.service.AdminCongeService;
+import com.codeWithProject.ecom.service.dto.DemandeCongeAdminDTO;
+import com.codeWithProject.ecom.service.exception.BusinessException;
+import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/admin/conges")
+@RequiredArgsConstructor
+@Slf4j
+@Tag(name = "Admin RH - Gestion des congés", description = "API pour l'administration des demandes de congé")
+@PreAuthorize("hasRole('ADMIN_RH') or hasRole('admin')")
+public class AdminCongeController {
+
+    private final AdminCongeService adminCongeService;
+
+    @GetMapping("/a-valider")
+    @Operation(summary = "Récupère les demandes en attente avec plus de 10 jours")
+    public ResponseEntity<ApiResponse<List<DemandeCongeAdminDTO>>> getDemandesAValider() {
+        log.info("GET /api/admin/conges/a-valider - Récupération des demandes à valider");
+
+        try {
+            List<DemandeCongeAdminDTO> demandes = adminCongeService.getDemandesEnAttentePlusDe10Jours();
+            return ResponseEntity.ok(ApiResponse.success(demandes, "Demandes récupérées avec succès"));
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "Récupère toutes les demandes de congé")
+    public ResponseEntity<ApiResponse<List<DemandeCongeAdminDTO>>> getAllDemandes() {
+        log.info("GET /api/admin/conges/all - Récupération de toutes les demandes");
+
+        try {
+            List<DemandeCongeAdminDTO> demandes = adminCongeService.getAllDemandes();
+            return ResponseEntity.ok(ApiResponse.success(demandes, "Toutes les demandes récupérées"));
+        } catch (Exception e) {
+            log.error("Erreur: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Récupère une demande par son ID")
+    public ResponseEntity<ApiResponse<DemandeCongeAdminDTO>> getDemandeById(@PathVariable Long id) {
+        log.info("GET /api/admin/conges/{}", id);
+
+        try {
+            DemandeCongeAdminDTO demande = adminCongeService.getDemandeById(id);
+            return ResponseEntity.ok(ApiResponse.success(demande, "Demande trouvée"));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Erreur: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/valider")
+    @Operation(summary = "Approuve une demande de congé")
+    public ResponseEntity<ApiResponse<Void>> validerDemande(
+            @PathVariable Long id,
+            @RequestParam(required = false) String commentaire) {
+
+        log.info("PUT /api/admin/conges/{}/valider - Approbation demande", id);
+
+        try {
+            adminCongeService.validerDemande(id, commentaire);
+            return ResponseEntity.ok(ApiResponse.success(null, "Demande approuvée avec succès"));
+        } catch (BusinessException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Erreur lors de l'approbation: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Erreur lors de l'approbation: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/refuser")
+    @Operation(summary = "Refuse une demande de congé avec un motif")
+    public ResponseEntity<ApiResponse<Void>> refuserDemande(
+            @PathVariable Long id,
+            @RequestParam String motif) {
+
+        log.info("PUT /api/admin/conges/{}/refuser - Refus demande, motif: {}", id, motif);
+
+        try {
+            adminCongeService.refuserDemande(id, motif);
+            return ResponseEntity.ok(ApiResponse.success(null, "Demande refusée avec succès"));
+        } catch (BusinessException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Erreur lors du refus: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Erreur lors du refus: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/stats/statut")
+    @Operation(summary = "Statistiques des demandes par statut")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> getStatsByStatut() {
+        log.info("GET /api/admin/conges/stats/statut");
+
+        try {
+            Map<String, Long> stats = adminCongeService.getStatsByStatut();
+            return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques récupérées"));
+        } catch (Exception e) {
+            log.error("Erreur: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/orphan-requests")
+    @Operation(summary = "Demandes orphelines (sans instance Camunda)")
+    public ResponseEntity<ApiResponse<List<DemandeCongeAdminDTO>>> getOrphanRequests() {
+        log.info("GET /api/admin/conges/orphan-requests - Récupération des demandes orphelines");
+
+        try {
+            List<DemandeCongeAdminDTO> demandes = adminCongeService.getOrphanRequests();
+            return ResponseEntity.ok(ApiResponse.success(demandes, "Demandes orphelines récupérées"));
+        } catch (Exception e) {
+            log.error("Erreur: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+}

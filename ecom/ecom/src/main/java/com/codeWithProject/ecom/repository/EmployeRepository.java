@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -15,6 +16,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
     // ===== RECHERCHES PAR IDENTIFIANTS =====
     Optional<Employe> findByMatricule(String matricule);
     boolean existsByMatricule(String matricule);
+    Optional<Employe> findByEmail(String email);
 
     // ===== RECHERCHES PAR ATTRIBUTS =====
     List<Employe> findByDepartement(String departement);
@@ -40,7 +42,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
     List<Employe> findByDateEmbaucheBefore(LocalDate date);
     List<Employe> findByDateEmbaucheBetween(LocalDate debut, LocalDate fin);
 
-    @Query("SELECT e FROM Employe e ORDER BY e.dateEmbauche DESC")
+    @Query("SELECT e FROM Employe e LEFT JOIN FETCH e.manager ORDER BY e.dateEmbauche DESC")
     List<Employe> findEmployesRecents();
 
     @Query("SELECT e FROM Employe e ORDER BY e.dateEmbauche ASC")
@@ -99,7 +101,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
     @Query("SELECT AVG(e.soldeConges) FROM Employe e WHERE e.statut = 'ACTIF'")
     Double soldeCongesMoyen();
 
-    // ===== RECHERCHE GLOBALE - CORRIGÉE =====
+    // ===== RECHERCHE GLOBALE =====
     @Query("SELECT e FROM Employe e WHERE " +
             "LOWER(e.nom) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(e.prenom) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
@@ -109,7 +111,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
             "LOWER(e.departement) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Employe> searchEmployes(@Param("keyword") String keyword);
 
-    // ===== TABLEAU DE BORD =====
+    // ✅ CORRECTION : retourner une List<Map<String, Object>>
     @Query("SELECT new map(" +
             "COUNT(e) as total, " +
             "SUM(CASE WHEN e.statut = 'ACTIF' THEN 1 ELSE 0 END) as actifs, " +
@@ -119,5 +121,17 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
             "SUM(e.salaire) as masseSalariale, " +
             "AVG(e.soldeConges) as soldeCongesMoyen) " +
             "FROM Employe e")
-    List<Object[]> getStatsTableauBord();
+    List<Map<String, Object>> getStatsTableauBord();
+
+    // ===== AUTRES =====
+    List<Employe> findByManagerEmail(String email);
+    // Dans EmployeRepository.java - AJOUTER ces méthodes
+
+    // Dans EmployeRepository.java - AJOUTER cette méthode
+    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL")
+    List<Employe> findByManagerIsNull();
+    // ✅ À AJOUTER pour les employés actifs d'un manager
+    @Query("SELECT e FROM Employe e WHERE e.manager.id = :managerId AND e.statut = 'ACTIF'")
+    List<Employe> findActifsByManagerId(@Param("managerId") Long managerId);
+
 }

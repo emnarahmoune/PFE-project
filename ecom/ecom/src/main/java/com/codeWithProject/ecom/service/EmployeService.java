@@ -65,7 +65,7 @@ public interface EmployeService {
      */
     TableauBordEmployeDTO getStatsTableauBord();
 
-    // ===== NOUVELLES MÉTHODES POUR L'UTILISATEUR AUTHENTIFIÉ =====
+    // ===== MÉTHODES POUR L'UTILISATEUR AUTHENTIFIÉ =====
 
     /**
      * Trouve un employé par son email
@@ -106,4 +106,14 @@ public interface EmployeService {
      * Change l'email d'un employé
      */
     EmployeDTO changeEmailByEmail(String email, String newEmail);
+
+    // ===== NOUVELLE MÉTHODE : MISE À JOUR DU MANAGER =====
+
+    /**
+     * Met à jour le manager d'un employé
+     * @param employeId ID de l'employé
+     * @param managerId ID du nouveau manager (peut être null pour supprimer le manager)
+     * @return L'employé mis à jour
+     */
+    EmployeDTO updateManager(Long employeId, Long managerId);
 }

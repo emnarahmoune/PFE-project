@@ -26,8 +26,14 @@ public class EmployeDTO {
     private String departement;
     private Integer soldeConges;
 
-    // Champ password ajouté pour la création des comptes utilisateurs
+    // Champ password pour la création des comptes utilisateurs
     private String password;
+
+    // Champ role pour définir le rôle Spring Security ("user", "manager", "admin_rh")
+    private String role;
+
+    // Email du manager (pratique pour la création)
+    private String managerEmail;
 
     private Long anciennete;
     private Double salaireAnnuel;

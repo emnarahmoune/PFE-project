@@ -149,4 +149,10 @@ public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> 
             "MAX(u.derniereConnexion) as derniereConnexionGlobale) " +
             "FROM Utilisateur u")
     List<Object[]> getStatsTableauBord();
+    // 🔥 Ajouter ces méthodes pour les rôles dynamiques
+    List<Utilisateur> findByRole(String role);
+
+    List<Utilisateur> findByRoleIgnoreCase(String role);
+
+    boolean existsByRole(String role);
 }

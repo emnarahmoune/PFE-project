@@ -1,7 +1,10 @@
 package com.codeWithProject.ecom.controller;
 
 import com.codeWithProject.ecom.controller.dto.ApiResponse;
+import com.codeWithProject.ecom.entity.Notification;
+import com.codeWithProject.ecom.repository.EmployeRepository;
 import com.codeWithProject.ecom.service.DemandeCongeService;
+import com.codeWithProject.ecom.service.NotificationService;
 import com.codeWithProject.ecom.service.dto.DemandeCongeDTO;
 import com.codeWithProject.ecom.service.dto.SoldeCongesDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,10 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +31,8 @@ import java.util.Map;
 @Slf4j
 @Tag(name = "Demandes de congé", description = "API de gestion des demandes de congé")
 public class DemandeCongeController {
-
+    private final NotificationService notificationService;
+    private final EmployeRepository employeRepository;
     private final DemandeCongeService demandeCongeService;
 
     // ==================== ENDPOINTS EMPLOYÉ ====================
@@ -157,6 +157,47 @@ public class DemandeCongeController {
         return annulerDemande(id, jwt);
     }
 
+    // ==================== ENDPOINTS NOTIFICATIONS ====================
+
+    @GetMapping("/notifications")
+    @Operation(summary = "Récupère les notifications de l'utilisateur connecté")
+    public ResponseEntity<ApiResponse<List<Notification>>> getMesNotifications(
+            @AuthenticationPrincipal Jwt jwt) {
+
+        log.info("GET /api/conges/notifications - Récupération des notifications");
+
+        if (jwt == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
+        }
+
+        String email = jwt.getClaimAsString("email");
+        if (email == null) email = jwt.getClaimAsString("preferred_username");
+        if (email == null) email = jwt.getSubject();
+
+        try {
+            var employeOpt = employeRepository.findByEmail(email);
+            if (employeOpt.isEmpty()) {
+                return ResponseEntity.ok(ApiResponse.success(List.of(), "Aucune notification (employé non trouvé)"));
+            }
+            Long employeId = employeOpt.get().getId();
+            List<Notification> notifications = notificationService.getNotificationsByEmployeId(employeId);
+            return ResponseEntity.ok(ApiResponse.success(notifications, "Notifications récupérées"));
+        } catch (Exception e) {
+            log.error("Erreur lors de la récupération des notifications: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Erreur serveur", HttpStatus.INTERNAL_SERVER_ERROR));
+        }
+    }
+
+    @PutMapping("/notifications/{id}/read")
+    @Operation(summary = "Marque une notification comme lue")
+    public ResponseEntity<ApiResponse<Void>> markNotificationAsRead(@PathVariable Long id) {
+        log.info("PUT /api/conges/notifications/{}/read", id);
+        notificationService.markAsRead(id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Notification marquée comme lue"));
+    }
+
     // ==================== ENDPOINTS ADMIN ====================
 
     @GetMapping("/admin/all")
@@ -189,6 +230,7 @@ public class DemandeCongeController {
 
     // ==================== ENDPOINTS GÉNÉRAUX ====================
 
+    // ⚠️ Ce mapping doit être APRÈS tous les mappings avec chemin fixe (comme /notifications, /mes-conges, etc.)
     @GetMapping("/{id}")
     @Operation(summary = "Récupère une demande par son ID")
     public ResponseEntity<ApiResponse<DemandeCongeDTO>> getDemandeById(@PathVariable Long id) {
@@ -232,7 +274,7 @@ public class DemandeCongeController {
 
     @GetMapping("/urgentes")
     @Operation(summary = "Récupère les demandes urgentes en attente")
-    @PreAuthorize("hasAnyRole('ADMIN_RH', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN_RH', 'ADMIN', 'manager')")   // Ajout du rôle ADMIN
     public ResponseEntity<ApiResponse<List<DemandeCongeDTO>>> getDemandesUrgentes() {
         log.info("GET /api/conges/urgentes");
         List<DemandeCongeDTO> urgentes = demandeCongeService.findUrgentesEnAttente();
@@ -243,7 +285,7 @@ public class DemandeCongeController {
 
     @GetMapping("/stats/statut")
     @Operation(summary = "Statistiques des demandes par statut")
-    @PreAuthorize("hasAnyRole('ADMIN_RH', 'MANAGER')")
+    @PreAuthorize("hasAnyRole('ADMIN_RH', 'ADMIN', 'manager')")   // Ajout du rôle ADMIN
     public ResponseEntity<ApiResponse<Map<String, Long>>> getStatsByStatut() {
         log.info("GET /api/conges/stats/statut");
         Map<String, Long> stats = demandeCongeService.countByStatut();

@@ -5,6 +5,8 @@ import lombok.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "employes",
@@ -64,17 +66,20 @@ public class Employe {
 
     @OneToOne(mappedBy = "employe", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @ToString.Exclude
+    @JsonIgnore
     private Utilisateur utilisateur;
+
+    // ✅ CORRECTION : Utiliser Manager comme type cible
+    // Le problème venait du fait que Hibernate essayait d'assigner un Utilisateur à un champ Manager
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "manager_id")
+    @JsonIgnoreProperties({"employesGeres", "demandesCongeAValider"})
+    private Manager manager;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id")
     @ToString.Exclude
     private Service service;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "manager_id")
-    @ToString.Exclude
-    private Manager manager;
 
     @OneToMany(mappedBy = "employe", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
@@ -94,19 +99,21 @@ public class Employe {
     @OneToMany(mappedBy = "employe", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @Builder.Default
+    @JsonIgnore
     private List<DemandeConge> demandesConge = new ArrayList<>();
 
     /* ── Méthodes métier ────────────────────────────────────── */
 
     /**
-     * Crée et associe un Utilisateur pour cet employé
+     * Crée un utilisateur associé à cet employé
+     * @param encodedPassword mot de passe encodé
+     * @return l'utilisateur créé
      */
     public Utilisateur createUtilisateur(String encodedPassword) {
         if (this.utilisateur != null) {
             return this.utilisateur;
         }
 
-        // Créer une instance concrète de Utilisateur (plus abstract)
         Utilisateur newUtilisateur = new Utilisateur();
         newUtilisateur.setNom(this.nom);
         newUtilisateur.setPrenom(this.prenom);
@@ -118,9 +125,37 @@ public class Employe {
         newUtilisateur.setNombreConnexions(0);
         newUtilisateur.setTentativesEchec(0);
         newUtilisateur.setEmploye(this);
+        newUtilisateur.setRole("user");
 
         this.utilisateur = newUtilisateur;
         return newUtilisateur;
+    }
+
+    /**
+     * Crée un utilisateur de type Manager associé à cet employé
+     */
+    public Manager createManager(String encodedPassword, String departement, LocalDate dateNomination) {
+        if (this.utilisateur != null && this.utilisateur instanceof Manager) {
+            return (Manager) this.utilisateur;
+        }
+
+        Manager newManager = new Manager();
+        newManager.setNom(this.nom);
+        newManager.setPrenom(this.prenom);
+        newManager.setEmail(this.email);
+        newManager.setTelephone(this.telephone);
+        newManager.setPassword(encodedPassword);
+        newManager.setActif(true);
+        newManager.setCompteVerrouille(false);
+        newManager.setNombreConnexions(0);
+        newManager.setTentativesEchec(0);
+        newManager.setEmploye(this);
+        newManager.setRole("manager");
+        newManager.setDepartement(departement);
+        newManager.setDateNomination(dateNomination);
+
+        this.utilisateur = newManager;
+        return newManager;
     }
 
     public Integer getSoldeConges() {

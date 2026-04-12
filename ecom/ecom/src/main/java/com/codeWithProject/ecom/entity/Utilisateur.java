@@ -6,25 +6,28 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "utilisateurs",
         indexes = {
                 @Index(name = "idx_utilisateur_email", columnList = "email"),
-                @Index(name = "idx_utilisateur_actif", columnList = "actif")
+                @Index(name = "idx_utilisateur_actif", columnList = "actif"),
+                @Index(name = "idx_utilisateur_role", columnList = "role")
         },
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_utilisateur_email", columnNames = "email")
         }
 )
 @Inheritance(strategy = InheritanceType.JOINED)
-@DiscriminatorColumn(name = "type_utilisateur")
+@DiscriminatorColumn(name = "type_utilisateur", discriminatorType = DiscriminatorType.STRING)
+@DiscriminatorValue("UTILISATEUR")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class Utilisateur {  // ← Plus abstract !
+public class Utilisateur {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -70,30 +73,55 @@ public class Utilisateur {  // ← Plus abstract !
     @Column(name = "type_utilisateur", insertable = false, updatable = false)
     private String typeUtilisateur;
 
+    // Rôle Spring Security : valeurs possibles "user", "manager", "ADMIN_RH"
+    // (respecte la casse utilisée dans @PreAuthorize)
+    @Column(name = "role", length = 50)
+    private String role;
+
+    // ===== CONSTANTES POUR LES TYPES (discriminator) =====
+    public static final String TYPE_EMPLOYE = "UTILISATEUR";
+    public static final String TYPE_MANAGER = "MANAGER";
+    public static final String TYPE_ADMIN_RH = "ADMIN_RH";
+
     // ===== RELATION AVEC EMPLOYE =====
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employe_id", unique = true)
     @ToString.Exclude
+    @JsonIgnore
     private Employe employe;
 
-    // ===== MÉTHODES MÉTIER =====
+    // ===== MÉTHODES POUR LE ROLE =====
+    public boolean hasRole(String roleName) {
+        return role != null && role.equals(roleName);
+    }
+
+    public boolean isManager() {
+        return "manager".equalsIgnoreCase(role);
+    }
+
+    public boolean isAdminRH() {
+        return "ADMIN_RH".equals(role);
+    }
+
+    public boolean isEmploye() {
+        return "user".equals(role);
+    }
+
+    // ===== MÉTHODES MÉTIER EXISTANTES (inchangées) =====
     public boolean seConnecter(String email, String password) {
         if (!this.actif) {
             throw new IllegalStateException("Compte utilisateur désactivé. Contactez l'administrateur.");
         }
-
         if (this.compteVerrouille) {
             throw new IllegalStateException(
                     String.format("Compte verrouillé depuis le %s. Contactez l'administrateur.",
                             this.dateVerrouillage)
             );
         }
-
         if (!this.email.equalsIgnoreCase(email)) {
             enregistrerEchecConnexion();
             return false;
         }
-
         enregistrerConnexionReussie();
         return true;
     }
@@ -106,7 +134,6 @@ public class Utilisateur {  // ← Plus abstract !
 
     private void enregistrerEchecConnexion() {
         this.tentativesEchec = (this.tentativesEchec == null ? 0 : this.tentativesEchec) + 1;
-
         if (this.tentativesEchec >= 5) {
             verrouiller();
         }
@@ -154,12 +181,17 @@ public class Utilisateur {  // ← Plus abstract !
         if (nouvelEmail == null || nouvelEmail.trim().isEmpty()) {
             throw new IllegalArgumentException("L'email ne peut pas être vide");
         }
-
         if (!nouvelEmail.contains("@") || !nouvelEmail.contains(".")) {
             throw new IllegalArgumentException("Format d'email invalide");
         }
-
         this.email = nouvelEmail.trim().toLowerCase();
+    }
+
+    // Cette méthode n'est plus utilisée pour définir le rôle Spring.
+    // Elle est conservée pour compatibilité mais ne doit pas être appelée automatiquement.
+    @Deprecated
+    public void setRoleFromTypeUtilisateur() {
+        // Ne rien faire – la gestion du rôle est déléguée à AuthController
     }
 
     @Transient
@@ -172,22 +204,20 @@ public class Utilisateur {  // ← Plus abstract !
         profil.append("=== PROFIL UTILISATEUR ===\n");
         profil.append("Nom complet: ").append(getNomComplet()).append("\n");
         profil.append("Email: ").append(this.email).append("\n");
+        profil.append("Rôle: ").append(this.role != null ? this.role : "Non défini").append("\n");
         profil.append("Téléphone: ").append(this.telephone != null ? this.telephone : "Non renseigné").append("\n");
         profil.append("Statut: ").append(getStatutCompte()).append("\n");
         profil.append("Date de création: ").append(this.dateCreation).append("\n");
         profil.append("Nombre de connexions: ").append(this.nombreConnexions != null ? this.nombreConnexions : 0).append("\n");
-
         if (this.derniereConnexion != null) {
             profil.append("Dernière connexion: ").append(this.derniereConnexion).append("\n");
         }
-
         if (this.employe != null) {
             profil.append("\n=== INFORMATIONS EMPLOYÉ ===\n");
             profil.append("Matricule: ").append(this.employe.getMatricule()).append("\n");
             profil.append("Poste: ").append(this.employe.getPoste()).append("\n");
             profil.append("Département: ").append(this.employe.getDepartement()).append("\n");
         }
-
         return profil.toString();
     }
 
@@ -256,6 +286,11 @@ public class Utilisateur {  // ← Plus abstract !
         if (this.compteVerrouille == null) {
             this.compteVerrouille = false;
         }
+
+        // Suppression de l'appel à setRoleFromTypeUtilisateur() pour éviter d'écraser le rôle Spring
+        // if (this.role == null && this.typeUtilisateur != null) {
+        //     setRoleFromTypeUtilisateur();
+        // }
 
         if (this.email != null) {
             this.email = this.email.trim().toLowerCase();

@@ -40,7 +40,7 @@ public class EmployeServiceImpl implements EmployeService {
     private final EmployeMapper mapper;
     private final PasswordEncoder passwordEncoder;
 
-    // ===== MÉTHODES EXISTANTES =====
+    // ===== MÉTHODES EXISTANTES (inchangées) =====
 
     @Override
     @Transactional(readOnly = true)
@@ -128,6 +128,8 @@ public class EmployeServiceImpl implements EmployeService {
                 .collect(Collectors.toList());
     }
 
+    // ===== MÉTHODE CREATE =====
+
     @Override
     public EmployeDTO create(EmployeDTO dto) {
         log.debug("Création d'un employé: {}", dto.getMatricule());
@@ -170,26 +172,48 @@ public class EmployeServiceImpl implements EmployeService {
             employe.setService(service);
         }
 
-        // Gérer le manager
+        // Gérer le manager (optionnel)
+        Manager manager = null;
         if (dto.getManagerId() != null) {
-            Manager manager = managerRepository.findById(dto.getManagerId())
+            manager = managerRepository.findById(dto.getManagerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Manager", dto.getManagerId()));
-            employe.setManager(manager);
+        } else if (dto.getManagerEmail() != null && !dto.getManagerEmail().isBlank()) {
+            manager = managerRepository.findByEmail(dto.getManagerEmail())
+                    .orElseThrow(() -> new ResourceNotFoundException("Manager avec email " + dto.getManagerEmail()));
         }
+        employe.setManager(manager);
 
-        // CRITICAL: Créer et associer l'utilisateur
+        // Créer et associer l'utilisateur
         String defaultPassword = dto.getPassword() != null ? dto.getPassword() : "default123";
         String encodedPassword = passwordEncoder.encode(defaultPassword);
-        employe.createUtilisateur(encodedPassword);
+        Utilisateur utilisateur = employe.createUtilisateur(encodedPassword);
 
-        // Sauvegarder (cascade sauvegardera aussi l'utilisateur)
+        // Définir le rôle et le type d'utilisateur
+        String role = dto.getRole() != null ? dto.getRole() : "user";
+        utilisateur.setRole(role);
+        utilisateur.setTypeUtilisateur(determineTypeFromRole(role));
+        log.debug("Rôle défini: {}, typeUtilisateur: {}", role, utilisateur.getTypeUtilisateur());
+
+        // Sauvegarder
         Employe saved = employeRepository.save(employe);
 
-        log.info("Employé créé avec succès - ID: {}, Utilisateur associé ID: {}",
-                saved.getId(), saved.getUtilisateur() != null ? saved.getUtilisateur().getId() : null);
+        log.info("Employé créé avec succès - ID: {}, Utilisateur associé ID: {}, rôle: {}",
+                saved.getId(), saved.getUtilisateur() != null ? saved.getUtilisateur().getId() : null, role);
 
         return mapper.toDto(saved);
     }
+
+    private String determineTypeFromRole(String role) {
+        if ("admin_rh".equals(role)) {
+            return "ADMIN_RH";
+        } else if ("manager".equals(role)) {
+            return "MANAGER";
+        } else {
+            return "EMPLOYE";
+        }
+    }
+
+    // ===== MÉTHODE UPDATE =====
 
     @Override
     public EmployeDTO update(Long id, EmployeDTO dto) {
@@ -248,6 +272,43 @@ public class EmployeServiceImpl implements EmployeService {
         return mapper.toDto(saved);
     }
 
+    // ===== NOUVELLE MÉTHODE : UPDATE MANAGER =====
+
+    @Override
+    @Transactional
+    public EmployeDTO updateManager(Long employeId, Long managerId) {
+        log.debug("Mise à jour du manager pour l'employé ID: {} vers manager ID: {}", employeId, managerId);
+
+        // Récupérer l'employé
+        Employe employe = employeRepository.findById(employeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé avec ID: " + employeId));
+
+        // Gérer le cas où managerId est null (supprimer le manager)
+        if (managerId == null) {
+            employe.setManager(null);
+            log.debug("Manager supprimé pour l'employé ID: {}", employeId);
+        } else {
+            // Récupérer le nouveau manager
+            Manager newManager = managerRepository.findById(managerId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Manager non trouvé avec ID: " + managerId));
+
+            // Vérifier que l'utilisateur est bien un manager
+            if (!"MANAGER".equals(newManager.getTypeUtilisateur())) {
+                throw new BusinessException("L'utilisateur sélectionné n'est pas un manager valide");
+            }
+
+            employe.setManager(newManager);
+            log.debug("Manager mis à jour pour l'employé ID: {} -> nouveau manager: {}",
+                    employeId, newManager.getNomComplet());
+        }
+
+        // Sauvegarder et retourner le DTO
+        Employe updatedEmploye = employeRepository.save(employe);
+        return mapper.toDto(updatedEmploye);
+    }
+
+    // ===== AUTRES MÉTHODES =====
+
     @Override
     public EmployeDTO mettreAJourProfil(Long id, String poste, Double salaire, String departement) {
         log.debug("Mise à jour du profil ID: {}", id);
@@ -280,7 +341,6 @@ public class EmployeServiceImpl implements EmployeService {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé", id));
 
-        // L'utilisateur sera supprimé automatiquement grâce à cascade et orphanRemoval
         employeRepository.delete(employe);
         log.info("Employé supprimé - ID: {}", id);
     }
@@ -344,7 +404,7 @@ public class EmployeServiceImpl implements EmployeService {
     public TableauBordEmployeDTO getStatsTableauBord() {
         log.info("Récupération des statistiques tableau de bord des employés");
 
-        List<Object[]> stats = employeRepository.getStatsTableauBord();
+        List<Map<String, Object>> stats = employeRepository.getStatsTableauBord();
 
         if (stats == null || stats.isEmpty()) {
             log.warn("Aucune donnée de statistiques trouvée");
@@ -359,29 +419,15 @@ public class EmployeServiceImpl implements EmployeService {
                     .build();
         }
 
-        Object[] stat = stats.get(0);
+        Map<String, Object> stat = stats.get(0);
 
-        // Vérifier la longueur du tableau
-        if (stat.length < 7) {
-            log.error("Le résultat de la requête a {} colonnes, mais 7 sont attendues", stat.length);
-            return TableauBordEmployeDTO.builder()
-                    .total(0L)
-                    .actifs(0L)
-                    .inactifs(0L)
-                    .enConge(0L)
-                    .salaireMoyen(0.0)
-                    .masseSalariale(0.0)
-                    .soldeCongesMoyen(0.0)
-                    .build();
-        }
-
-        Long total = stat[0] != null ? ((Number) stat[0]).longValue() : 0L;
-        Long actifs = stat[1] != null ? ((Number) stat[1]).longValue() : 0L;
-        Long inactifs = stat[2] != null ? ((Number) stat[2]).longValue() : 0L;
-        Long enConge = stat[3] != null ? ((Number) stat[3]).longValue() : 0L;
-        Double salaireMoyen = stat[4] != null ? ((Number) stat[4]).doubleValue() : 0.0;
-        Double masseSalariale = stat[5] != null ? ((Number) stat[5]).doubleValue() : 0.0;
-        Double soldeCongesMoyen = stat[6] != null ? ((Number) stat[6]).doubleValue() : 0.0;
+        Long total = toLong(stat.get("total"));
+        Long actifs = toLong(stat.get("actifs"));
+        Long inactifs = toLong(stat.get("inactifs"));
+        Long enConge = toLong(stat.get("enConge"));
+        Double salaireMoyen = toDouble(stat.get("salaireMoyen"));
+        Double masseSalariale = toDouble(stat.get("masseSalariale"));
+        Double soldeCongesMoyen = toDouble(stat.get("soldeCongesMoyen"));
 
         log.info("Statistiques récupérées: total={}, actifs={}, salaireMoyen={}", total, actifs, salaireMoyen);
 
@@ -396,7 +442,19 @@ public class EmployeServiceImpl implements EmployeService {
                 .build();
     }
 
-    // ===== NOUVELLES MÉTHODES =====
+    private Long toLong(Object value) {
+        if (value == null) return 0L;
+        if (value instanceof Number) return ((Number) value).longValue();
+        return Long.parseLong(value.toString());
+    }
+
+    private Double toDouble(Object value) {
+        if (value == null) return 0.0;
+        if (value instanceof Number) return ((Number) value).doubleValue();
+        return Double.parseDouble(value.toString());
+    }
+
+    // ===== MÉTHODES POUR L'UTILISATEUR AUTHENTIFIÉ =====
 
     @Override
     @Transactional(readOnly = true)

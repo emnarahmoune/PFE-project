@@ -16,6 +16,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -294,21 +296,20 @@ public class FormationServiceImpl implements FormationService {
         return formationRepository.findAllDomaines();
     }
 
+
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getStatsTableauBord() {
         List<Object[]> stats = formationRepository.getStatsTableauBord();
-        if (stats.isEmpty()) {
+        if (stats == null || stats.isEmpty()) {
             return Map.of();
         }
         Object[] stat = stats.get(0);
-
-        return Map.of(
-                "totalFormations", stat[0],
-                "formationsActives", stat[1],
-                "dureeMoyenne", stat[2],
-                "participantsMoyens", stat[3],
-                "totalParticipants", stat[4]
-        );
-    }
-}
+        Map<String, Object> result = new HashMap<>();
+        if (stat.length > 0) result.put("totalFormations", stat[0]);
+        if (stat.length > 1) result.put("formationsActives", stat[1]);
+        if (stat.length > 2) result.put("dureeMoyenne", stat[2]);
+        if (stat.length > 3) result.put("participantsMoyens", stat[3]);
+        if (stat.length > 4) result.put("totalParticipants", stat[4]);
+        return result;
+    }}

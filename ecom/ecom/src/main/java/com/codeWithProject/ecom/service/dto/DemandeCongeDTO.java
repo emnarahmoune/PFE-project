@@ -40,4 +40,10 @@ public class DemandeCongeDTO {
     // Champs calculés
     private Long nombreJours;
     private String resume;
+    // Ajoutez ces champs pour le workflow
+    private String managerEmail;
+    private String adminEmail;
+    private Boolean managerApprouve;
+    private Boolean rhApprouve;
+    private String processInstanceId;
 }

@@ -2,27 +2,14 @@ package com.codeWithProject.ecom.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Set;
 
-/**
- * Entité DemandeConge - Gestion des demandes de congé
- * Corrigée pour correspondre au diagramme de classes :
- *
- * Colonnes du diagramme :
- *  - id          : Long
- *  - dateDebut   : Date
- *  - dateFin     : Date
- *  - type        : String   (ANNUEL, MALADIE, SANS_SOLDE…)
- *  - statut      : String   (EN_ATTENTE, APPROUVE, REFUSE, ANNULE)
- *  - dateDemande : Date
- *  - commentaire : String
- *
- * Colonnes supplémentaires conservées car nécessaires au workflow :
- *  - dateDecision, motifRefus, joursOuvres, urgente
- */
+@Slf4j
 @Entity
 @Table(name = "demandes_conge",
         indexes = {
@@ -39,8 +26,6 @@ import java.util.Set;
 @Builder
 public class DemandeConge {
 
-    /* ── Colonnes du diagramme de classes ─────────────────── */
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -52,11 +37,9 @@ public class DemandeConge {
     @Column(name = "date_fin", nullable = false)
     private LocalDate dateFin;
 
-    /** ANNUEL, MALADIE, SANS_SOLDE, MATERNITE, PATERNITE, FORMATION */
     @Column(name = "type", nullable = false, length = 50)
     private String type;
 
-    /** EN_ATTENTE, APPROUVE, REFUSE, ANNULE */
     @Column(name = "statut", nullable = false, length = 50)
     @Builder.Default
     private String statut = "EN_ATTENTE";
@@ -66,8 +49,6 @@ public class DemandeConge {
 
     @Column(name = "commentaire", columnDefinition = "TEXT")
     private String commentaire;
-
-    /* ── Colonnes techniques (hors diagramme, conservées) ─── */
 
     @Column(name = "date_decision")
     private LocalDate dateDecision;
@@ -82,19 +63,24 @@ public class DemandeConge {
     @Builder.Default
     private Boolean urgente = false;
 
-    /* ── Relations ─────────────────────────────────────────── */
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "employe_id", nullable = false)
     @ToString.Exclude
+    @JsonIgnoreProperties({"demandesConge", "manager", "competences", "formations"})
     private Employe employe;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")
     @ToString.Exclude
+    @JsonIgnoreProperties({"demandesCongeAValider", "employesGeres"})
     private Manager manager;
 
-    /* ── Constantes ─────────────────────────────────────────── */
+    // ✅ Supprimer les déclarations en double - garder UNE SEULE fois ces champs
+    @Column(name = "process_instance_id", length = 100)
+    private String processInstanceId;
+
+    @Column(name = "task_id", length = 100)
+    private String currentTaskId;
 
     private static final Set<DayOfWeek> WEEKEND = Set.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY);
     private static final Set<LocalDate> JOURS_FERIES = Set.of(
@@ -106,25 +92,22 @@ public class DemandeConge {
             LocalDate.of(2026, 12, 25)
     );
 
-    /* ── Méthodes workflow (diagramme) ──────────────────────── */
-
     public void soumettre() {
         validerDates();
         validerType();
-        this.joursOuvres  = calculerJoursOuvres();
+        this.joursOuvres = calculerJoursOuvres();
         verifierSoldeSuffisant();
-        this.dateDemande  = LocalDate.now();
-        this.statut       = "EN_ATTENTE";
-        this.urgente      = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
+        this.dateDemande = LocalDate.now();
+        this.statut = "EN_ATTENTE";
+        this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
     }
 
     public void modifier(LocalDate nouvelleDateDebut, LocalDate nouvelleDateFin,
                          String nouveauType, String nouveauCommentaire) {
         verifierModificationAutorisee();
-        if (nouvelleDateDebut  != null) this.dateDebut  = nouvelleDateDebut;
-        if (nouvelleDateFin    != null) this.dateFin    = nouvelleDateFin;
-        if (nouveauType != null && !nouveauType.isBlank())
-            this.type = nouveauType.trim().toUpperCase();
+        if (nouvelleDateDebut != null) this.dateDebut = nouvelleDateDebut;
+        if (nouvelleDateFin != null) this.dateFin = nouvelleDateFin;
+        if (nouveauType != null && !nouveauType.isBlank()) this.type = nouveauType.trim().toUpperCase();
         if (nouveauCommentaire != null) this.commentaire = nouveauCommentaire;
         validerDates();
         this.joursOuvres = calculerJoursOuvres();
@@ -137,11 +120,9 @@ public class DemandeConge {
             throw new IllegalStateException("Seules les demandes EN_ATTENTE ou APPROUVÉES peuvent être annulées");
         if ("APPROUVE".equals(this.statut) && this.dateDebut.isBefore(LocalDate.now()))
             throw new IllegalStateException("Impossible d'annuler un congé déjà commencé");
-
         String ancien = this.statut;
-        this.statut       = "ANNULE";
+        this.statut = "ANNULE";
         this.dateDecision = LocalDate.now();
-
         if ("APPROUVE".equals(ancien) && "ANNUEL".equals(this.type)
                 && this.joursOuvres != null && this.employe != null) {
             this.employe.ajouterConges(this.joursOuvres);
@@ -150,7 +131,7 @@ public class DemandeConge {
 
     public void valider() {
         verifierValidationAutorisee();
-        this.statut       = "APPROUVE";
+        this.statut = "APPROUVE";
         this.dateDecision = LocalDate.now();
         if ("ANNUEL".equals(this.type) && this.joursOuvres != null && this.employe != null)
             this.employe.deduireConges(this.joursOuvres);
@@ -158,7 +139,7 @@ public class DemandeConge {
 
     public void refuser() {
         verifierValidationAutorisee();
-        this.statut       = "REFUSE";
+        this.statut = "REFUSE";
         this.dateDecision = LocalDate.now();
     }
 
@@ -172,10 +153,14 @@ public class DemandeConge {
                 this.dateDebut, this.dateFin,
                 "APPROUVE".equals(this.statut) ? "approuvée" : "refusée");
         if (this.motifRefus != null) msg += " — Motif : " + this.motifRefus;
-        System.out.println("Notification : " + msg);
+        log.info("NOTIFICATION : {}", msg);
     }
 
-    /* ── Validations privées ────────────────────────────────── */
+    // ✅ Getters/Setters explicites pour éviter les problèmes Lombok
+    public String getProcessInstanceId() { return processInstanceId; }
+    public void setProcessInstanceId(String processInstanceId) { this.processInstanceId = processInstanceId; }
+    public String getCurrentTaskId() { return currentTaskId; }
+    public void setCurrentTaskId(String currentTaskId) { this.currentTaskId = currentTaskId; }
 
     private void validerDates() {
         if (this.dateDebut == null || this.dateFin == null)
@@ -212,8 +197,6 @@ public class DemandeConge {
         if (!"EN_ATTENTE".equals(this.statut))
             throw new IllegalStateException("Seules les demandes EN_ATTENTE peuvent être validées/refusées");
     }
-
-    /* ── Calculs ────────────────────────────────────────────── */
 
     private Integer calculerJoursOuvres() {
         if (this.dateDebut == null || this.dateFin == null) return 0;
@@ -266,8 +249,6 @@ public class DemandeConge {
                 Boolean.TRUE.equals(this.urgente) ? " [URGENT]" : "");
     }
 
-    /* ── Lifecycle ──────────────────────────────────────────── */
-
     @PrePersist
     protected void onCreate() {
         initialiserValeursParDefaut();
@@ -282,11 +263,11 @@ public class DemandeConge {
     }
 
     private void initialiserValeursParDefaut() {
-        if (this.dateDemande == null)                    this.dateDemande = LocalDate.now();
-        if (this.statut == null || this.statut.isBlank()) this.statut     = "EN_ATTENTE";
-        else                                              this.statut      = this.statut.toUpperCase();
-        if (this.type   != null)                          this.type        = this.type.toUpperCase();
-        if (this.joursOuvres == null)                     this.joursOuvres = calculerJoursOuvres();
+        if (this.dateDemande == null) this.dateDemande = LocalDate.now();
+        if (this.statut == null || this.statut.isBlank()) this.statut = "EN_ATTENTE";
+        else this.statut = this.statut.toUpperCase();
+        if (this.type != null) this.type = this.type.toUpperCase();
+        if (this.joursOuvres == null) this.joursOuvres = calculerJoursOuvres();
         if (this.urgente == null)
             this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
     }
