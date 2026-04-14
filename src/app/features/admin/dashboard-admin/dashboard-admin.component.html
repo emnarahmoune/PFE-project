@@ -8,7 +8,9 @@
       </div>
       <div class="hero-right">
         <div class="user-badge">
-          <div class="user-avatar">{{ (userPrenom.charAt(0) || 'U') + (userNom.charAt(0) || '') }}</div>
+          <div class="user-avatar">
+            {{ (userPrenom.charAt(0) || 'U') + (userNom.charAt(0) || '') }}
+          </div>
           <div class="user-info">
             <span class="user-name">{{ userPrenom }} {{ userNom }}</span>
             <span class="user-role">{{ userRole | titlecase }}</span>
@@ -36,13 +38,19 @@
           <span class="section-subtitle">Synthèse de l'activité RH</span>
         </div>
         <div class="kpi-grid">
-          <div class="kpi-tile" *ngFor="let card of statCards" (click)="card.link && navigateTo(card.link)">
+          <div
+            class="kpi-tile"
+            *ngFor="let card of statCards"
+            (click)="card.link && navigateTo(card.link)"
+          >
             <div class="kpi-icon">{{ card.icon }}</div>
             <div class="kpi-data">
               <span class="kpi-value">{{ card.value }}</span>
               <span class="kpi-label">{{ card.title }}</span>
             </div>
-            <div class="kpi-trend" [class]="card.trend" *ngIf="card.change">{{ card.change }}</div>
+            <div class="kpi-trend" [class]="card.trend" *ngIf="card.change">
+              {{ card.change }}
+            </div>
           </div>
         </div>
       </div>
@@ -101,14 +109,18 @@
             </div>
             <div class="employee-list">
               <div class="employee-item" *ngFor="let emp of recentEmployees">
-                <div class="employee-avatar" [style.background]="getAvatarBg(emp.departement)">{{ emp.prenom.charAt(0) }}{{ emp.nom.charAt(0) }}</div>
+                <div class="employee-avatar" [style.background]="getAvatarBg(emp.departement)">
+                  {{ emp.prenom.charAt(0) }}{{ emp.nom.charAt(0) }}
+                </div>
                 <div class="employee-details">
                   <div class="employee-name">{{ emp.prenom }} {{ emp.nom }}</div>
                   <div class="employee-meta">{{ emp.poste }} • {{ emp.departement }}</div>
                 </div>
                 <div class="employee-date">{{ emp.dateEmbauche | date:'dd/MM/yy' }}</div>
               </div>
-              <div class="empty-message" *ngIf="recentEmployees.length === 0">Aucun employé récent</div>
+              <div class="empty-message" *ngIf="recentEmployees.length === 0">
+                Aucun employé récent
+              </div>
             </div>
           </div>
 
@@ -123,7 +135,10 @@
                 <div class="alert-icon" [class]="a.type">{{ getAlertEmoji(a.type) }}</div>
                 <div class="alert-content">
                   <div class="alert-message">{{ a.message }}</div>
-                  <div class="alert-time">{{ a.time }} • <a *ngIf="a.lien" [routerLink]="a.lien" class="alert-link">Voir</a></div>
+                  <div class="alert-time">
+                    {{ a.time }}
+                    <a *ngIf="a.lien" [routerLink]="a.lien" class="alert-link">Voir</a>
+                  </div>
                 </div>
               </div>
               <div class="empty-message" *ngIf="alerts.length === 0">Aucune alerte</div>
@@ -151,7 +166,9 @@
                   <div class="competence-fill" [style.width.%]="c.pourcentage"></div>
                 </div>
               </div>
-              <div class="empty-message" *ngIf="topCompetences.length === 0">Aucune donnée</div>
+              <div class="empty-message" *ngIf="topCompetences.length === 0">
+                Aucune donnée
+              </div>
             </div>
           </div>
           <div class="analytics-card">

@@ -75,7 +75,6 @@ export class DashboardService {
    * Récupère toutes les statistiques du dashboard depuis l'API
    */
   getDashboardStats(): Observable<DashboardStats> {
-    // Appels parallèles aux différents endpoints
     return forkJoin({
       employes: this.http.get<any>(`${this.apiUrl}/employes/stats/tableau-bord`).pipe(
         catchError(err => {
@@ -127,7 +126,6 @@ export class DashboardService {
       )
     }).pipe(
       map((data: any) => {
-        // Traitement des données reçues
         const employesStats = data.employes.data || {};
         const turnoverData = Array.isArray(data.turnover.data) ? data.turnover.data[0] : { valeur: 0 };
         const absenteismeData = Array.isArray(data.absenteisme.data) ? data.absenteisme.data[0] : { valeur: 0 };
@@ -137,7 +135,6 @@ export class DashboardService {
         const departementsData = data.departements.data || [];
         const statutsData = data.statuts.data || {};
 
-        // Transformation des données départements
         const parDepartement: { [key: string]: number } = {};
         departementsData.forEach((item: any[]) => {
           if (item.length >= 2) {
@@ -197,7 +194,7 @@ export class DashboardService {
       conges: this.http.get<any>(`${this.apiUrl}/conges/urgentes`).pipe(
         catchError(err => of({ data: [] }))
       ),
-      scores: this.http.get<any>(`${this.apiUrl}/scores-turnover/scores-risques`).pipe(
+      scores: this.http.get<any>(`${this.apiUrl}/scores-turnover/stats/repartition-risques`).pipe(
         catchError(err => of({ data: [] }))
       ),
       formations: this.http.get<any>(`${this.apiUrl}/formations/populaires?limit=1`).pipe(
@@ -210,7 +207,6 @@ export class DashboardService {
       map((data: any) => {
         const alertes: Alerte[] = [];
         
-        // Alertes congés urgents
         const congesUrgents = data.conges.data || [];
         if (congesUrgents.length > 0) {
           alertes.push({
@@ -221,7 +217,6 @@ export class DashboardService {
           });
         }
 
-        // Alertes scores risque
         const scoresRisques = data.scores.data || [];
         const scoresEleves = scoresRisques.filter((s: any) => 
           s.niveauRisque === 'ELEVE' || s.niveauRisque === 'CRITIQUE'
@@ -235,7 +230,6 @@ export class DashboardService {
           });
         }
 
-        // Alertes formations
         const formations = data.formations.data || [];
         if (formations.length > 0) {
           const prochaineFormation = formations[0];
@@ -247,7 +241,6 @@ export class DashboardService {
           });
         }
 
-        // Alerte anniversaire d'embauche (feature cool)
         const employes = data.employes.data || [];
         const aujourdHui = new Date();
         const employesAnniversaire = employes.filter((e: any) => {

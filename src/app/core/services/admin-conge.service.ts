@@ -1,5 +1,4 @@
 // src/app/core/services/admin-conge.service.ts
-
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -15,27 +14,22 @@ export interface DemandeCongeAdmin {
   dateFin: string;
   joursOuvres: number;
   type: string;
-  commentaire: string;
+  commentaire?: string;
   statut: string;
   dateDemande: string;
-  processInstanceId: string;
-  taskId: string;
+  processInstanceId?: string;
+  taskId?: string;
   currentTaskId?: string;
   motifRefus?: string;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  statusCode?: number;
+  urgente?: boolean;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AdminCongeService {
-  private apiUrl = 'http://localhost:8082/api/admin/conges';
+  // ✅ URL relative – le proxy se chargera de rediriger vers http://localhost:8082
+  private apiUrl = '/api/admin/conges';
 
   constructor(
     private http: HttpClient,
@@ -50,72 +44,51 @@ export class AdminCongeService {
     });
   }
 
-  /**
-   * Récupère les demandes en attente avec plus de 10 jours
-   */
-  getDemandesAValider(): Observable<ApiResponse<DemandeCongeAdmin[]>> {
-    return this.http.get<ApiResponse<DemandeCongeAdmin[]>>(
+  getDemandesAValider(): Observable<DemandeCongeAdmin[]> {
+    return this.http.get<DemandeCongeAdmin[]>(
       `${this.apiUrl}/a-valider`,
       { headers: this.getHeaders() }
     );
   }
 
-  /**
-   * Récupère toutes les demandes
-   */
-  getAllDemandes(): Observable<ApiResponse<DemandeCongeAdmin[]>> {
-    return this.http.get<ApiResponse<DemandeCongeAdmin[]>>(
+  getAllDemandes(): Observable<DemandeCongeAdmin[]> {
+    return this.http.get<DemandeCongeAdmin[]>(
       `${this.apiUrl}/all`,
       { headers: this.getHeaders() }
     );
   }
 
-  /**
-   * Récupère une demande par son ID
-   */
-  getDemandeById(id: number): Observable<ApiResponse<DemandeCongeAdmin>> {
-    return this.http.get<ApiResponse<DemandeCongeAdmin>>(
+  getDemandeById(id: number): Observable<DemandeCongeAdmin> {
+    return this.http.get<DemandeCongeAdmin>(
       `${this.apiUrl}/${id}`,
       { headers: this.getHeaders() }
     );
   }
 
-  /**
-   * Approuve une demande
-   */
-  approuverDemande(id: number, commentaire?: string): Observable<ApiResponse<void>> {
+  approuverDemande(id: number, commentaire?: string): Observable<void> {
     const url = commentaire 
       ? `${this.apiUrl}/${id}/valider?commentaire=${encodeURIComponent(commentaire)}`
       : `${this.apiUrl}/${id}/valider`;
-    return this.http.put<ApiResponse<void>>(url, {}, { headers: this.getHeaders() });
+    return this.http.put<void>(url, {}, { headers: this.getHeaders() });
   }
 
-  /**
-   * Refuse une demande avec motif
-   */
-  refuserDemande(id: number, motif: string): Observable<ApiResponse<void>> {
-    return this.http.put<ApiResponse<void>>(
+  refuserDemande(id: number, motif: string): Observable<void> {
+    return this.http.put<void>(
       `${this.apiUrl}/${id}/refuser?motif=${encodeURIComponent(motif)}`,
       {},
       { headers: this.getHeaders() }
     );
   }
 
-  /**
-   * Récupère les statistiques par statut
-   */
-  getStats(): Observable<ApiResponse<Record<string, number>>> {
-    return this.http.get<ApiResponse<Record<string, number>>>(
+  getStats(): Observable<Record<string, number>> {
+    return this.http.get<Record<string, number>>(
       `${this.apiUrl}/stats/statut`,
       { headers: this.getHeaders() }
     );
   }
 
-  /**
-   * Récupère les demandes orphelines (sans instance Camunda)
-   */
-  getOrphanRequests(): Observable<ApiResponse<DemandeCongeAdmin[]>> {
-    return this.http.get<ApiResponse<DemandeCongeAdmin[]>>(
+  getOrphanRequests(): Observable<DemandeCongeAdmin[]> {
+    return this.http.get<DemandeCongeAdmin[]>(
       `${this.apiUrl}/orphan-requests`,
       { headers: this.getHeaders() }
     );

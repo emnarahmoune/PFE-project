@@ -1,5 +1,4 @@
 // src/app/features/admin/gestion-conges/pages/validation-rh/validation-rh.component.ts
-
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -37,7 +36,6 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
   loading = false;
   selectedTabIndex = 0;
   
-  // Modals
   showApproveModal = false;
   showRejectModal = false;
   selectedDemande: DemandeCongeAdmin | null = null;
@@ -45,7 +43,6 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
   motifRefus = '';
   isSubmitting = false;
   
-  // Stats
   stats = {
     total: 0,
     approuvees: 0,
@@ -88,14 +85,11 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     if (showLoading) this.loading = true;
     
     this.adminCongeService.getDemandesAValider().subscribe({
-      next: (response) => {
+      next: (data) => {
         this.loading = false;
-        if (response.success) {
-          this.demandes = response.data || [];
-          this.updateStatsFromDemandes();
-        } else {
-          this.showToast(response.message || 'Erreur chargement', 'error');
-        }
+        this.demandes = data || [];
+        this.stats.enAttente = this.demandes.length;
+        this.stats.total = this.stats.enAttente + this.stats.approuvees + this.stats.refusees;
       },
       error: (error) => {
         this.loading = false;
@@ -107,20 +101,16 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
 
   loadStats(): void {
     this.adminCongeService.getStats().subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          this.stats.enAttente = response.data['EN_ATTENTE'] || 0;
-          this.stats.approuvees = response.data['APPROUVE'] || 0;
-          this.stats.refusees = response.data['REFUSE'] || 0;
+      next: (data) => {
+        if (data) {
+          this.stats.enAttente = data['EN_ATTENTE'] || 0;
+          this.stats.approuvees = data['APPROUVE'] || 0;
+          this.stats.refusees = data['REFUSE'] || 0;
           this.stats.total = this.stats.enAttente + this.stats.approuvees + this.stats.refusees;
         }
       },
       error: (err) => console.error('Erreur chargement stats:', err)
     });
-  }
-
-  private updateStatsFromDemandes(): void {
-    this.stats.enAttente = this.demandes.length;
   }
 
   openApproveModal(demande: DemandeCongeAdmin): void {
@@ -148,17 +138,13 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     this.isSubmitting = true;
 
     this.adminCongeService.approuverDemande(this.selectedDemande.id, this.commentaire).subscribe({
-      next: (response) => {
+      next: () => {
         this.isSubmitting = false;
-        if (response.success) {
-          this.showToast(`✅ Demande approuvée avec succès`, 'success');
-          this.closeModals();
-          this.loadDemandes();
-          this.loadStats();
-          this.notificationService.showSuccess(`Demande de ${this.selectedDemande!.employePrenom} ${this.selectedDemande!.employeNom} approuvée`);
-        } else {
-          this.showToast(response.message || 'Erreur lors de l\'approbation', 'error');
-        }
+        this.showToast(`✅ Demande approuvée avec succès`, 'success');
+        this.closeModals();
+        this.loadDemandes();
+        this.loadStats();
+        this.notificationService?.showSuccess?.(`Demande de ${this.selectedDemande!.employePrenom} ${this.selectedDemande!.employeNom} approuvée`);
       },
       error: (error) => {
         this.isSubmitting = false;
@@ -179,17 +165,13 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     this.isSubmitting = true;
 
     this.adminCongeService.refuserDemande(this.selectedDemande.id, this.motifRefus).subscribe({
-      next: (response) => {
+      next: () => {
         this.isSubmitting = false;
-        if (response.success) {
-          this.showToast(`❌ Demande refusée avec succès`, 'success');
-          this.closeModals();
-          this.loadDemandes();
-          this.loadStats();
-          this.notificationService.showWarning(`Demande de ${this.selectedDemande!.employePrenom} ${this.selectedDemande!.employeNom} refusée`);
-        } else {
-          this.showToast(response.message || 'Erreur lors du refus', 'error');
-        }
+        this.showToast(`❌ Demande refusée avec succès`, 'success');
+        this.closeModals();
+        this.loadDemandes();
+        this.loadStats();
+        this.notificationService?.showWarning?.(`Demande de ${this.selectedDemande!.employePrenom} ${this.selectedDemande!.employeNom} refusée`);
       },
       error: (error) => {
         this.isSubmitting = false;

@@ -49,10 +49,15 @@ export const routes: Routes = [
       },
       // ✅ NOUVEAU - Validation RH des congés (>10 jours)
       {
-        path: 'conges/validation-rh',
-        loadComponent: () => import('./features/admin/gestion-conges/pages/validation-rh/validation-rh.component')
-          .then(m => m.ValidationRhComponent)
-      },
+      path: 'conges',
+      redirectTo: 'conges/validation-rh',
+      pathMatch: 'full'
+    },
+    {
+      path: 'conges/validation-rh',
+      loadComponent: () => import('./features/admin/gestion-conges/pages/validation-rh/validation-rh.component')
+        .then(m => m.ValidationRhComponent)
+    },
       // ✅ NOUVEAU - Assignation des managers
       {
         path: 'manager-assignment',

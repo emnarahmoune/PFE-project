@@ -1,3 +1,4 @@
+// src/app/core/services/workflow.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
@@ -30,7 +31,8 @@ export interface ApiResponse<T> {
   providedIn: 'root'
 })
 export class WorkflowService {
-  private apiUrl = 'http://localhost:8082/api';
+  // ✅ URL relative – le proxy se chargera de la redirection
+  private apiUrl = '/api';
 
   constructor(
     private http: HttpClient,
@@ -64,7 +66,7 @@ export class WorkflowService {
   approveTask(taskId: string, commentaire: string): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(
       `${this.apiUrl}/workflow/manager/decide`,
-      { taskId: taskId, approve: true, comment: commentaire },
+      { taskId, approve: true, comment: commentaire },
       { headers: this.getHeaders() }
     );
   }
@@ -72,7 +74,7 @@ export class WorkflowService {
   rejectTask(taskId: string, motif: string): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(
       `${this.apiUrl}/workflow/manager/decide`,
-      { taskId: taskId, approve: false, comment: motif },
+      { taskId, approve: false, comment: motif },
       { headers: this.getHeaders() }
     );
   }
@@ -96,7 +98,7 @@ export class WorkflowService {
   approveRHTask(taskId: string, commentaire: string): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(
       `${this.apiUrl}/workflow/rh/decide`,
-      { taskId: taskId, approve: true, comment: commentaire },
+      { taskId, approve: true, comment: commentaire },
       { headers: this.getHeaders() }
     );
   }
@@ -104,7 +106,7 @@ export class WorkflowService {
   rejectRHTask(taskId: string, motif: string): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(
       `${this.apiUrl}/workflow/rh/decide`,
-      { taskId: taskId, approve: false, comment: motif },
+      { taskId, approve: false, comment: motif },
       { headers: this.getHeaders() }
     );
   }
