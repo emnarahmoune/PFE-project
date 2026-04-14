@@ -4,16 +4,11 @@ import com.codeWithProject.ecom.entity.ScoreTurnover;
 import com.codeWithProject.ecom.service.dto.ScoreTurnoverDTO;
 import org.springframework.stereotype.Component;
 
-/**
- * Mapper pour l'entité ScoreTurnover
- */
 @Component
 public class ScoreTurnoverMapper {
 
     public ScoreTurnoverDTO toDto(ScoreTurnover entity) {
-        if (entity == null) {
-            return null;
-        }
+        if (entity == null) return null;
 
         ScoreTurnoverDTO dto = new ScoreTurnoverDTO();
         dto.setId(entity.getId());
@@ -32,15 +27,13 @@ public class ScoreTurnoverMapper {
         dto.setScoreFormation(entity.getScoreFormation());
         dto.setScoreAbsenteisme(entity.getScoreAbsenteisme());
 
-        // Informations employé
+        // Informations employé – directement via Employe
         if (entity.getEmploye() != null) {
             dto.setEmployeId(entity.getEmploye().getId());
             dto.setEmployeMatricule(entity.getEmploye().getMatricule());
             dto.setEmployeDepartement(entity.getEmploye().getDepartement());
-            if (entity.getEmploye().getUtilisateur() != null) {
-                dto.setEmployeNom(entity.getEmploye().getUtilisateur().getNom());
-                dto.setEmployePrenom(entity.getEmploye().getUtilisateur().getPrenom());
-            }
+            dto.setEmployeNom(entity.getEmploye().getNom());
+            dto.setEmployePrenom(entity.getEmploye().getPrenom());
         }
 
         // Informations système BI
@@ -49,7 +42,6 @@ public class ScoreTurnoverMapper {
             dto.setSystemeBIVersion(entity.getSystemeBI().getVersion());
         }
 
-        // Métadonnées
         dto.setNecessiteAlerte(entity.necessiteAlerte());
         dto.setCouleurAffichage(entity.getCouleurAffichage());
         dto.setResume(entity.getResume());
@@ -59,9 +51,7 @@ public class ScoreTurnoverMapper {
     }
 
     public ScoreTurnover toEntity(ScoreTurnoverDTO dto) {
-        if (dto == null) {
-            return null;
-        }
+        if (dto == null) return null;
 
         return ScoreTurnover.builder()
                 .id(dto.getId())

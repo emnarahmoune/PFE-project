@@ -25,7 +25,6 @@ public class DeduireSoldeDelegate implements JavaDelegate {
         log.info("=== DÉDUCTION DU SOLDE ===");
 
         String processInstanceId = execution.getProcessInstanceId();
-        // ✅ Correction: findByProcessInstanceId retourne Optional
         DemandeConge demande = demandeRepository.findByProcessInstanceId(processInstanceId)
                 .orElse(null);
 
@@ -35,9 +34,10 @@ public class DeduireSoldeDelegate implements JavaDelegate {
             return;
         }
 
-        // Vérifier si la demande est déjà approuvée
-        if (!"APPROUVEE".equals(demande.getStatut())) {
-            log.warn("Demande {} non approuvée, déduction ignorée", demande.getId());
+        // Correction : le statut après approbation est "APPROUVE" (un seul E)
+        if (!"APPROUVE".equals(demande.getStatut())) {
+            log.warn("Demande {} non approuvée (statut={}), déduction ignorée",
+                    demande.getId(), demande.getStatut());
             execution.setVariable("soldeDeduit", false);
             return;
         }

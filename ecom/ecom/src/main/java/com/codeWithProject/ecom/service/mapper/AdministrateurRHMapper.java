@@ -4,59 +4,63 @@ import com.codeWithProject.ecom.entity.AdministrateurRH;
 import com.codeWithProject.ecom.service.dto.AdministrateurRHDTO;
 import org.springframework.stereotype.Component;
 
-/**
- * Mapper AdministrateurRH ↔ AdministrateurRHDTO
- *
- * Après refactoring : AdministrateurRH extends Utilisateur.
- * Les champs nom/prenom/email/telephone/actif/dateCreation sont des attributs
- * DIRECTS de AdministrateurRH (hérités) — plus besoin de passer par getUtilisateur().
- *
- * Anciens appels supprimés :
- *   entity.getEmploye().getUtilisateur().getNom()   → entity.getNom()
- *   dto.setNomEmploye(...)                          → dto.setNom(...)
- *   dto.setMatriculeEmploye(...)                    → dto.setMatricule(...)
- */
 @Component
 public class AdministrateurRHMapper {
-
-    // ── Entité → DTO ──────────────────────────────────────────
 
     public AdministrateurRHDTO toDto(AdministrateurRH entity) {
         if (entity == null) return null;
 
         AdministrateurRHDTO dto = new AdministrateurRHDTO();
         dto.setId(entity.getId());
-
-        // Champs hérités directement de Utilisateur
+        dto.setMatricule(entity.getMatricule());
         dto.setNom(entity.getNom());
         dto.setPrenom(entity.getPrenom());
         dto.setEmail(entity.getEmail());
         dto.setTelephone(entity.getTelephone());
+        dto.setPoste(entity.getPoste());
+        dto.setDepartement(entity.getDepartement());
+        dto.setSalaire(entity.getSalaire());
+        dto.setStatut(entity.getStatut());
         dto.setActif(entity.getActif());
+        dto.setDateEmbauche(entity.getDateEmbauche());
         dto.setDateCreation(entity.getDateCreation());
+        dto.setSoldeConges(entity.getSoldeConges());
+        dto.setRole(entity.getRole());
+        dto.setNomComplet(entity.getNomComplet());
+        dto.setStatutCompte(entity.getStatutCompte());
+        dto.setPeutSeConnecter(entity.peutSeConnecter());
+        dto.setAnciennete(entity.getAnciennete());
 
-        // Relation Employe (optionnelle)
-        if (entity.getEmploye() != null) {
-            dto.setEmployeId(entity.getEmploye().getId());
-            dto.setMatricule(entity.getEmploye().getMatricule());
-        }
+        // Un administrateur RH n'a pas de relation 'employe' distincte
+        // car il est lui-même un employé. On peut éventuellement mettre son propre ID comme employeId
+        dto.setEmployeId(entity.getId());
+        dto.setEmployeMatricule(entity.getMatricule());
+        dto.setEmployeNom(entity.getNom());
+        dto.setEmployePrenom(entity.getPrenom());
 
         return dto;
     }
-
-    // ── DTO → Entité ──────────────────────────────────────────
 
     public AdministrateurRH toEntity(AdministrateurRHDTO dto) {
         if (dto == null) return null;
 
         AdministrateurRH entity = new AdministrateurRH();
+        entity.setId(dto.getId());
+        entity.setMatricule(dto.getMatricule());
         entity.setNom(dto.getNom());
         entity.setPrenom(dto.getPrenom());
         entity.setEmail(dto.getEmail());
         entity.setTelephone(dto.getTelephone());
-        entity.setActif(dto.getActif() != null ? dto.getActif() : Boolean.TRUE);
-        // L'employé est associé dans le service, pas ici
-
+        entity.setPoste(dto.getPoste());
+        entity.setDepartement(dto.getDepartement());
+        entity.setSalaire(dto.getSalaire());
+        entity.setStatut(dto.getStatut() != null ? dto.getStatut() : "ACTIF");
+        entity.setActif(dto.getActif() != null ? dto.getActif() : true);
+        entity.setDateEmbauche(dto.getDateEmbauche());
+        entity.setDateCreation(dto.getDateCreation());
+        entity.setSoldeConges(dto.getSoldeConges() != null ? dto.getSoldeConges() : 25);
+        entity.setRole(dto.getRole() != null ? dto.getRole() : "ADMIN_RH");
+        entity.setTypeEmploye(com.codeWithProject.ecom.entity.Employe.TYPE_ADMIN_RH);
         return entity;
     }
 }

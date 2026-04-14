@@ -7,23 +7,24 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
 public interface ManagerRepository extends JpaRepository<Manager, Long> {
 
     // ===== RECHERCHES PAR IDENTIFIANTS =====
-
-    @Query("SELECT m FROM Manager m WHERE m.id = :id")
-    Optional<Manager> findById(@Param("id") Long id);
-
-    Optional<Manager> findByEmployeId(Long employeId);
-
-    @Query("SELECT m FROM Manager m WHERE m.employe.matricule = :matricule")
-    Optional<Manager> findByEmployeMatricule(@Param("matricule") String matricule);
-
-    // ✅ CORRECTION: Manager hérite de Utilisateur, donc email est direct
+    Optional<Manager> findByMatricule(String matricule);
     Optional<Manager> findByEmail(String email);
+
+    // ✅ Méthodes pour compatibilité avec l'ancien code (l'ID du manager est l'ID employé)
+    default Optional<Manager> findByEmployeId(Long employeId) {
+        return findById(employeId);
+    }
+
+    default Optional<Manager> findByEmployeMatricule(String matricule) {
+        return findByMatricule(matricule);
+    }
 
     // ===== RECHERCHES PAR DÉPARTEMENT =====
     List<Manager> findByDepartement(String departement);
@@ -109,7 +110,7 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
             "SUM(SIZE(m.employesGeres)) as totalEmployesGeres, " +
             "COUNT(DISTINCT m.departement) as departementsCouverts) " +
             "FROM Manager m")
-    List<Object[]> getManagersStats();
+    List<Map<String, Object>> getManagersStats();
 
     @Query("SELECT m.departement, COUNT(m) FROM Manager m GROUP BY m.departement")
     List<Object[]> countManagersByDepartement();
@@ -129,10 +130,5 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
             "GROUP BY m.departement, m.id")
     List<Object[]> getStatsManagers();
 
-    // Dans ManagerRepository.java - AJOUTER cette méthode
-    @Query("SELECT m FROM Manager m WHERE m.email = :email")
-    Optional<Manager> findByUtilisateurEmail(@Param("email") String email);
-
-    // ✅ Garder cette méthode pour le manager par défaut
     Optional<Manager> findFirstByOrderByIdAsc();
 }

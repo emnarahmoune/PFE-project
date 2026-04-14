@@ -8,9 +8,7 @@ import org.springframework.stereotype.Component;
 public class DemandeCongeMapper {
 
     public DemandeCongeDTO toDto(DemandeConge entity) {
-        if (entity == null) {
-            return null;
-        }
+        if (entity == null) return null;
 
         DemandeCongeDTO dto = new DemandeCongeDTO();
         dto.setId(entity.getId());
@@ -26,28 +24,31 @@ public class DemandeCongeMapper {
         dto.setUrgente(entity.getUrgente());
         dto.setNombreJours(entity.getNombreJoursCalendaires());
         dto.setResume(entity.getResume());
+        dto.setProcessInstanceId(entity.getProcessInstanceId());
 
+        // Employé (directement via Employe, plus d'Utilisateur intermédiaire)
         if (entity.getEmploye() != null) {
             dto.setEmployeId(entity.getEmploye().getId());
             dto.setEmployeMatricule(entity.getEmploye().getMatricule());
-            if (entity.getEmploye().getUtilisateur() != null) {
-                dto.setEmployeNom(entity.getEmploye().getUtilisateur().getNom());
-                dto.setEmployePrenom(entity.getEmploye().getUtilisateur().getPrenom());
-            }
+            dto.setEmployeNom(entity.getEmploye().getNom());
+            dto.setEmployePrenom(entity.getEmploye().getPrenom());
         }
 
+        // Manager
         if (entity.getManager() != null) {
             dto.setManagerId(entity.getManager().getId());
             dto.setManagerNom(entity.getManager().getNomComplet());
+            dto.setManagerEmail(entity.getManager().getEmail());
         }
+
+        // Champs workflow (à remplir par le service si besoin)
+        // dto.setAdminEmail(...); dto.setManagerApprouve(...); etc.
 
         return dto;
     }
 
     public DemandeConge toEntity(DemandeCongeDTO dto) {
-        if (dto == null) {
-            return null;
-        }
+        if (dto == null) return null;
 
         return DemandeConge.builder()
                 .id(dto.getId())
@@ -61,6 +62,7 @@ public class DemandeCongeMapper {
                 .motifRefus(dto.getMotifRefus())
                 .joursOuvres(dto.getJoursOuvres())
                 .urgente(dto.getUrgente() != null ? dto.getUrgente() : false)
+                .processInstanceId(dto.getProcessInstanceId())
                 .build();
     }
 }

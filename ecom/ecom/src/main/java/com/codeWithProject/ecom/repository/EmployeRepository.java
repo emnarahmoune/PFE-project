@@ -1,6 +1,8 @@
 package com.codeWithProject.ecom.repository;
 
 import com.codeWithProject.ecom.entity.Employe;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,10 +20,17 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
     boolean existsByMatricule(String matricule);
     Optional<Employe> findByEmail(String email);
 
+    @Query("SELECT e FROM Employe e WHERE e.typeEmploye = 'MANAGER'")
+    List<Employe> findAllManagers();
+
+    @Query("SELECT e FROM Employe e WHERE e.typeEmploye = 'ADMIN_RH'")
+    List<Employe> findAllAdminRH();
+
     // ===== RECHERCHES PAR ATTRIBUTS =====
     List<Employe> findByDepartement(String departement);
     List<Employe> findByStatut(String statut);
     List<Employe> findByPoste(String poste);
+    List<Employe> findByActif(Boolean actif);
 
     @Query("SELECT e FROM Employe e WHERE LOWER(e.poste) LIKE LOWER(CONCAT('%', :poste, '%'))")
     List<Employe> findByPosteContaining(@Param("poste") String poste);
@@ -42,7 +51,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
     List<Employe> findByDateEmbaucheBefore(LocalDate date);
     List<Employe> findByDateEmbaucheBetween(LocalDate debut, LocalDate fin);
 
-    @Query("SELECT e FROM Employe e LEFT JOIN FETCH e.manager ORDER BY e.dateEmbauche DESC")
+    @Query("SELECT e FROM Employe e ORDER BY e.dateEmbauche DESC")
     List<Employe> findEmployesRecents();
 
     @Query("SELECT e FROM Employe e ORDER BY e.dateEmbauche ASC")
@@ -60,7 +69,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
     List<Employe> findByManagerId(Long managerId);
     List<Employe> findByServiceId(Long serviceId);
 
-    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL")
+    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL AND e.typeEmploye = 'EMPLOYE'")
     List<Employe> findEmployesSansManager();
 
     @Query("SELECT e FROM Employe e WHERE e.service IS NULL")
@@ -111,7 +120,6 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
             "LOWER(e.departement) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Employe> searchEmployes(@Param("keyword") String keyword);
 
-    // ✅ CORRECTION : retourner une List<Map<String, Object>>
     @Query("SELECT new map(" +
             "COUNT(e) as total, " +
             "SUM(CASE WHEN e.statut = 'ACTIF' THEN 1 ELSE 0 END) as actifs, " +
@@ -125,13 +133,10 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
 
     // ===== AUTRES =====
     List<Employe> findByManagerEmail(String email);
-    // Dans EmployeRepository.java - AJOUTER ces méthodes
 
-    // Dans EmployeRepository.java - AJOUTER cette méthode
-    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL")
+    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL AND e.typeEmploye = 'EMPLOYE'")
     List<Employe> findByManagerIsNull();
-    // ✅ À AJOUTER pour les employés actifs d'un manager
+
     @Query("SELECT e FROM Employe e WHERE e.manager.id = :managerId AND e.statut = 'ACTIF'")
     List<Employe> findActifsByManagerId(@Param("managerId") Long managerId);
-
 }

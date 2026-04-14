@@ -1,6 +1,6 @@
 package com.codeWithProject.ecom.controller;
 
-import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
+import com.codeWithProject.ecom.controller.dto.ApiResponse;
 import com.codeWithProject.ecom.service.exception.BusinessException;
 import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,7 +16,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,25 +23,20 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    // ── 404 ────────────────────────────────────────────────────
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleNotFound(
-            ResourceNotFoundException ex, HttpServletRequest req) {
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex, HttpServletRequest req) {
         log.warn("404 [{}] : {}", req.getRequestURI(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ApiResponse.error(ex.getMessage(), HttpStatus.NOT_FOUND));
     }
 
-    // ── 400 BusinessException ──────────────────────────────────
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBusiness(
-            BusinessException ex, HttpServletRequest req) {
+    public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException ex, HttpServletRequest req) {
         log.warn("400 [{}] code={} : {}", req.getRequestURI(), ex.getCode(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ex.getMessage(), HttpStatus.BAD_REQUEST));
     }
 
-    // ── 400 Validation @Valid ──────────────────────────────────
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(
             MethodArgumentNotValidException ex, HttpServletRequest req) {
@@ -50,41 +44,28 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getAllErrors().forEach(err ->
                 errors.put(((FieldError) err).getField(), err.getDefaultMessage()));
         log.warn("400 Validation [{}] : {}", req.getRequestURI(), errors);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.<Map<String, String>>builder()
-                        .success(false)
-                        .message("Erreur de validation")
-                        .data(errors)
-                        .timestamp(LocalDateTime.now())
-                        .statusCode(HttpStatus.BAD_REQUEST.value())
-                        .build());
+
+        ApiResponse<Map<String, String>> response = ApiResponse.error("Erreur de validation", HttpStatus.BAD_REQUEST);
+        response.setData(errors);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    // ── 400 Contrainte SQL (NOT NULL, UNIQUE…) ─────────────────
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(
-            DataIntegrityViolationException ex, HttpServletRequest req) {
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex, HttpServletRequest req) {
         String msg = extraireMessageSQL(ex.getMostSpecificCause());
         log.warn("400 DataIntegrity [{}] : {}", req.getRequestURI(), msg);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(msg, HttpStatus.BAD_REQUEST));
     }
 
-    // ── 500 TransactionSystemException ────────────────────────
     @ExceptionHandler({TransactionSystemException.class, JpaSystemException.class})
-    public ResponseEntity<ApiResponse<Void>> handleTransactionSystem(
-            Exception ex, HttpServletRequest req) {
-
+    public ResponseEntity<ApiResponse<Void>> handleTransactionSystem(Exception ex, HttpServletRequest req) {
         Throwable cause = ex;
-        while (cause.getCause() != null) {
-            cause = cause.getCause();
-        }
-
+        while (cause.getCause() != null) cause = cause.getCause();
         String rootMsg = cause.getClass().getSimpleName() + " : " + cause.getMessage();
         log.error("500 TransactionSystem [{}] cause racine : {}", req.getRequestURI(), rootMsg, ex);
 
-        if (cause instanceof IllegalStateException
-                || cause instanceof IllegalArgumentException
+        if (cause instanceof IllegalStateException || cause instanceof IllegalArgumentException
                 || cause instanceof StringIndexOutOfBoundsException) {
             String msg = cause instanceof StringIndexOutOfBoundsException
                     ? "Données invalides en base (champ vide ou null) : " + cause.getMessage()
@@ -92,15 +73,12 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(msg, HttpStatus.BAD_REQUEST));
         }
-
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(rootMsg, HttpStatus.INTERNAL_SERVER_ERROR));
     }
 
-    // ── 400 Mauvais type paramètre URL ─────────────────────────
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(
-            MethodArgumentTypeMismatchException ex, HttpServletRequest req) {
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest req) {
         String msg = String.format("Paramètre '%s' invalide : '%s' attendu en %s",
                 ex.getName(), ex.getValue(),
                 ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "?");
@@ -109,19 +87,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(msg, HttpStatus.BAD_REQUEST));
     }
 
-    // ── 500 catch-all ──────────────────────────────────────────
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneric(
-            Exception ex, HttpServletRequest req) {
-        log.error("500 [{}] {} : {}", req.getRequestURI(),
-                ex.getClass().getSimpleName(), ex.getMessage(), ex);
-        String msg = ex.getClass().getSimpleName() + " : "
-                + (ex.getMessage() != null ? ex.getMessage() : "erreur interne");
+    public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex, HttpServletRequest req) {
+        log.error("500 [{}] {} : {}", req.getRequestURI(), ex.getClass().getSimpleName(), ex.getMessage(), ex);
+        String msg = ex.getClass().getSimpleName() + " : " + (ex.getMessage() != null ? ex.getMessage() : "erreur interne");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(msg, HttpStatus.INTERNAL_SERVER_ERROR));
     }
 
-    // ── Utilitaire ─────────────────────────────────────────────
     private String extraireMessageSQL(Throwable cause) {
         if (cause == null) return "Violation de contrainte base de données";
         String raw = cause.getMessage();

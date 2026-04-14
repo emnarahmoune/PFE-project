@@ -56,7 +56,6 @@ public class Service {
     private Boolean actif = true;
 
     // ===== RELATIONS =====
-
     @OneToMany(mappedBy = "service", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
     @ToString.Exclude
     @Builder.Default
@@ -174,8 +173,6 @@ public class Service {
                 this.actif ? "Actif" : "Inactif"
         );
     }
-
-    // ===== UN SEUL LIFECYCLE CALLBACK =====
 
     @PrePersist
     @PreUpdate

@@ -1,8 +1,9 @@
 package com.codeWithProject.ecom.service;
 
 import com.codeWithProject.ecom.entity.DemandeConge;
-import com.codeWithProject.ecom.entity.Utilisateur;
-import com.codeWithProject.ecom.repository.UtilisateurRepository;
+import com.codeWithProject.ecom.entity.Employe;
+import com.codeWithProject.ecom.repository.EmployeRepository;
+import com.codeWithProject.ecom.repository.DemandeCongeRepository;
 import com.codeWithProject.ecom.service.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +13,7 @@ import org.camunda.bpm.engine.TaskService;
 import org.camunda.bpm.engine.task.Task;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.codeWithProject.ecom.repository.DemandeCongeRepository;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -24,14 +25,15 @@ public class WorkflowService {
     private final TaskService taskService;
     private final RuntimeService runtimeService;
     private final DemandeCongeRepository demandeRepository;
-    private final UtilisateurRepository utilisateurRepository;
+    private final EmployeRepository employeRepository;
 
     public List<Map<String, Object>> getManagerTasks(String managerEmail) {
-        Utilisateur user = utilisateurRepository.findByEmail(managerEmail)
-                .orElseThrow(() -> new BusinessException("Utilisateur non trouvé: " + managerEmail));
+        Employe employe = employeRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new BusinessException("Employé non trouvé: " + managerEmail));
 
-        if (!"manager".equalsIgnoreCase(user.getRole())) {
-            log.warn("Utilisateur {} n'a pas le rôle manager (rôle: {})", managerEmail, user.getRole());
+        // Correction : le rôle stocké est généralement "MANAGER" (en majuscules)
+        if (!"MANAGER".equalsIgnoreCase(employe.getRole())) {
+            log.warn("Utilisateur {} n'a pas le rôle manager (rôle: {})", managerEmail, employe.getRole());
             throw new BusinessException("Accès non autorisé: vous n'avez pas le rôle manager");
         }
 
@@ -76,11 +78,12 @@ public class WorkflowService {
     }
 
     public List<Map<String, Object>> getRHTasks(String adminEmail) {
-        Utilisateur user = utilisateurRepository.findByEmail(adminEmail)
-                .orElseThrow(() -> new BusinessException("Utilisateur non trouvé: " + adminEmail));
+        Employe employe = employeRepository.findByEmail(adminEmail)
+                .orElseThrow(() -> new BusinessException("Employé non trouvé: " + adminEmail));
 
-        if (!"admin_rh".equalsIgnoreCase(user.getRole()) && !"admin".equalsIgnoreCase(user.getRole())) {
-            log.warn("Utilisateur {} n'a pas le rôle admin_rh (rôle: {})", adminEmail, user.getRole());
+        // Correction : rôle "ADMIN_RH"
+        if (!"ADMIN_RH".equalsIgnoreCase(employe.getRole())) {
+            log.warn("Utilisateur {} n'a pas le rôle admin_rh (rôle: {})", adminEmail, employe.getRole());
             throw new BusinessException("Accès non autorisé: vous n'avez pas le rôle admin RH");
         }
 

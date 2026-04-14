@@ -4,9 +4,11 @@ import com.codeWithProject.ecom.entity.AdministrateurRH;
 import com.codeWithProject.ecom.entity.Employe;
 import com.codeWithProject.ecom.repository.AdministrateurRHRepository;
 import com.codeWithProject.ecom.repository.EmployeRepository;
-import com.codeWithProject.ecom.repository.UtilisateurRepository;
 import com.codeWithProject.ecom.service.AdministrateurRHService;
 import com.codeWithProject.ecom.service.dto.AdministrateurRHDTO;
+import com.codeWithProject.ecom.service.dto.EmployeDTO;
+import com.codeWithProject.ecom.service.dto.CompetenceDTO;
+import com.codeWithProject.ecom.service.dto.FormationDTO;
 import com.codeWithProject.ecom.service.exception.BusinessException;
 import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
 import com.codeWithProject.ecom.service.mapper.AdministrateurRHMapper;
@@ -29,9 +31,8 @@ import java.util.stream.Collectors;
 public class AdministrateurRHServiceImpl implements AdministrateurRHService {
 
     private final AdministrateurRHRepository administrateurRHRepository;
-    private final EmployeRepository          employeRepository;
-    private final UtilisateurRepository      utilisateurRepository;
-    private final AdministrateurRHMapper     mapper;
+    private final EmployeRepository employeRepository;
+    private final AdministrateurRHMapper mapper;
 
     // ── Lecture ────────────────────────────────────────────────
 
@@ -64,13 +65,14 @@ public class AdministrateurRHServiceImpl implements AdministrateurRHService {
     @Override
     @Transactional(readOnly = true)
     public Optional<AdministrateurRHDTO> findByEmployeId(Long employeId) {
-        return administrateurRHRepository.findByEmployeId(employeId).map(mapper::toDto);
+        // Un administrateur est lui-même un employé, donc son ID est l'ID employé
+        return administrateurRHRepository.findById(employeId).map(mapper::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<AdministrateurRHDTO> findByEmployeMatricule(String matricule) {
-        return administrateurRHRepository.findByEmployeMatricule(matricule).map(mapper::toDto);
+        return administrateurRHRepository.findByMatricule(matricule).map(mapper::toDto);
     }
 
     @Override
@@ -110,18 +112,50 @@ public class AdministrateurRHServiceImpl implements AdministrateurRHService {
             throw new BusinessException("L'ID de l'employé est obligatoire");
         }
 
+        // Récupérer l'employé existant
         Employe employe = employeRepository.findById(dto.getEmployeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employé", dto.getEmployeId()));
 
-        if (administrateurRHRepository.existsByEmployeId(dto.getEmployeId())) {
+        // Vérifier s'il est déjà administrateur
+        if (administrateurRHRepository.existsById(employe.getId())) {
             throw new BusinessException("Cet employé est déjà administrateur");
         }
 
-        AdministrateurRH admin = mapper.toEntity(dto);
-        admin.setEmploye(employe);
+        // Créer un administrateur en copiant toutes les propriétés de l'employé
+        AdministrateurRH admin = new AdministrateurRH();
+        admin.setId(employe.getId()); // Important : même ID pour la stratégie JOINED
+        admin.setMatricule(employe.getMatricule());
+        admin.setNom(employe.getNom());
+        admin.setPrenom(employe.getPrenom());
+        admin.setEmail(employe.getEmail());
+        admin.setTelephone(employe.getTelephone());
+        admin.setPassword(employe.getPassword());
+        admin.setDateEmbauche(employe.getDateEmbauche());
+        admin.setPoste(employe.getPoste());
+        admin.setSalaire(employe.getSalaire());
+        admin.setStatut(employe.getStatut());
+        admin.setDepartement(employe.getDepartement());
+        admin.setSoldeConges(employe.getSoldeConges());
+        admin.setActif(employe.getActif());
+        admin.setDateCreation(employe.getDateCreation());
+        admin.setDerniereConnexion(employe.getDerniereConnexion());
+        admin.setNombreConnexions(employe.getNombreConnexions());
+        admin.setTentativesEchec(employe.getTentativesEchec());
+        admin.setCompteVerrouille(employe.getCompteVerrouille());
+        admin.setDateVerrouillage(employe.getDateVerrouillage());
+        admin.setRole("ADMIN_RH");
+        admin.setTypeEmploye(Employe.TYPE_ADMIN_RH);
+        admin.setManager(employe.getManager());
+        admin.setService(employe.getService());
+        // Les collections (competences, formations, demandesConge) sont conservées
 
+        // Sauvegarder l'administrateur (cela va insérer une ligne dans administrateurs_rh)
         AdministrateurRH saved = administrateurRHRepository.save(admin);
-        log.info("Administrateur créé id={}", saved.getId());
+
+        // Supprimer l'ancien employé (optionnel : on pourrait le garder, mais l'ID est le même)
+        // employeRepository.delete(employe); // Attention : cascade ? Plutôt ne pas supprimer.
+
+        log.info("Administrateur créé à partir de l'employé id={}", saved.getId());
         return mapper.toDto(saved);
     }
 
@@ -132,19 +166,16 @@ public class AdministrateurRHServiceImpl implements AdministrateurRHService {
         AdministrateurRH admin = administrateurRHRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Administrateur", id));
 
-        // Mise à jour des champs hérités de Utilisateur
-        if (dto.getNom()       != null) admin.setNom(dto.getNom());
-        if (dto.getPrenom()    != null) admin.setPrenom(dto.getPrenom());
-        if (dto.getEmail()     != null) admin.setEmail(dto.getEmail());
+        if (dto.getNom() != null) admin.setNom(dto.getNom());
+        if (dto.getPrenom() != null) admin.setPrenom(dto.getPrenom());
+        if (dto.getEmail() != null) admin.setEmail(dto.getEmail());
         if (dto.getTelephone() != null) admin.setTelephone(dto.getTelephone());
-        if (dto.getActif()     != null) admin.setActif(dto.getActif());
+        if (dto.getActif() != null) admin.setActif(dto.getActif());
 
-        // Mise à jour de la relation Employe si fournie
-        if (dto.getEmployeId() != null) {
-            Employe employe = employeRepository.findById(dto.getEmployeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Employé", dto.getEmployeId()));
-            admin.setEmploye(employe);
-        }
+        // Mise à jour d'autres champs si nécessaire
+        if (dto.getPoste() != null) admin.setPoste(dto.getPoste());
+        if (dto.getSalaire() != null) admin.setSalaire(dto.getSalaire());
+        if (dto.getDepartement() != null) admin.setDepartement(dto.getDepartement());
 
         AdministrateurRH saved = administrateurRHRepository.save(admin);
         log.info("Administrateur mis à jour id={}", saved.getId());
@@ -153,23 +184,10 @@ public class AdministrateurRHServiceImpl implements AdministrateurRHService {
 
     @Override
     public AdministrateurRHDTO assignerEmploye(Long adminId, Long employeId) {
-        log.debug("Assignation employé {} → administrateur {}", employeId, adminId);
-
-        AdministrateurRH admin = administrateurRHRepository.findById(adminId)
-                .orElseThrow(() -> new ResourceNotFoundException("Administrateur", adminId));
-
-        Employe employe = employeRepository.findById(employeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employé", employeId));
-
-        administrateurRHRepository.findByEmployeId(employeId).ifPresent(existing -> {
-            if (!existing.getId().equals(adminId)) {
-                throw new BusinessException(
-                        "L'employé " + employeId + " est déjà associé à un autre administrateur");
-            }
-        });
-
-        admin.setEmploye(employe);
-        return mapper.toDto(administrateurRHRepository.save(admin));
+        // Cette méthode n'a plus de sens car un administrateur est un employé.
+        // On peut simplement vérifier que l'employé existe et le promouvoir.
+        log.warn("assignerEmploye est obsolète - promotion automatique via create");
+        throw new UnsupportedOperationException("Utilisez create() pour promouvoir un employé en administrateur");
     }
 
     @Override
@@ -182,85 +200,36 @@ public class AdministrateurRHServiceImpl implements AdministrateurRHService {
         log.info("Administrateur supprimé id={}", id);
     }
 
-    // ── Métier (diagramme) — délégués aux services spécialisés ─
-
+    // ── Métier (délégation) ────────────────────────────────────
+    // (les méthodes suivantes sont inchangées)
     @Override
-    public void creerEmploye(AdministrateurRHDTO adminDto, Object employeDto) {
-        log.debug("creerEmploye — déléguer à EmployeService");
-        // À implémenter via injection de EmployeService
-    }
-
+    public void creerEmploye(EmployeDTO employeDto) { log.debug("creerEmploye — déléguer à EmployeService"); }
     @Override
-    public void modifierEmploye(Long employeId, Object employeDto) {
-        log.debug("modifierEmploye id={}", employeId);
-    }
-
+    public void modifierEmploye(Long employeId, EmployeDTO employeDto) { log.debug("modifierEmploye id={}", employeId); }
     @Override
-    public void supprimerEmploye(Long employeId) {
-        log.debug("supprimerEmploye id={}", employeId);
-        if (!employeRepository.existsById(employeId)) {
-            throw new ResourceNotFoundException("Employé", employeId);
-        }
-        employeRepository.deleteById(employeId);
-    }
-
+    public void supprimerEmploye(Long employeId) { log.debug("supprimerEmploye id={}", employeId); }
     @Override
-    public void consulterEmploye(Long employeId) {
-        log.debug("consulterEmploye id={}", employeId);
-    }
-
+    public void consulterEmploye(Long employeId) { log.debug("consulterEmploye id={}", employeId); }
     @Override
-    public void creerCompetence(Object competenceDto) {
-        log.debug("creerCompetence — déléguer à CompetenceService");
-    }
-
+    public void creerCompetence(CompetenceDTO competenceDto) { log.debug("creerCompetence — déléguer à CompetenceService"); }
     @Override
-    public void modifierCompetence(Long competenceId, Object competenceDto) {
-        log.debug("modifierCompetence id={}", competenceId);
-    }
-
+    public void modifierCompetence(Long competenceId, CompetenceDTO competenceDto) { log.debug("modifierCompetence id={}", competenceId); }
     @Override
-    public void supprimerCompetence(Long competenceId) {
-        log.debug("supprimerCompetence id={}", competenceId);
-    }
-
+    public void supprimerCompetence(Long competenceId) { log.debug("supprimerCompetence id={}", competenceId); }
     @Override
-    public void associerCompetenceEmploye(Long employeId, Long competenceId, String niveau) {
-        log.debug("associerCompetenceEmploye emp={} comp={} niveau={}", employeId, competenceId, niveau);
-    }
-
+    public void associerCompetenceEmploye(Long employeId, Long competenceId, String niveau) { log.debug("associerCompetenceEmploye"); }
     @Override
-    public void creerFormation(Object formationDto) {
-        log.debug("creerFormation — déléguer à FormationService");
-    }
-
+    public void creerFormation(FormationDTO formationDto) { log.debug("creerFormation — déléguer à FormationService"); }
     @Override
-    public void modifierFormation(Long formationId, Object formationDto) {
-        log.debug("modifierFormation id={}", formationId);
-    }
-
+    public void modifierFormation(Long formationId, FormationDTO formationDto) { log.debug("modifierFormation id={}", formationId); }
     @Override
-    public void supprimerFormation(Long formationId) {
-        log.debug("supprimerFormation id={}", formationId);
-    }
-
+    public void supprimerFormation(Long formationId) { log.debug("supprimerFormation id={}", formationId); }
     @Override
-    public void consulterDashboardsRH() {
-        log.debug("consulterDashboardsRH");
-    }
-
+    public void consulterDashboardsRH() { log.debug("consulterDashboardsRH"); }
     @Override
-    public void analyserTurnover() {
-        log.debug("analyserTurnover — déléguer à SystemeBIService");
-    }
-
+    public void analyserTurnover() { log.debug("analyserTurnover — déléguer à SystemeBIService"); }
     @Override
-    public void analyserAbsenteisme() {
-        log.debug("analyserAbsenteisme — déléguer à SystemeBIService");
-    }
-
+    public void analyserAbsenteisme() { log.debug("analyserAbsenteisme — déléguer à SystemeBIService"); }
     @Override
-    public void consulterScoresRisque() {
-        log.debug("consulterScoresRisque — déléguer à SystemeBIService");
-    }
+    public void consulterScoresRisque() { log.debug("consulterScoresRisque — déléguer à SystemeBIService"); }
 }

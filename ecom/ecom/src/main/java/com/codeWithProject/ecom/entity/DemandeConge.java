@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.Set;
 
 @Slf4j
@@ -75,7 +76,6 @@ public class DemandeConge {
     @JsonIgnoreProperties({"demandesCongeAValider", "employesGeres"})
     private Manager manager;
 
-    // ✅ Supprimer les déclarations en double - garder UNE SEULE fois ces champs
     @Column(name = "process_instance_id", length = 100)
     private String processInstanceId;
 
@@ -83,14 +83,22 @@ public class DemandeConge {
     private String currentTaskId;
 
     private static final Set<DayOfWeek> WEEKEND = Set.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY);
-    private static final Set<LocalDate> JOURS_FERIES = Set.of(
-            LocalDate.of(2026, 1, 1),   LocalDate.of(2026, 4, 6),
-            LocalDate.of(2026, 5, 1),   LocalDate.of(2026, 5, 8),
-            LocalDate.of(2026, 5, 14),  LocalDate.of(2026, 5, 25),
-            LocalDate.of(2026, 7, 14),  LocalDate.of(2026, 8, 15),
-            LocalDate.of(2026, 11, 1),  LocalDate.of(2026, 11, 11),
-            LocalDate.of(2026, 12, 25)
-    );
+    private static final Set<LocalDate> JOURS_FERIES = new HashSet<>();
+
+    static {
+        // Initialisation des jours fériés pour 2026
+        JOURS_FERIES.add(LocalDate.of(2026, 1, 1));
+        JOURS_FERIES.add(LocalDate.of(2026, 4, 6));
+        JOURS_FERIES.add(LocalDate.of(2026, 5, 1));
+        JOURS_FERIES.add(LocalDate.of(2026, 5, 8));
+        JOURS_FERIES.add(LocalDate.of(2026, 5, 14));
+        JOURS_FERIES.add(LocalDate.of(2026, 5, 25));
+        JOURS_FERIES.add(LocalDate.of(2026, 7, 14));
+        JOURS_FERIES.add(LocalDate.of(2026, 8, 15));
+        JOURS_FERIES.add(LocalDate.of(2026, 11, 1));
+        JOURS_FERIES.add(LocalDate.of(2026, 11, 11));
+        JOURS_FERIES.add(LocalDate.of(2026, 12, 25));
+    }
 
     public void soumettre() {
         validerDates();
@@ -156,7 +164,6 @@ public class DemandeConge {
         log.info("NOTIFICATION : {}", msg);
     }
 
-    // ✅ Getters/Setters explicites pour éviter les problèmes Lombok
     public String getProcessInstanceId() { return processInstanceId; }
     public void setProcessInstanceId(String processInstanceId) { this.processInstanceId = processInstanceId; }
     public String getCurrentTaskId() { return currentTaskId; }
@@ -254,12 +261,18 @@ public class DemandeConge {
         initialiserValeursParDefaut();
         validerDates();
         validerType();
+        if (this.joursOuvres == null && this.dateDebut != null && this.dateFin != null) {
+            this.joursOuvres = calculerJoursOuvres();
+        }
     }
 
     @PreUpdate
     protected void onUpdate() {
         initialiserValeursParDefaut();
         validerDates();
+        if (this.dateDebut != null && this.dateFin != null) {
+            this.joursOuvres = calculerJoursOuvres();
+        }
     }
 
     private void initialiserValeursParDefaut() {
@@ -267,8 +280,11 @@ public class DemandeConge {
         if (this.statut == null || this.statut.isBlank()) this.statut = "EN_ATTENTE";
         else this.statut = this.statut.toUpperCase();
         if (this.type != null) this.type = this.type.toUpperCase();
-        if (this.joursOuvres == null) this.joursOuvres = calculerJoursOuvres();
-        if (this.urgente == null)
+        if (this.joursOuvres == null && this.dateDebut != null && this.dateFin != null) {
+            this.joursOuvres = calculerJoursOuvres();
+        }
+        if (this.urgente == null && this.dateDebut != null) {
             this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
+        }
     }
 }

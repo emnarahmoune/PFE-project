@@ -2,7 +2,6 @@ package com.codeWithProject.ecom.controller.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -10,7 +9,6 @@ import org.springframework.http.HttpStatus;
 import java.time.LocalDateTime;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -23,89 +21,73 @@ public class ApiResponse<T> {
     private LocalDateTime timestamp;
     private int statusCode;
 
-    // Méthodes success
+    // ===== SUCCESS =====
     public static <T> ApiResponse<T> success(T data) {
-        return ApiResponse.<T>builder()
-                .success(true)
-                .data(data)
-                .timestamp(LocalDateTime.now())
-                .statusCode(HttpStatus.OK.value())
-                .build();
+        ApiResponse<T> response = new ApiResponse<>();
+        response.setSuccess(true);
+        response.setData(data);
+        response.setTimestamp(LocalDateTime.now());
+        response.setStatusCode(HttpStatus.OK.value());
+        return response;
     }
 
     public static <T> ApiResponse<T> success(T data, String message) {
-        return ApiResponse.<T>builder()
-                .success(true)
-                .message(message)
-                .data(data)
-                .timestamp(LocalDateTime.now())
-                .statusCode(HttpStatus.OK.value())
-                .build();
+        ApiResponse<T> response = success(data);
+        response.setMessage(message);
+        return response;
     }
 
     public static <T> ApiResponse<T> success(String message) {
-        return ApiResponse.<T>builder()
-                .success(true)
-                .message(message)
-                .timestamp(LocalDateTime.now())
-                .statusCode(HttpStatus.OK.value())
-                .build();
+        ApiResponse<T> response = new ApiResponse<>();
+        response.setSuccess(true);
+        response.setMessage(message);
+        response.setTimestamp(LocalDateTime.now());
+        response.setStatusCode(HttpStatus.OK.value());
+        return response;
     }
 
-    // Méthodes created
+    // ===== CREATED =====
     public static <T> ApiResponse<T> created(T data) {
-        return ApiResponse.<T>builder()
-                .success(true)
-                .data(data)
-                .timestamp(LocalDateTime.now())
-                .statusCode(HttpStatus.CREATED.value())
-                .build();
+        ApiResponse<T> response = new ApiResponse<>();
+        response.setSuccess(true);
+        response.setData(data);
+        response.setTimestamp(LocalDateTime.now());
+        response.setStatusCode(HttpStatus.CREATED.value());
+        return response;
     }
 
     public static <T> ApiResponse<T> created(T data, String message) {
-        return ApiResponse.<T>builder()
-                .success(true)
-                .message(message)
-                .data(data)
-                .timestamp(LocalDateTime.now())
-                .statusCode(HttpStatus.CREATED.value())
-                .build();
+        ApiResponse<T> response = created(data);
+        response.setMessage(message);
+        return response;
     }
 
     public static <T> ApiResponse<T> created(String message) {
-        return ApiResponse.<T>builder()
-                .success(true)
-                .message(message)
-                .timestamp(LocalDateTime.now())
-                .statusCode(HttpStatus.CREATED.value())
-                .build();
+        ApiResponse<T> response = new ApiResponse<>();
+        response.setSuccess(true);
+        response.setMessage(message);
+        response.setTimestamp(LocalDateTime.now());
+        response.setStatusCode(HttpStatus.CREATED.value());
+        return response;
     }
 
-    // Méthodes error
+    // ===== ERROR =====
     public static <T> ApiResponse<T> error(String message) {
-        return ApiResponse.<T>builder()
-                .success(false)
-                .error(message)
-                .timestamp(LocalDateTime.now())
-                .statusCode(HttpStatus.BAD_REQUEST.value())
-                .build();
+        ApiResponse<T> response = new ApiResponse<>();
+        response.setSuccess(false);
+        response.setError(message);
+        response.setTimestamp(LocalDateTime.now());
+        response.setStatusCode(HttpStatus.BAD_REQUEST.value());
+        return response;
     }
 
     public static <T> ApiResponse<T> error(String message, HttpStatus status) {
-        return ApiResponse.<T>builder()
-                .success(false)
-                .error(message)
-                .timestamp(LocalDateTime.now())
-                .statusCode(status.value())
-                .build();
+        ApiResponse<T> response = error(message);
+        response.setStatusCode(status.value());
+        return response;
     }
 
     public static <T> ApiResponse<T> error(HttpStatus status, String message) {
-        return ApiResponse.<T>builder()
-                .success(false)
-                .error(message)
-                .timestamp(LocalDateTime.now())
-                .statusCode(status.value())
-                .build();
+        return error(message, status);
     }
 }

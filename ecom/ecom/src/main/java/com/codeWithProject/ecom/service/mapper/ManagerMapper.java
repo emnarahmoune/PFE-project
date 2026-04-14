@@ -2,53 +2,44 @@ package com.codeWithProject.ecom.service.mapper;
 
 import com.codeWithProject.ecom.entity.Manager;
 import com.codeWithProject.ecom.service.dto.ManagerDTO;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import java.util.stream.Collectors;
 
-/**
- * Mapper pour l'entité Manager
- */
 @Component
-@RequiredArgsConstructor
 public class ManagerMapper {
 
-    private final UtilisateurMapper utilisateurMapper;
-
     public ManagerDTO toDto(Manager entity) {
-        if (entity == null) {
-            return null;
-        }
+        if (entity == null) return null;
 
         ManagerDTO dto = new ManagerDTO();
         dto.setId(entity.getId());
-        dto.setDepartement(entity.getDepartement());
-        dto.setDateNomination(entity.getDateNomination());
-        dto.setActif(entity.getActif());
-
-        // Informations utilisateur
-        dto.setUtilisateurId(entity.getId());
+        dto.setMatricule(entity.getMatricule());
         dto.setNom(entity.getNom());
         dto.setPrenom(entity.getPrenom());
         dto.setEmail(entity.getEmail());
         dto.setTelephone(entity.getTelephone());
+        dto.setPoste(entity.getPoste());
+        dto.setSalaire(entity.getSalaire());
+        dto.setStatut(entity.getStatut());
+        dto.setDepartement(entity.getDepartement());
+        dto.setSoldeConges(entity.getSoldeConges());
+        dto.setActif(entity.getActif());
+        dto.setDateCreation(entity.getDateCreation());
+        dto.setDateEmbauche(entity.getDateEmbauche());   // ✅ maintenant disponible
+        dto.setRole(entity.getRole());
 
-        // Informations employé associé
-        if (entity.getEmploye() != null) {
-            dto.setEmployeId(entity.getEmploye().getId());
-            dto.setEmployeMatricule(entity.getEmploye().getMatricule());
-            if (entity.getEmploye().getUtilisateur() != null) {
-                dto.setEmployeNom(entity.getEmploye().getUtilisateur().getNom());
-                dto.setEmployePrenom(entity.getEmploye().getUtilisateur().getPrenom());
-            }
-        }
+        dto.setDateNomination(entity.getDateNomination());
 
-        // Statistiques
+        dto.setEmployeId(entity.getId());
+        dto.setEmployeMatricule(entity.getMatricule());
+        dto.setEmployeNom(entity.getNom());
+        dto.setEmployePrenom(entity.getPrenom());
+
         if (entity.getEmployesGeres() != null) {
             dto.setNombreEmployesGeres(entity.getNombreEmployesGeres());
             dto.setNombreEmployesTotal(entity.getNombreEmployesTotal());
             dto.setEmployesGeresIds(entity.getEmployesGeres().stream()
-                    .map(employe -> employe.getId())
+                    .map(emp -> emp.getId())
                     .collect(Collectors.toList()));
         }
 
@@ -59,31 +50,41 @@ public class ManagerMapper {
                     .map(d -> d.getId())
                     .collect(Collectors.toList()));
 
-            // Demandes urgentes
             var urgentes = entity.getDemandesUrgentes();
             dto.setNombreDemandesUrgentes(urgentes.size());
             dto.setADesDemandesUrgentes(!urgentes.isEmpty());
         }
 
-        // Métadonnées
         dto.setNomComplet(entity.getNomComplet());
-        dto.setMatricule(entity.getMatricule());
+        dto.setAnciennete(entity.getAnciennete());
         dto.setAncienneteManager(entity.getAncienneteManager());
+        dto.setStatutCompte(entity.getStatutCompte());
+        dto.setPeutSeConnecter(entity.peutSeConnecter());
 
         return dto;
     }
 
     public Manager toEntity(ManagerDTO dto) {
-        if (dto == null) {
-            return null;
-        }
+        if (dto == null) return null;
 
-        return Manager.builder()
-                .id(dto.getId())
-                .departement(dto.getDepartement())
-                .dateNomination(dto.getDateNomination())
-                .actif(dto.getActif() != null ? dto.getActif() : true)
-                .build();
-        // Les relations seront gérées par le service
+        Manager entity = new Manager();
+        entity.setId(dto.getId());
+        entity.setMatricule(dto.getMatricule());
+        entity.setNom(dto.getNom());
+        entity.setPrenom(dto.getPrenom());
+        entity.setEmail(dto.getEmail());
+        entity.setTelephone(dto.getTelephone());
+        entity.setDateEmbauche(dto.getDateEmbauche());
+        entity.setPoste(dto.getPoste());
+        entity.setSalaire(dto.getSalaire());
+        entity.setStatut(dto.getStatut() != null ? dto.getStatut() : "ACTIF");
+        entity.setDepartement(dto.getDepartement());
+        entity.setSoldeConges(dto.getSoldeConges() != null ? dto.getSoldeConges() : 25);
+        entity.setActif(dto.getActif() != null ? dto.getActif() : true);
+        entity.setRole(dto.getRole() != null ? dto.getRole() : "manager");
+        entity.setDateNomination(dto.getDateNomination());
+        entity.setTypeEmploye(com.codeWithProject.ecom.entity.Employe.TYPE_MANAGER);
+
+        return entity;
     }
 }

@@ -17,29 +17,19 @@ import java.util.stream.Collectors;
                 @Index(name = "idx_manager_departement", columnList = "departement")
         }
 )
-@PrimaryKeyJoinColumn(name = "utilisateur_id")
+@PrimaryKeyJoinColumn(name = "employe_id")
 @DiscriminatorValue("MANAGER")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
-public class Manager extends Utilisateur {
-
-    @Column(name = "departement", nullable = false, length = 100)
-    private String departement;
+public class Manager extends Employe {
 
     @Column(name = "date_nomination")
     private LocalDate dateNomination;
 
     // ===== RELATIONS =====
-
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employe_id", unique = true)
-    @ToString.Exclude
-    private Employe employe;
-
-    // CORRECTION : mappedBy doit correspondre au nom du champ dans Employe
     @OneToMany(mappedBy = "manager", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @ToString.Exclude
     @JsonIgnore
@@ -53,7 +43,6 @@ public class Manager extends Utilisateur {
     private List<DemandeConge> demandesCongeAValider = new ArrayList<>();
 
     // ===== MÉTHODES MÉTIER =====
-
     public void ajouterEmploye(Employe employe) {
         if (employe == null) throw new IllegalArgumentException("L'employé ne peut pas être null");
         if (!Boolean.TRUE.equals(this.getActif())) {
@@ -170,7 +159,7 @@ public class Manager extends Utilisateur {
         StringBuilder rapport = new StringBuilder();
         rapport.append("=== RAPPORT D'ÉQUIPE ===\n");
         rapport.append("Manager: ").append(this.getPrenom()).append(" ").append(this.getNom()).append("\n");
-        rapport.append("Département: ").append(this.departement).append("\n");
+        rapport.append("Département: ").append(this.getDepartement()).append("\n");
         rapport.append("Effectif actif: ").append(getNombreEmployesGeres()).append("\n");
         rapport.append("Demandes en attente: ").append(getNombreDemandesEnAttente()).append("\n");
         long demandesUrgentes = getDemandesUrgentes().size();
@@ -181,27 +170,9 @@ public class Manager extends Utilisateur {
     }
 
     @Transient
-    public String getNomComplet() {
-        return this.getPrenom() + " " + this.getNom();
-    }
-
-    @Transient
-    public String getMatricule() {
-        return this.employe != null ? this.employe.getMatricule() : null;
-    }
-
-    @Transient
     public long getAncienneteManager() {
         if (this.dateNomination == null) return 0;
         return ChronoUnit.MONTHS.between(this.dateNomination, LocalDate.now());
-    }
-
-    public void activer() {
-        this.setActif(true);
-    }
-
-    public void desactiver() {
-        this.setActif(false);
     }
 
     @PostLoad

@@ -1,4 +1,4 @@
-package com.codeWithProject.ecom.service.mapper;
+package com.codeWithProject.ecom.service.impl;
 
 import com.codeWithProject.ecom.entity.Employe;
 import com.codeWithProject.ecom.entity.Manager;
@@ -8,6 +8,7 @@ import com.codeWithProject.ecom.service.ManagerService;
 import com.codeWithProject.ecom.service.dto.ManagerDTO;
 import com.codeWithProject.ecom.service.exception.BusinessException;
 import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
+import com.codeWithProject.ecom.service.mapper.ManagerMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -15,6 +16,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,24 +57,22 @@ public class ManagerServiceImpl implements ManagerService {
     @Transactional(readOnly = true)
     public Optional<ManagerDTO> findById(Long id) {
         log.debug("Recherche de manager par ID: {}", id);
-        return managerRepository.findById(id)
-                .map(mapper::toDto);
+        return managerRepository.findById(id).map(mapper::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<ManagerDTO> findByEmployeId(Long employeId) {
         log.debug("Recherche de manager par employeId: {}", employeId);
-        return managerRepository.findByEmployeId(employeId)
-                .map(mapper::toDto);
+        // Un manager est un employé, donc son ID est l'ID employé
+        return managerRepository.findById(employeId).map(mapper::toDto);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Optional<ManagerDTO> findByEmployeMatricule(String matricule) {
         log.debug("Recherche de manager par matricule: {}", matricule);
-        return managerRepository.findByEmployeMatricule(matricule)
-                .map(mapper::toDto);
+        return managerRepository.findByMatricule(matricule).map(mapper::toDto);
     }
 
     @Override
@@ -123,23 +124,47 @@ public class ManagerServiceImpl implements ManagerService {
     public ManagerDTO create(ManagerDTO dto) {
         log.debug("Création d'un nouveau manager");
 
-        // Validation
-        if (dto.getDepartement() == null || dto.getDepartement().trim().isEmpty()) {
-            throw new BusinessException("Le département est obligatoire");
+        if (dto.getEmployeId() == null) {
+            throw new BusinessException("L'ID de l'employé est obligatoire pour créer un manager");
         }
 
-        Manager manager = mapper.toEntity(dto);
+        Employe employe = employeRepository.findById(dto.getEmployeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Employé", dto.getEmployeId()));
 
-        // Association à un employé si spécifié
-        if (dto.getEmployeId() != null) {
-            Employe employe = employeRepository.findById(dto.getEmployeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Employé", dto.getEmployeId()));
-            manager.setEmploye(employe);
+        if (managerRepository.findById(employe.getId()).isPresent()) {
+            throw new BusinessException("Cet employé est déjà un manager");
         }
+
+        // Promouvoir l'employé en manager : création d'une instance Manager avec les mêmes attributs
+        Manager manager = new Manager();
+        manager.setId(employe.getId()); // Même ID pour la stratégie JOINED
+        manager.setMatricule(employe.getMatricule());
+        manager.setNom(employe.getNom());
+        manager.setPrenom(employe.getPrenom());
+        manager.setEmail(employe.getEmail());
+        manager.setTelephone(employe.getTelephone());
+        manager.setPassword(employe.getPassword());
+        manager.setDateEmbauche(employe.getDateEmbauche());
+        manager.setPoste(employe.getPoste());
+        manager.setSalaire(employe.getSalaire());
+        manager.setStatut(employe.getStatut());
+        manager.setDepartement(dto.getDepartement() != null ? dto.getDepartement() : employe.getDepartement());
+        manager.setSoldeConges(employe.getSoldeConges());
+        manager.setActif(employe.getActif() != null ? employe.getActif() : true);
+        manager.setDateCreation(employe.getDateCreation());
+        manager.setDerniereConnexion(employe.getDerniereConnexion());
+        manager.setNombreConnexions(employe.getNombreConnexions());
+        manager.setTentativesEchec(employe.getTentativesEchec());
+        manager.setCompteVerrouille(employe.getCompteVerrouille() != null ? employe.getCompteVerrouille() : false);
+        manager.setDateVerrouillage(employe.getDateVerrouillage());
+        manager.setRole("manager");
+        manager.setTypeEmploye(Employe.TYPE_MANAGER);
+        manager.setManager(null);
+        manager.setService(employe.getService());
+        manager.setDateNomination(dto.getDateNomination() != null ? dto.getDateNomination() : LocalDate.now());
 
         Manager saved = managerRepository.save(manager);
         log.info("Manager créé avec succès - ID: {}", saved.getId());
-
         return mapper.toDto(saved);
     }
 
@@ -150,46 +175,38 @@ public class ManagerServiceImpl implements ManagerService {
         Manager manager = managerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager", id));
 
-        if (dto.getDepartement() != null) {
-            manager.setDepartement(dto.getDepartement());
-        }
-        if (dto.getDateNomination() != null) {
-            manager.setDateNomination(dto.getDateNomination());
-        }
-        if (dto.getActif() != null) {
-            manager.setActif(dto.getActif());
-        }
+        if (dto.getDepartement() != null) manager.setDepartement(dto.getDepartement());
+        if (dto.getDateNomination() != null) manager.setDateNomination(dto.getDateNomination());
+        if (dto.getActif() != null) manager.setActif(dto.getActif());
+        if (dto.getNom() != null) manager.setNom(dto.getNom());
+        if (dto.getPrenom() != null) manager.setPrenom(dto.getPrenom());
+        if (dto.getEmail() != null) manager.setEmail(dto.getEmail());
+        if (dto.getTelephone() != null) manager.setTelephone(dto.getTelephone());
+        if (dto.getPoste() != null) manager.setPoste(dto.getPoste());
+        if (dto.getSalaire() != null) manager.setSalaire(dto.getSalaire());
+        if (dto.getStatut() != null) manager.setStatut(dto.getStatut());
 
         Manager saved = managerRepository.save(manager);
         log.info("Manager mis à jour avec succès - ID: {}", id);
-
         return mapper.toDto(saved);
     }
 
     @Override
     public ManagerDTO activer(Long id) {
         log.debug("Activation du manager ID: {}", id);
-
         Manager manager = managerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager", id));
-
         manager.activer();
-        Manager saved = managerRepository.save(manager);
-
-        return mapper.toDto(saved);
+        return mapper.toDto(managerRepository.save(manager));
     }
 
     @Override
     public ManagerDTO desactiver(Long id) {
         log.debug("Désactivation du manager ID: {}", id);
-
         Manager manager = managerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager", id));
-
         manager.desactiver();
-        Manager saved = managerRepository.save(manager);
-
-        return mapper.toDto(saved);
+        return mapper.toDto(managerRepository.save(manager));
     }
 
     @Override
@@ -205,7 +222,6 @@ public class ManagerServiceImpl implements ManagerService {
         manager.ajouterEmploye(employe);
         employeRepository.save(employe);
         Manager saved = managerRepository.save(manager);
-
         return mapper.toDto(saved);
     }
 
@@ -222,36 +238,24 @@ public class ManagerServiceImpl implements ManagerService {
         manager.retirerEmploye(employe);
         employeRepository.save(employe);
         Manager saved = managerRepository.save(manager);
-
         return mapper.toDto(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Object> getManagersStats() {
-        List<Object[]> stats = managerRepository.getManagersStats();
-        if (stats.isEmpty()) {
+        List<Map<String, Object>> stats = managerRepository.getManagersStats();
+        if (stats == null || stats.isEmpty()) {
             return Map.of();
         }
-        Object[] stat = stats.get(0);
-
-        return Map.of(
-                "totalManagers", stat[0],
-                "managersActifs", stat[1],
-                "tailleMoyenneEquipe", stat[2],
-                "totalEmployesGeres", stat[3],
-                "departementsCouverts", stat[4]
-        );
+        return stats.get(0);
     }
 
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> countByDepartement() {
         return managerRepository.countManagersByDepartement().stream()
-                .collect(Collectors.toMap(
-                        arr -> (String) arr[0],
-                        arr -> (Long) arr[1]
-                ));
+                .collect(Collectors.toMap(arr -> (String) arr[0], arr -> (Long) arr[1]));
     }
 
     @Override
@@ -264,7 +268,10 @@ public class ManagerServiceImpl implements ManagerService {
     @Transactional(readOnly = true)
     public List<ManagerDTO> search(String keyword) {
         log.debug("Recherche de managers avec mot-clé: {}", keyword);
-        return managerRepository.searchManagers(keyword).stream()
+        if (keyword == null || keyword.isBlank()) {
+            return findAll();
+        }
+        return managerRepository.searchManagers(keyword.trim()).stream()
                 .map(mapper::toDto)
                 .collect(Collectors.toList());
     }
@@ -283,7 +290,6 @@ public class ManagerServiceImpl implements ManagerService {
     public String genererRapportEquipe(Long managerId) {
         Manager manager = managerRepository.findById(managerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Manager", managerId));
-
         return manager.genererRapportEquipe();
     }
 

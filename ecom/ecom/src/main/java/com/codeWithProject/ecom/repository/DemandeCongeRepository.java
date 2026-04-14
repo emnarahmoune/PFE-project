@@ -1,9 +1,6 @@
 package com.codeWithProject.ecom.repository;
 
 import com.codeWithProject.ecom.entity.DemandeConge;
-import org.springframework.stereotype.Repository;
-
-import com.codeWithProject.ecom.entity.DemandeConge;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,7 +15,7 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
     // ===== RECHERCHES PAR EMPLOYÉ =====
     List<DemandeConge> findByEmployeId(Long employeId);
 
-    // AJOUTÉ : nécessaire pour hasConflitDates
+    // Nécessaire pour hasConflitDates
     List<DemandeConge> findByEmployeIdAndStatutIn(Long employeId, List<String> statuts);
 
     @Query("SELECT d FROM DemandeConge d WHERE d.employe.id = :employeId ORDER BY d.dateDemande DESC")
@@ -38,9 +35,6 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
 
     @Query("SELECT d FROM DemandeConge d WHERE d.statut = 'EN_ATTENTE' AND d.urgente = true")
     List<DemandeConge> findDemandesUrgentes();
-
-    @Query("SELECT d FROM DemandeConge d WHERE d.statut = 'EN_ATTENTE' AND d.urgente = true")
-    List<DemandeConge> findUrgentesEnAttente();
 
     @Query("SELECT d FROM DemandeConge d WHERE d.statut = 'EN_ATTENTE' AND d.dateDebut <= :dateLimite")
     List<DemandeConge> findDemandesUrgentesAvantDate(@Param("dateLimite") LocalDate dateLimite);
@@ -85,23 +79,23 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
 
     // ===== MÉTHODES POUR WORKFLOW CAMUNDA =====
 
-    // ✅ Pour récupérer une demande par processInstanceId
+    // Pour récupérer une demande par processInstanceId
     @Query("SELECT d FROM DemandeConge d WHERE d.processInstanceId = :processInstanceId")
     Optional<DemandeConge> findByProcessInstanceId(@Param("processInstanceId") String processInstanceId);
 
-    // ✅ Pour les demandes orphelines (sans processInstanceId)
+    // Pour les demandes orphelines (sans processInstanceId)
     @Query("SELECT d FROM DemandeConge d WHERE d.processInstanceId IS NULL AND d.statut = 'EN_ATTENTE'")
     List<DemandeConge> findByProcessInstanceIdIsNull();
 
-    // ✅ Pour les demandes en attente avec plus de 10 jours (pour le RH)
+    // Pour les demandes en attente avec plus de 10 jours (pour le RH)
     @Query("SELECT d FROM DemandeConge d WHERE d.statut = 'EN_ATTENTE' AND d.joursOuvres > 10 ORDER BY d.dateDemande ASC")
     List<DemandeConge> findDemandesEnAttentePlusDe10Jours();
 
-    // ✅ Pour les demandes en attente avec moins ou égal à 10 jours (pour le Manager)
+    // Pour les demandes en attente avec moins ou égal à 10 jours (pour le Manager)
     @Query("SELECT d FROM DemandeConge d WHERE d.statut = 'EN_ATTENTE' AND d.joursOuvres <= 10 ORDER BY d.dateDemande ASC")
     List<DemandeConge> findDemandesEnAttenteMoinsDe10Jours();
 
-    // ✅ Pour trouver l'ID de la tâche Camunda
+    // Pour trouver l'ID de la tâche Camunda
     @Query("SELECT d.currentTaskId FROM DemandeConge d WHERE d.processInstanceId = :processInstanceId")
     Optional<String> findCurrentTaskIdByProcessInstanceId(@Param("processInstanceId") String processInstanceId);
 }

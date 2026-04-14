@@ -39,12 +39,10 @@ public class ManagerController {
     private final DemandeCongeRepository demandeCongeRepository;
     private final EmployeRepository employeRepository;
 
-    // ===== MÉTHODES EXISTANTES =====
-
     @GetMapping
     @Operation(summary = "Liste tous les managers")
     public ResponseEntity<ApiResponse<List<ManagerDTO>>> getAllManagers() {
-        log.info("GET /api/managers - Récupération de tous les managers");
+        log.info("GET /api/managers");
         List<ManagerDTO> managers = managerService.findAll();
         return ResponseEntity.ok(ApiResponse.success(managers, "Managers récupérés avec succès"));
     }
@@ -58,11 +56,8 @@ public class ManagerController {
             @RequestParam(defaultValue = "asc") String direction) {
 
         log.info("GET /api/managers/paged - page: {}, size: {}", page, size);
-
-        Sort sort = direction.equalsIgnoreCase("desc") ?
-                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
-
         Page<ManagerDTO> managers = managerService.findAll(pageable);
         return ResponseEntity.ok(ApiResponse.success(managers, "Managers récupérés avec succès"));
     }
@@ -112,7 +107,7 @@ public class ManagerController {
     @PostMapping
     @Operation(summary = "Crée un nouveau manager")
     public ResponseEntity<ApiResponse<ManagerDTO>> createManager(@Valid @RequestBody ManagerDTO dto) {
-        log.info("POST /api/managers - Création d'un manager pour le département: {}", dto.getDepartement());
+        log.info("POST /api/managers - Création manager pour département: {}", dto.getDepartement());
         ManagerDTO created = managerService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(created, "Manager créé avec succès"));
@@ -121,7 +116,7 @@ public class ManagerController {
     @PutMapping("/{id}")
     @Operation(summary = "Met à jour un manager")
     public ResponseEntity<ApiResponse<ManagerDTO>> updateManager(@PathVariable Long id, @Valid @RequestBody ManagerDTO dto) {
-        log.info("PUT /api/managers/{} - Mise à jour", id);
+        log.info("PUT /api/managers/{}", id);
         ManagerDTO updated = managerService.update(id, dto);
         return ResponseEntity.ok(ApiResponse.success(updated, "Manager mis à jour avec succès"));
     }
@@ -206,7 +201,7 @@ public class ManagerController {
         return ResponseEntity.ok(ApiResponse.success(result, "Résultats de la recherche"));
     }
 
-    // ===== NOUVEAUX ENDPOINTS POUR LE WORKFLOW =====
+    // ===== WORKFLOW MANAGER =====
 
     @GetMapping("/mon-equipe")
     @Operation(summary = "Récupère l'équipe du manager connecté")
@@ -223,7 +218,7 @@ public class ManagerController {
     @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getDemandesConge(@AuthenticationPrincipal Jwt jwt) {
         String email = extractEmail(jwt);
-        log.info("Manager {} récupère les demandes de congé de son équipe", email);
+        log.info("Manager {} récupère les demandes de congé", email);
         List<Map<String, Object>> tasks = workflowService.getManagerTasks(email);
         return ResponseEntity.ok(ApiResponse.success(tasks, "Demandes récupérées avec succès"));
     }
@@ -261,36 +256,24 @@ public class ManagerController {
     @PostMapping("/approuver-demande")
     @Operation(summary = "Approuve une demande de congé")
     @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<String>> approuverDemande(
-            @RequestBody Map<String, Object> decision,
-            @AuthenticationPrincipal Jwt jwt) {
-
+    public ResponseEntity<ApiResponse<String>> approuverDemande(@RequestBody Map<String, Object> decision, @AuthenticationPrincipal Jwt jwt) {
         String email = extractEmail(jwt);
         String taskId = (String) decision.get("taskId");
         String commentaire = (String) decision.get("commentaire");
-
         log.info("Manager {} approuve la tâche {}", email, taskId);
-
         workflowService.processManagerDecision(taskId, true, commentaire, email);
-
         return ResponseEntity.ok(ApiResponse.success("Demande approuvée avec succès"));
     }
 
     @PostMapping("/refuser-demande")
     @Operation(summary = "Refuse une demande de congé")
     @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<String>> refuserDemande(
-            @RequestBody Map<String, Object> decision,
-            @AuthenticationPrincipal Jwt jwt) {
-
+    public ResponseEntity<ApiResponse<String>> refuserDemande(@RequestBody Map<String, Object> decision, @AuthenticationPrincipal Jwt jwt) {
         String email = extractEmail(jwt);
         String taskId = (String) decision.get("taskId");
         String motif = (String) decision.get("motif");
-
         log.info("Manager {} refuse la tâche {} avec motif: {}", email, taskId, motif);
-
         workflowService.processManagerDecision(taskId, false, motif, email);
-
         return ResponseEntity.ok(ApiResponse.success("Demande refusée avec succès"));
     }
 
