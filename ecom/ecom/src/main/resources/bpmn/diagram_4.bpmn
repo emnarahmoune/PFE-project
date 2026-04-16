@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.45.0">
+  <bpmn:process id="LeaveRequestProcess" name="Processus Demande de Congé" isExecutable="true" camunda:historyTimeToLive="120">
+    <bpmn:startEvent id="StartEvent_1" name="Demande de congé">
+      <bpmn:outgoing>Flow_Start_Verifier</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_VerifierSolde" name="Vérifier solde" camunda:class="com.codeWithProject.ecom.service.workflow.VerifierSoldeDelegate">
+      <bpmn:incoming>Flow_Start_Verifier</bpmn:incoming>
+      <bpmn:outgoing>Flow_Verifier_GatewaySolde</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_Start_Verifier" sourceRef="StartEvent_1" targetRef="Task_VerifierSolde" />
+    <bpmn:sequenceFlow id="Flow_Verifier_GatewaySolde" sourceRef="Task_VerifierSolde" targetRef="Gateway_SoldeSuffisant" />
+    <bpmn:exclusiveGateway id="Gateway_SoldeSuffisant" name="Solde suffisant ?">
+      <bpmn:incoming>Flow_Verifier_GatewaySolde</bpmn:incoming>
+      <bpmn:outgoing>Flow_SoldeNon</bpmn:outgoing>
+      <bpmn:outgoing>Flow_SoldeOui</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_SoldeNon" name="non" sourceRef="Gateway_SoldeSuffisant" targetRef="Task_NotifierRefusSolde">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${soldeSuffisant == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Task_NotifierRefusSolde" name="Notifier refus solde" camunda:class="com.codeWithProject.ecom.service.workflow.NotifierRefusDelegate">
+      <bpmn:incoming>Flow_SoldeNon</bpmn:incoming>
+      <bpmn:outgoing>Flow_RefusSolde_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_RefusSolde_End" sourceRef="Task_NotifierRefusSolde" targetRef="Event_Rejetee" />
+    <bpmn:sequenceFlow id="Flow_SoldeOui" name="oui" sourceRef="Gateway_SoldeSuffisant" targetRef="Task_ValidationManager">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${soldeSuffisant == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:userTask id="Task_ValidationManager" name="Validation Manager" camunda:assignee="${managerEmail}">
+      <bpmn:incoming>Flow_SoldeOui</bpmn:incoming>
+      <bpmn:outgoing>Flow_Manager_GatewayManager</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_Manager_GatewayManager" sourceRef="Task_ValidationManager" targetRef="Gateway_ManagerApprouve" />
+    <bpmn:exclusiveGateway id="Gateway_ManagerApprouve" name="Manager approuve ?">
+      <bpmn:incoming>Flow_Manager_GatewayManager</bpmn:incoming>
+      <bpmn:outgoing>Flow_ManagerNon</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ManagerOui</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_ManagerNon" name="non" sourceRef="Gateway_ManagerApprouve" targetRef="Task_NotifierRefusManager">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${managerApprouve == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Task_NotifierRefusManager" name="Notifier refus manager" camunda:class="com.codeWithProject.ecom.service.workflow.NotifierRefusDelegate">
+      <bpmn:incoming>Flow_ManagerNon</bpmn:incoming>
+      <bpmn:outgoing>Flow_RefusManager_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_RefusManager_End" sourceRef="Task_NotifierRefusManager" targetRef="Event_Rejetee" />
+    <bpmn:sequenceFlow id="Flow_ManagerOui" name="oui" sourceRef="Gateway_ManagerApprouve" targetRef="Gateway_JoursSup10">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${managerApprouve == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:exclusiveGateway id="Gateway_JoursSup10" name="Jours &#62; 10 ?">
+      <bpmn:incoming>Flow_ManagerOui</bpmn:incoming>
+      <bpmn:outgoing>Flow_JoursNon</bpmn:outgoing>
+      <bpmn:outgoing>Flow_JoursOui</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_JoursNon" name="non" sourceRef="Gateway_JoursSup10" targetRef="Task_DeduireSoldeDirect">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${nbJours &lt;= 10}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Task_DeduireSoldeDirect" name="Déduire solde" camunda:class="com.codeWithProject.ecom.service.workflow.DeduireSoldeDelegate">
+      <bpmn:incoming>Flow_JoursNon</bpmn:incoming>
+      <bpmn:outgoing>Flow_Deduction_Notif</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_JoursOui" name="oui" sourceRef="Gateway_JoursSup10" targetRef="Task_ValidationRH">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${nbJours &gt; 10}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:userTask id="Task_ValidationRH" name="Validation Admin RH" camunda:assignee="${adminEmail}">
+      <bpmn:incoming>Flow_JoursOui</bpmn:incoming>
+      <bpmn:outgoing>Flow_RH_GatewayRH</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_RH_GatewayRH" sourceRef="Task_ValidationRH" targetRef="Gateway_RHApprouve" />
+    <bpmn:exclusiveGateway id="Gateway_RHApprouve" name="RH approuve ?">
+      <bpmn:incoming>Flow_RH_GatewayRH</bpmn:incoming>
+      <bpmn:outgoing>Flow_RHNon</bpmn:outgoing>
+      <bpmn:outgoing>Flow_RHOui</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_RHNon" name="non" sourceRef="Gateway_RHApprouve" targetRef="Task_NotifierRefusRH">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${rhApprouve == false}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Task_NotifierRefusRH" name="Notifier REFUS" camunda:class="com.codeWithProject.ecom.service.workflow.NotifierRefusDelegate">
+      <bpmn:incoming>Flow_RHNon</bpmn:incoming>
+      <bpmn:outgoing>Flow_RefusRH_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_RefusRH_End" sourceRef="Task_NotifierRefusRH" targetRef="Event_Rejetee" />
+    <bpmn:sequenceFlow id="Flow_RHOui" name="oui" sourceRef="Gateway_RHApprouve" targetRef="Task_DeduireSoldeRH">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${rhApprouve == true}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:serviceTask id="Task_DeduireSoldeRH" name="DÉDUIRE solde" camunda:class="com.codeWithProject.ecom.service.workflow.DeduireSoldeDelegate">
+      <bpmn:incoming>Flow_RHOui</bpmn:incoming>
+      <bpmn:outgoing>Flow_DeductionRH_Notif</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_NotifierApprobation" name="Notifier APPROBATION" camunda:class="com.codeWithProject.ecom.service.workflow.NotifierApprouveDelegate">
+      <bpmn:incoming>Flow_Deduction_Notif</bpmn:incoming>
+      <bpmn:incoming>Flow_DeductionRH_Notif</bpmn:incoming>
+      <bpmn:outgoing>Flow_Notif_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_Deduction_Notif" sourceRef="Task_DeduireSoldeDirect" targetRef="Task_NotifierApprobation" />
+    <bpmn:sequenceFlow id="Flow_DeductionRH_Notif" sourceRef="Task_DeduireSoldeRH" targetRef="Task_NotifierApprobation" />
+    <bpmn:sequenceFlow id="Flow_Notif_End" sourceRef="Task_NotifierApprobation" targetRef="Event_Approuvee" />
+    <bpmn:endEvent id="Event_Approuvee" name="Approuvée">
+      <bpmn:incoming>Flow_Notif_End</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="Event_Rejetee" name="Demande rejetée">
+      <bpmn:incoming>Flow_RefusSolde_End</bpmn:incoming>
+      <bpmn:incoming>Flow_RefusManager_End</bpmn:incoming>
+      <bpmn:incoming>Flow_RefusRH_End</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="LeaveRequestProcess">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="220" y="100" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="206" y="143" width="64" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_VerifierSolde_di" bpmnElement="Task_VerifierSolde">
+        <dc:Bounds x="200" y="180" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_SoldeSuffisant_di" bpmnElement="Gateway_SoldeSuffisant" isMarkerVisible="true">
+        <dc:Bounds x="225" y="290" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="209" y="266" width="82" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifierRefusSolde_di" bpmnElement="Task_NotifierRefusSolde">
+        <dc:Bounds x="370" y="280" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidationManager_di" bpmnElement="Task_ValidationManager">
+        <dc:Bounds x="200" y="390" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_ManagerApprouve_di" bpmnElement="Gateway_ManagerApprouve" isMarkerVisible="true">
+        <dc:Bounds x="225" y="510" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="159" y="521" width="56" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifierRefusManager_di" bpmnElement="Task_NotifierRefusManager">
+        <dc:Bounds x="370" y="500" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_JoursSup10_di" bpmnElement="Gateway_JoursSup10" isMarkerVisible="true">
+        <dc:Bounds x="225" y="620" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="153" y="638" width="62" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ValidationRH_di" bpmnElement="Task_ValidationRH">
+        <dc:Bounds x="370" y="720" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_RHApprouve_di" bpmnElement="Gateway_RHApprouve" isMarkerVisible="true">
+        <dc:Bounds x="395" y="840" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="309.5" y="858" width="75" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DeduireSoldeRH_di" bpmnElement="Task_DeduireSoldeRH">
+        <dc:Bounds x="395" y="940" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_Approuvee_di" bpmnElement="Event_Approuvee">
+        <dc:Bounds x="332" y="1180" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="324" y="1223" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_Rejetee_di" bpmnElement="Event_Rejetee">
+        <dc:Bounds x="520" y="280" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="495" y="256" width="85" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifierRefusRH_di" bpmnElement="Task_NotifierRefusRH">
+        <dc:Bounds x="710" y="790" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_NotifierApprobation_di" bpmnElement="Task_NotifierApprobation">
+        <dc:Bounds x="160" y="1070" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_DeduireSoldeDirect_di" bpmnElement="Task_DeduireSoldeDirect">
+        <dc:Bounds x="200" y="750" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_Start_Verifier_di" bpmnElement="Flow_Start_Verifier">
+        <di:waypoint x="238" y="136" />
+        <di:waypoint x="238" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Verifier_GatewaySolde_di" bpmnElement="Flow_Verifier_GatewaySolde">
+        <di:waypoint x="250" y="260" />
+        <di:waypoint x="250" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SoldeNon_di" bpmnElement="Flow_SoldeNon">
+        <di:waypoint x="275" y="315" />
+        <di:waypoint x="370" y="315" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="315" y="297" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RefusSolde_End_di" bpmnElement="Flow_RefusSolde_End">
+        <di:waypoint x="470" y="320" />
+        <di:waypoint x="520" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_SoldeOui_di" bpmnElement="Flow_SoldeOui">
+        <di:waypoint x="250" y="340" />
+        <di:waypoint x="250" y="390" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="258" y="360" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Manager_GatewayManager_di" bpmnElement="Flow_Manager_GatewayManager">
+        <di:waypoint x="250" y="470" />
+        <di:waypoint x="250" y="510" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ManagerNon_di" bpmnElement="Flow_ManagerNon">
+        <di:waypoint x="275" y="535" />
+        <di:waypoint x="370" y="535" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="315" y="517" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RefusManager_End_di" bpmnElement="Flow_RefusManager_End">
+        <di:waypoint x="470" y="538" />
+        <di:waypoint x="538" y="538" />
+        <di:waypoint x="538" y="316" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ManagerOui_di" bpmnElement="Flow_ManagerOui">
+        <di:waypoint x="250" y="560" />
+        <di:waypoint x="250" y="620" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="258" y="585" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_JoursNon_di" bpmnElement="Flow_JoursNon">
+        <di:waypoint x="255" y="665" />
+        <di:waypoint x="255" y="750" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="279" y="722" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_JoursOui_di" bpmnElement="Flow_JoursOui">
+        <di:waypoint x="275" y="645" />
+        <di:waypoint x="406" y="645" />
+        <di:waypoint x="406" y="720" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="355" y="658" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RH_GatewayRH_di" bpmnElement="Flow_RH_GatewayRH">
+        <di:waypoint x="420" y="800" />
+        <di:waypoint x="420" y="840" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RHNon_di" bpmnElement="Flow_RHNon">
+        <di:waypoint x="444" y="864" />
+        <di:waypoint x="711" y="864" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="572" y="843" width="19" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RefusRH_End_di" bpmnElement="Flow_RefusRH_End">
+        <di:waypoint x="756" y="790" />
+        <di:waypoint x="756" y="298" />
+        <di:waypoint x="556" y="298" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_RHOui_di" bpmnElement="Flow_RHOui">
+        <di:waypoint x="420" y="890" />
+        <di:waypoint x="420" y="940" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="428" y="910" width="15" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Deduction_Notif_di" bpmnElement="Flow_Deduction_Notif">
+        <di:waypoint x="233" y="830" />
+        <di:waypoint x="233" y="950" />
+        <di:waypoint x="223" y="950" />
+        <di:waypoint x="223" y="1070" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_DeductionRH_Notif_di" bpmnElement="Flow_DeductionRH_Notif">
+        <di:waypoint x="495" y="1011" />
+        <di:waypoint x="500" y="1110" />
+        <di:waypoint x="260" y="1110" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Notif_End_di" bpmnElement="Flow_Notif_End">
+        <di:waypoint x="210" y="1150" />
+        <di:waypoint x="210" y="1198" />
+        <di:waypoint x="332" y="1198" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

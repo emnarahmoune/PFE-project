@@ -27,7 +27,6 @@ public class NotifierApprouveDelegate implements JavaDelegate {
         log.info("=== NOTIFICATION APPROBATION ===");
 
         String processInstanceId = execution.getProcessInstanceId();
-        // ✅ Correction: findByProcessInstanceId retourne Optional
         DemandeConge demande = demandeRepository.findByProcessInstanceId(processInstanceId)
                 .orElse(null);
 
@@ -36,43 +35,37 @@ public class NotifierApprouveDelegate implements JavaDelegate {
             return;
         }
 
-        // ✅ Vérifier si déjà approuvée (anti-double)
-        if ("APPROUVEE".equals(demande.getStatut())) {
-            log.info("Demande {} déjà approuvée, traitement ignoré", demande.getId());
+        // Éviter les doublons d’exécution du delegate
+        Boolean notificationEnvoyee = (Boolean) execution.getVariable("notificationApprobationEnvoyee");
+        if (notificationEnvoyee != null && notificationEnvoyee) {
+            log.info("Notification d'approbation déjà envoyée pour la demande {}", demande.getId());
             return;
         }
 
-        // Valider la demande
-        demande.valider();
+        // Ne PAS appeler demande.valider() – l’état a déjà été changé par le service métier
 
-        // ✅ Vérifier si le solde n'a pas déjà été déduit par DeduireSoldeDelegate
+        // Déduire le solde si nécessaire (et si non déjà fait)
         Boolean soldeDejaDeduit = (Boolean) execution.getVariable("soldeDeduit");
-
         if (soldeDejaDeduit == null || !soldeDejaDeduit) {
-            // Déduire les jours du solde si c'est un congé annuel
             if ("ANNUEL".equals(demande.getType()) && demande.getEmploye() != null) {
                 Employe employe = demande.getEmploye();
                 int jours = demande.getJoursOuvres();
                 if (employe.getSoldeConges() != null && employe.getSoldeConges() >= jours) {
                     employe.deduireConges(jours);
                     employeRepository.save(employe);
-                    log.info("✅ Solde déduit pour l'employé {} : {} jours (nouveau solde: {})",
-                            employe.getId(), jours, employe.getSoldeConges());
+                    log.info("✅ Solde déduit pour l'employé {} : {} jours", employe.getId(), jours);
                     execution.setVariable("soldeDeduit", true);
                 }
             }
-        } else {
-            log.info("Solde déjà déduit par DeduireSoldeDelegate, pas de double déduction");
         }
 
-        demandeRepository.save(demande);
-
-        // Créer une notification
+        // Créer la notification (toujours)
         String message = String.format("✅ Votre demande de congé du %s au %s a été approuvée !",
                 demande.getDateDebut(), demande.getDateFin());
         notificationService.createNotification(
                 demande.getEmploye().getId(), message, "SUCCESS", demande.getId());
 
-        log.info("✅ Demande {} approuvée et notification créée", demande.getId());
+        execution.setVariable("notificationApprobationEnvoyee", true);
+        log.info("✅ Notification d'approbation créée pour la demande {}", demande.getId());
     }
 }

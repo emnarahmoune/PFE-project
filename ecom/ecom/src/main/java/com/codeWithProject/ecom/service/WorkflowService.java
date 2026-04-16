@@ -27,11 +27,11 @@ public class WorkflowService {
     private final DemandeCongeRepository demandeRepository;
     private final EmployeRepository employeRepository;
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getManagerTasks(String managerEmail) {
         Employe employe = employeRepository.findByEmail(managerEmail)
                 .orElseThrow(() -> new BusinessException("Employé non trouvé: " + managerEmail));
 
-        // Correction : le rôle stocké est généralement "MANAGER" (en majuscules)
         if (!"MANAGER".equalsIgnoreCase(employe.getRole())) {
             log.warn("Utilisateur {} n'a pas le rôle manager (rôle: {})", managerEmail, employe.getRole());
             throw new BusinessException("Accès non autorisé: vous n'avez pas le rôle manager");
@@ -43,88 +43,54 @@ public class WorkflowService {
                 .list();
 
         log.info("Manager {} a {} tâche(s) en attente", managerEmail, tasks.size());
-
-        return tasks.stream().map(task -> {
-            Map<String, Object> taskInfo = new HashMap<>();
-            taskInfo.put("taskId", task.getId());
-            taskInfo.put("taskName", task.getName());
-            taskInfo.put("createTime", task.getCreateTime());
-            taskInfo.put("processInstanceId", task.getProcessInstanceId());
-
-            Map<String, Object> vars = new HashMap<>();
-            try {
-                vars = runtimeService.getVariables(task.getProcessInstanceId());
-            } catch (Exception e) {
-                log.warn("Impossible de récupérer les variables pour l'instance {}: {}", task.getProcessInstanceId(), e.getMessage());
-            }
-            taskInfo.put("employeId", vars.get("employeId"));
-            taskInfo.put("nbJours", vars.get("nbJours"));
-            taskInfo.put("demandeId", vars.get("demandeId"));
-            taskInfo.put("montantConge", vars.get("montantConge"));
-
-            Long demandeId = vars.get("demandeId") != null ? Long.valueOf(vars.get("demandeId").toString()) : null;
-            if (demandeId != null) {
-                demandeRepository.findById(demandeId).ifPresent(demande -> {
-                    taskInfo.put("dateDebut", demande.getDateDebut());
-                    taskInfo.put("dateFin", demande.getDateFin());
-                    taskInfo.put("type", demande.getType());
-                    taskInfo.put("commentaire", demande.getCommentaire());
-                    taskInfo.put("employeNom", demande.getEmploye().getNom());
-                    taskInfo.put("employePrenom", demande.getEmploye().getPrenom());
-                });
-            }
-            return taskInfo;
-        }).collect(Collectors.toList());
+        return tasks.stream().map(this::mapTaskToMap).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getRHTasks(String adminEmail) {
-        Employe employe = employeRepository.findByEmail(adminEmail)
-                .orElseThrow(() -> new BusinessException("Employé non trouvé: " + adminEmail));
-
-        // Correction : rôle "ADMIN_RH"
-        if (!"ADMIN_RH".equalsIgnoreCase(employe.getRole())) {
-            log.warn("Utilisateur {} n'a pas le rôle admin_rh (rôle: {})", adminEmail, employe.getRole());
-            throw new BusinessException("Accès non autorisé: vous n'avez pas le rôle admin RH");
-        }
-
         List<Task> tasks = taskService.createTaskQuery()
                 .taskAssignee(adminEmail)
                 .orderByTaskCreateTime().desc()
                 .list();
 
-        log.info("Admin RH {} a {} tâche(s) en attente", adminEmail, tasks.size());
+        log.info("Admin {} a {} tâche(s) en attente (assignee)", adminEmail, tasks.size());
+        return tasks.stream().map(this::mapTaskToMap).collect(Collectors.toList());
+    }
 
-        return tasks.stream().map(task -> {
-            Map<String, Object> taskInfo = new HashMap<>();
-            taskInfo.put("taskId", task.getId());
-            taskInfo.put("taskName", task.getName());
-            taskInfo.put("createTime", task.getCreateTime());
-            taskInfo.put("processInstanceId", task.getProcessInstanceId());
+    private Map<String, Object> mapTaskToMap(Task task) {
+        Map<String, Object> taskInfo = new HashMap<>();
+        taskInfo.put("taskId", task.getId());
+        taskInfo.put("taskName", task.getName());
+        taskInfo.put("createTime", task.getCreateTime());
+        taskInfo.put("processInstanceId", task.getProcessInstanceId());
 
-            Map<String, Object> vars = new HashMap<>();
-            try {
-                vars = runtimeService.getVariables(task.getProcessInstanceId());
-            } catch (Exception e) {
-                log.warn("Impossible de récupérer les variables pour l'instance {}: {}", task.getProcessInstanceId(), e.getMessage());
-            }
-            taskInfo.put("employeId", vars.get("employeId"));
-            taskInfo.put("nbJours", vars.get("nbJours"));
-            taskInfo.put("demandeId", vars.get("demandeId"));
-            taskInfo.put("montantConge", vars.get("montantConge"));
+        Map<String, Object> vars = new HashMap<>();
+        try {
+            vars = runtimeService.getVariables(task.getProcessInstanceId());
+        } catch (Exception e) {
+            log.warn("Impossible de récupérer les variables pour l'instance {}: {}", task.getProcessInstanceId(), e.getMessage());
+        }
+        taskInfo.put("employeId", vars.get("employeId"));
+        taskInfo.put("nbJours", vars.get("nbJours"));
+        taskInfo.put("demandeId", vars.get("demandeId"));
+        taskInfo.put("montantConge", vars.get("montantConge"));
 
-            Long demandeId = vars.get("demandeId") != null ? Long.valueOf(vars.get("demandeId").toString()) : null;
-            if (demandeId != null) {
-                demandeRepository.findById(demandeId).ifPresent(demande -> {
-                    taskInfo.put("dateDebut", demande.getDateDebut());
-                    taskInfo.put("dateFin", demande.getDateFin());
-                    taskInfo.put("type", demande.getType());
+        Long demandeId = vars.get("demandeId") != null ? Long.valueOf(vars.get("demandeId").toString()) : null;
+        if (demandeId != null) {
+            demandeRepository.findById(demandeId).ifPresent(demande -> {
+                // Convertir LocalDate en String pour éviter les problèmes de sérialisation
+                taskInfo.put("dateDebut", demande.getDateDebut() != null ? demande.getDateDebut().toString() : null);
+                taskInfo.put("dateFin", demande.getDateFin() != null ? demande.getDateFin().toString() : null);
+                taskInfo.put("type", demande.getType());
+                taskInfo.put("commentaire", demande.getCommentaire());
+                if (demande.getEmploye() != null) {
                     taskInfo.put("employeNom", demande.getEmploye().getNom());
                     taskInfo.put("employePrenom", demande.getEmploye().getPrenom());
                     taskInfo.put("employeEmail", demande.getEmploye().getEmail());
-                });
-            }
-            return taskInfo;
-        }).collect(Collectors.toList());
+                }
+            });
+        }
+        return taskInfo;
     }
 
     @Transactional
@@ -199,6 +165,7 @@ public class WorkflowService {
         log.info("Décision RH: taskId={}, approve={}, admin={}", taskId, approve, adminEmail);
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getProcessStatus(String processInstanceId) {
         Map<String, Object> status = new HashMap<>();
         status.put("processInstanceId", processInstanceId);
@@ -232,33 +199,33 @@ public class WorkflowService {
                 status.put("demande", Map.of(
                         "id", demande.getId(),
                         "statut", demande.getStatut(),
-                        "dateDebut", demande.getDateDebut(),
-                        "dateFin", demande.getDateFin(),
+                        "dateDebut", demande.getDateDebut() != null ? demande.getDateDebut().toString() : null,
+                        "dateFin", demande.getDateFin() != null ? demande.getDateFin().toString() : null,
                         "type", demande.getType(),
                         "joursOuvres", demande.getJoursOuvres()
                 ));
             });
         }
-
         return status;
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getOrphanRequests() {
         List<DemandeConge> orphanDemandes = demandeRepository.findByProcessInstanceIdIsNull();
 
         return orphanDemandes.stream().map(demande -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", demande.getId());
-            map.put("employeId", demande.getEmploye().getId());
-            map.put("employeNom", demande.getEmploye().getNom());
-            map.put("employePrenom", demande.getEmploye().getPrenom());
-            map.put("employeEmail", demande.getEmploye().getEmail());
-            map.put("dateDebut", demande.getDateDebut());
-            map.put("dateFin", demande.getDateFin());
+            map.put("employeId", demande.getEmploye() != null ? demande.getEmploye().getId() : null);
+            map.put("employeNom", demande.getEmploye() != null ? demande.getEmploye().getNom() : null);
+            map.put("employePrenom", demande.getEmploye() != null ? demande.getEmploye().getPrenom() : null);
+            map.put("employeEmail", demande.getEmploye() != null ? demande.getEmploye().getEmail() : null);
+            map.put("dateDebut", demande.getDateDebut() != null ? demande.getDateDebut().toString() : null);
+            map.put("dateFin", demande.getDateFin() != null ? demande.getDateFin().toString() : null);
             map.put("joursOuvres", demande.getJoursOuvres());
             map.put("type", demande.getType());
             map.put("statut", demande.getStatut());
-            map.put("dateDemande", demande.getDateDemande());
+            map.put("dateDemande", demande.getDateDemande() != null ? demande.getDateDemande().toString() : null);
             return map;
         }).collect(Collectors.toList());
     }

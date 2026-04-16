@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -271,23 +272,34 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         return checkConflitDates(employeId, debut, fin, demandeId);
     }
 
+    // ========== CRÉATION (avec workflow) ==========
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DemandeCongeDTO createForAuthenticatedUser(DemandeCongeDTO dto, String email) {
         Employe employe = getEmployeByEmail(email);
         dto.setEmployeId(employe.getId());
+
         if (dto.getDateDebut() == null || dto.getDateFin() == null)
             throw new BusinessException("Les dates de début et de fin sont obligatoires");
         if (dto.getDateDebut().isAfter(dto.getDateFin()))
             throw new BusinessException("La date de début doit être antérieure à la date de fin");
         if (dto.getDateDebut().isBefore(LocalDate.now()))
             throw new BusinessException("La date de début ne peut pas être dans le passé");
+
         if ("ANNUEL".equals(dto.getType())) {
             int joursDemandes = calculateJoursOuvres(dto.getDateDebut(), dto.getDateFin());
-            if (employe.getSoldeConges() < joursDemandes)
-                throw new BusinessException(String.format("Solde insuffisant. Disponible: %d, Demandé: %d",
-                        employe.getSoldeConges(), joursDemandes));
+            int annee = LocalDate.now().getYear();
+            int joursPris = demandeCongeRepository.sumJoursOuvresApprouvesAnnee(employe.getId(), annee);
+            Integer soldeTotal = employe.getSoldeConges() != null ? employe.getSoldeConges() : 25;
+            int soldeRestant = soldeTotal - joursPris;
+
+            if (soldeRestant < joursDemandes) {
+                throw new BusinessException(String.format(
+                        "Solde insuffisant. Solde restant: %d jours, Demandé: %d jours",
+                        soldeRestant, joursDemandes));
+            }
         }
+
         if (checkConflitDates(employe.getId(), dto.getDateDebut(), dto.getDateFin(), null))
             throw new BusinessException("Une demande de congé existe déjà sur cette période");
 
@@ -295,7 +307,8 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         demande.setEmploye(employe);
         demande.setJoursOuvres(calculateJoursOuvres(dto.getDateDebut(), dto.getDateFin()));
         demande.soumettre();
-        DemandeConge saved = demandeCongeRepository.save(demande);
+
+        DemandeConge saved = demandeCongeRepository.saveAndFlush(demande);
 
         try {
             Map<String, Object> workflowVariables = new HashMap<>();
@@ -309,7 +322,7 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
             workflowVariables.put("managerEmail", getManagerEmailFromEmploye(employe));
             workflowVariables.put("adminEmail", getAdminRHEmail());
 
-            var processInstance = runtimeService.startProcessInstanceByKey("Process_13wxvdy", workflowVariables);
+            var processInstance = runtimeService.startProcessInstanceByKey("LeaveRequestProcess", workflowVariables);
             saved.setProcessInstanceId(processInstance.getId());
             List<Task> tasks = taskService.createTaskQuery().processInstanceId(processInstance.getId()).list();
             if (!tasks.isEmpty()) saved.setCurrentTaskId(tasks.get(0).getId());
@@ -335,30 +348,85 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         Employe employe = getEmployeByEmail(email);
         Integer total = employe.getSoldeConges() != null ? employe.getSoldeConges() : 25;
         int annee = LocalDate.now().getYear();
-        long pris = demandeCongeRepository.countCongesPrisAnnee(employe.getId(), annee);
+        int pris = demandeCongeRepository.sumJoursOuvresApprouvesAnnee(employe.getId(), annee);
         long enAttente = demandeCongeRepository.countByEmployeIdAndStatut(employe.getId(), "EN_ATTENTE");
         return SoldeCongesDTO.builder()
-                .total(total).pris((int) pris).restant(total - (int) pris).enAttente((int) enAttente).build();
+                .total(total)
+                .pris(pris)
+                .restant(total - pris)
+                .enAttente((int) enAttente)
+                .build();
     }
 
+    // ========== MODIFICATION POUR UTILISATEUR AUTHENTIFIÉ (CORRIGÉE) ==========
     @Override
     public DemandeCongeDTO modifierForAuthenticatedUser(Long id, DemandeCongeDTO dto, String email) {
         Employe employe = getEmployeByEmail(email);
         DemandeConge demande = demandeCongeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("DemandeConge", id));
+
+        // Vérifier que la demande appartient à l'utilisateur
         if (!demande.getEmploye().getId().equals(employe.getId()))
             throw new BusinessException("Vous ne pouvez pas modifier une demande qui ne vous appartient pas");
+
+        // Vérifier que la demande est en attente
         if (!"EN_ATTENTE".equals(demande.getStatut()))
             throw new BusinessException("Seules les demandes en attente peuvent être modifiées");
+
         LocalDate newDebut = dto.getDateDebut() != null ? dto.getDateDebut() : demande.getDateDebut();
         LocalDate newFin = dto.getDateFin() != null ? dto.getDateFin() : demande.getDateFin();
+
+        // Vérifier que les nouvelles dates ne sont pas dans le passé
+        if (newDebut.isBefore(LocalDate.now()))
+            throw new BusinessException("La date de début ne peut pas être dans le passé");
+        if (newDebut.isAfter(newFin))
+            throw new BusinessException("La date de début doit être antérieure à la date de fin");
+
+        // Vérifier les conflits de dates
         if (checkConflitDates(employe.getId(), newDebut, newFin, id))
             throw new BusinessException("Une demande de congé existe déjà sur cette période");
-        demande.modifier(newDebut, newFin,
-                dto.getType() != null ? dto.getType() : demande.getType(),
-                dto.getCommentaire());
-        demande.setJoursOuvres(calculateJoursOuvres(demande.getDateDebut(), demande.getDateFin()));
-        return mapper.toDto(demandeCongeRepository.save(demande));
+
+        // Recalculer les jours ouvrables
+        int nouveauxJours = calculateJoursOuvres(newDebut, newFin);
+
+        // Vérifier le solde si le type est ANNUEL
+        String nouveauType = dto.getType() != null ? dto.getType() : demande.getType();
+        if ("ANNUEL".equals(nouveauType)) {
+            int annee = LocalDate.now().getYear();
+            int joursPris = demandeCongeRepository.sumJoursOuvresApprouvesAnnee(employe.getId(), annee);
+            Integer soldeTotal = employe.getSoldeConges() != null ? employe.getSoldeConges() : 25;
+            int soldeRestant = soldeTotal - joursPris;
+            if (soldeRestant < nouveauxJours) {
+                throw new BusinessException(String.format(
+                        "Solde insuffisant. Solde restant: %d jours, Demandé: %d jours",
+                        soldeRestant, nouveauxJours));
+            }
+        }
+
+        // Appliquer la modification
+        demande.setDateDebut(newDebut);
+        demande.setDateFin(newFin);
+        demande.setType(nouveauType);
+        demande.setCommentaire(dto.getCommentaire() != null ? dto.getCommentaire() : demande.getCommentaire());
+        demande.setJoursOuvres(nouveauxJours);
+        demande.setUrgente(ChronoUnit.DAYS.between(LocalDate.now(), newDebut) < 7);
+
+        // Sauvegarder
+        DemandeConge saved = demandeCongeRepository.save(demande);
+
+        // Optionnel : mettre à jour les variables du workflow Camunda (si nécessaire)
+        if (saved.getProcessInstanceId() != null && !saved.getProcessInstanceId().isEmpty()) {
+            try {
+                runtimeService.setVariable(saved.getProcessInstanceId(), "nbJours", nouveauxJours);
+                runtimeService.setVariable(saved.getProcessInstanceId(), "dateDebut", newDebut.toString());
+                runtimeService.setVariable(saved.getProcessInstanceId(), "dateFin", newFin.toString());
+                runtimeService.setVariable(saved.getProcessInstanceId(), "typeConge", nouveauType);
+            } catch (Exception e) {
+                log.warn("Impossible de mettre à jour les variables du workflow: {}", e.getMessage());
+            }
+        }
+
+        return mapper.toDto(saved);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -370,6 +438,22 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
                 log.warn("Instance Camunda introuvable ou déjà supprimée: {}", e.getMessage());
             }
         }
+    }
+
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DemandeCongeDTO> getCongesByEmployeIdForManager(Long employeId, String managerEmail) {
+        Employe manager = employeRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager non trouvé"));
+        Employe employe = employeRepository.findById(employeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
+        if (employe.getManager() == null || !employe.getManager().getId().equals(manager.getId())) {
+            throw new BusinessException("Cet employé n'appartient pas à votre équipe");
+        }
+        List<DemandeConge> demandes = demandeCongeRepository.findByEmployeId(employeId);
+        return demandes.stream().map(mapper::toDto).collect(Collectors.toList());
     }
 
     @Override

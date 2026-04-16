@@ -25,8 +25,7 @@ public class DeduireSoldeDelegate implements JavaDelegate {
         log.info("=== DÉDUCTION DU SOLDE ===");
 
         String processInstanceId = execution.getProcessInstanceId();
-        DemandeConge demande = demandeRepository.findByProcessInstanceId(processInstanceId)
-                .orElse(null);
+        DemandeConge demande = demandeRepository.findByProcessInstanceId(processInstanceId).orElse(null);
 
         if (demande == null) {
             log.warn("Demande non trouvée pour processInstanceId: {}", processInstanceId);
@@ -34,14 +33,24 @@ public class DeduireSoldeDelegate implements JavaDelegate {
             return;
         }
 
-        // Correction : le statut après approbation est "APPROUVE" (un seul E)
+        // Si la demande n'est pas encore approuvée, on l'approuve ici
         if (!"APPROUVE".equals(demande.getStatut())) {
-            log.warn("Demande {} non approuvée (statut={}), déduction ignorée",
-                    demande.getId(), demande.getStatut());
-            execution.setVariable("soldeDeduit", false);
+            log.info("Demande {} non encore approuvée, approbation avant déduction", demande.getId());
+            demande.valider();  // change le statut et déduit le solde (via employe.deduireConges)
+            demandeRepository.save(demande);
+            execution.setVariable("soldeDeduit", true);
             return;
         }
 
+        // Si déjà approuvée mais solde pas déduit (cas des ≤10 jours où la déduction est directe)
+        // On vérifie si le solde a déjà été déduit (variable de process)
+        Boolean dejaDeduit = (Boolean) execution.getVariable("soldeDeduit");
+        if (dejaDeduit != null && dejaDeduit) {
+            log.info("Solde déjà déduit pour la demande {}", demande.getId());
+            return;
+        }
+
+        // Sinon, on déduit
         if ("ANNUEL".equals(demande.getType()) && demande.getEmploye() != null) {
             Employe employe = demande.getEmploye();
             int jours = demande.getJoursOuvres();

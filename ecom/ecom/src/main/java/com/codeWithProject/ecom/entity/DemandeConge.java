@@ -110,6 +110,7 @@ public class DemandeConge {
         this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
     }
 
+    // Modification sans vérification du solde (déléguée au service)
     public void modifier(LocalDate nouvelleDateDebut, LocalDate nouvelleDateFin,
                          String nouveauType, String nouveauCommentaire) {
         verifierModificationAutorisee();
@@ -119,7 +120,6 @@ public class DemandeConge {
         if (nouveauCommentaire != null) this.commentaire = nouveauCommentaire;
         validerDates();
         this.joursOuvres = calculerJoursOuvres();
-        verifierSoldeSuffisant();
         this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
     }
 
@@ -164,6 +164,7 @@ public class DemandeConge {
         log.info("NOTIFICATION : {}", msg);
     }
 
+    // getters / setters manuels si Lombok ne fonctionne pas (mais @Data les fournit)
     public String getProcessInstanceId() { return processInstanceId; }
     public void setProcessInstanceId(String processInstanceId) { this.processInstanceId = processInstanceId; }
     public String getCurrentTaskId() { return currentTaskId; }

@@ -9,9 +9,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.delegate.JavaDelegate;
-import org.camunda.bpm.engine.delegate.BpmnError;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 
 @Component
 @RequiredArgsConstructor
@@ -27,7 +28,6 @@ public class VerifierSoldeDelegate implements JavaDelegate {
     public void execute(DelegateExecution execution) {
         log.info("=== Vérification du solde ===");
 
-        // Récupérer les variables
         String employeIdStr = (String) execution.getVariable("employeId");
         Object nbJoursObj = execution.getVariable("nbJours");
         Integer nbJours = nbJoursObj != null ? ((Number) nbJoursObj).intValue() : 0;
@@ -38,38 +38,44 @@ public class VerifierSoldeDelegate implements JavaDelegate {
         Employe employe = employeRepository.findById(employeId)
                 .orElseThrow(() -> new RuntimeException("Employé non trouvé: " + employeId));
 
-        Integer soldeActuel = employe.getSoldeConges() != null ? employe.getSoldeConges() : 25;
-        boolean soldeSuffisant = soldeActuel >= nbJours;
+        // Solde total annuel
+        Integer soldeTotal = employe.getSoldeConges() != null ? employe.getSoldeConges() : 25;
+        int annee = LocalDate.now().getYear();
+
+        // Jours déjà approuvés dans l'année (congés consommés)
+        int joursPris = demandeRepository.sumJoursOuvresApprouvesAnnee(employeId, annee);
+        int soldeRestant = soldeTotal - joursPris;
+
+        boolean soldeSuffisant = soldeRestant >= nbJours;
 
         execution.setVariable("soldeSuffisant", soldeSuffisant);
-        execution.setVariable("soldeActuel", soldeActuel);
+        execution.setVariable("soldeActuel", soldeRestant);
         execution.setVariable("nbJours", nbJours);
 
-        log.info("Employé ID: {}, Solde: {}, Demandé: {}, Suffisant: {}",
-                employeId, soldeActuel, nbJours, soldeSuffisant);
+        log.info("Employé ID: {}, Solde total: {}, Pris: {}, Restant: {}, Demandé: {}, Suffisant: {}",
+                employeId, soldeTotal, joursPris, soldeRestant, nbJours, soldeSuffisant);
 
-        // ❌ SOLDE INSUFFISANT - Lancer une erreur BPMN
         if (!soldeSuffisant && demandeId != null) {
-            String motif = "Solde de congés insuffisant (solde: " + soldeActuel + " jours, demandé: " + nbJours + " jours)";
-
-            // Mettre à jour la demande en base
-            DemandeConge demande = demandeRepository.findById(demandeId).orElse(null);
-            if (demande != null) {
-                demande.setStatut("REFUSE");
-                demande.setMotifRefus(motif);
-                demandeRepository.save(demande);
-                log.info("❌ Demande {} refusée - Solde insuffisant", demandeId);
-            }
-
-            // Créer une notification
-            String message = String.format("❌ Votre demande de congé a été refusée automatiquement. Motif : %s", motif);
-            notificationService.createNotification(employeId, message, "ERROR", demandeId);
-            log.info("📧 Notification de refus envoyée à l'employé {}", employeId);
-
-            // LANCER L'ERREUR BPMN
-            throw new BpmnError("SOLDE_INSUFFISANT", motif);
+            String motif = String.format("Solde de congés insuffisant (solde restant: %d jours, demandé: %d jours)",
+                    soldeRestant, nbJours);
+            refuserDemandeEtNotifier(demandeId, motif, employeId);
         }
 
-        log.info("✅ Solde suffisant, poursuite du workflow");
+        log.info("✅ Solde vérifié, poursuite du workflow");
+    }
+
+    @Transactional
+    public void refuserDemandeEtNotifier(Long demandeId, String motif, Long employeId) {
+        DemandeConge demande = demandeRepository.findById(demandeId).orElse(null);
+        if (demande != null && !"REFUSE".equals(demande.getStatut())) {
+            demande.setStatut("REFUSE");
+            demande.setMotifRefus(motif);
+            demandeRepository.save(demande);
+            log.info("❌ Demande {} refusée - Solde insuffisant", demandeId);
+        }
+
+        String message = String.format("❌ Votre demande de congé a été refusée automatiquement. Motif : %s", motif);
+        notificationService.createNotification(employeId, message, "ERROR", demandeId);
+        log.info("📧 Notification de refus envoyée à l'employé {}", employeId);
     }
 }

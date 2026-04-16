@@ -38,8 +38,7 @@ public class EmployeServiceImpl implements EmployeService {
     private final EmployeMapper mapper;
     private final PasswordEncoder passwordEncoder;
 
-    // ===== MÉTHODES EXISTANTES (inchangées mais sans Utilisateur) =====
-
+    // ===== MÉTHODES DE BASE =====
     @Override
     @Transactional(readOnly = true)
     public List<EmployeDTO> findAll() {
@@ -56,80 +55,92 @@ public class EmployeServiceImpl implements EmployeService {
 
     @Override
     @Transactional(readOnly = true)
-    public long count() { return employeRepository.count(); }
+    public long count() {
+        return employeRepository.count();
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<EmployeDTO> findById(Long id) { return employeRepository.findById(id).map(mapper::toDto); }
+    public Optional<EmployeDTO> findById(Long id) {
+        return employeRepository.findById(id).map(mapper::toDto);
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<EmployeDTO> findByMatricule(String matricule) { return employeRepository.findByMatricule(matricule).map(mapper::toDto); }
+    public Optional<EmployeDTO> findByMatricule(String matricule) {
+        return employeRepository.findByMatricule(matricule).map(mapper::toDto);
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public List<EmployeDTO> findByDepartement(String departement) { return employeRepository.findByDepartement(departement).stream().map(mapper::toDto).collect(Collectors.toList()); }
+    public List<EmployeDTO> findByDepartement(String departement) {
+        return employeRepository.findByDepartement(departement).stream().map(mapper::toDto).collect(Collectors.toList());
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public List<EmployeDTO> findByStatut(String statut) { return employeRepository.findByStatut(statut).stream().map(mapper::toDto).collect(Collectors.toList()); }
+    public List<EmployeDTO> findByStatut(String statut) {
+        return employeRepository.findByStatut(statut).stream().map(mapper::toDto).collect(Collectors.toList());
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public List<EmployeDTO> findByManagerId(Long managerId) { return employeRepository.findByManagerId(managerId).stream().map(mapper::toDto).collect(Collectors.toList()); }
+    public List<EmployeDTO> findByManagerId(Long managerId) {
+        return employeRepository.findByManagerId(managerId).stream().map(mapper::toDto).collect(Collectors.toList());
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public List<EmployeDTO> findByServiceId(Long serviceId) { return employeRepository.findByServiceId(serviceId).stream().map(mapper::toDto).collect(Collectors.toList()); }
+    public List<EmployeDTO> findByServiceId(Long serviceId) {
+        return employeRepository.findByServiceId(serviceId).stream().map(mapper::toDto).collect(Collectors.toList());
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public List<EmployeDTO> findActifs() { return employeRepository.findAllActifs().stream().map(mapper::toDto).collect(Collectors.toList()); }
+    public List<EmployeDTO> findActifs() {
+        return employeRepository.findAllActifs().stream().map(mapper::toDto).collect(Collectors.toList());
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public List<EmployeDTO> findSoldeCongesFaible(Integer seuil) { return employeRepository.findBySoldeCongesLessThan(seuil).stream().map(mapper::toDto).collect(Collectors.toList()); }
+    public List<EmployeDTO> findSoldeCongesFaible(Integer seuil) {
+        return employeRepository.findBySoldeCongesLessThan(seuil).stream().map(mapper::toDto).collect(Collectors.toList());
+    }
 
-    // ===== CREATE (sans Utilisateur) =====
-
+    // ===== CRUD =====
     @Override
     public EmployeDTO create(EmployeDTO dto) {
         log.debug("Création d'un employé: {}", dto.getMatricule());
 
-        if (dto.getMatricule() == null || dto.getMatricule().trim().isEmpty()) {
+        // Validations
+        if (dto.getMatricule() == null || dto.getMatricule().trim().isEmpty())
             throw new BusinessException("Le matricule est obligatoire");
-        }
-        if (dto.getNom() == null || dto.getNom().trim().isEmpty()) {
+        if (dto.getNom() == null || dto.getNom().trim().isEmpty())
             throw new BusinessException("Le nom est obligatoire");
-        }
-        if (dto.getPrenom() == null || dto.getPrenom().trim().isEmpty()) {
+        if (dto.getPrenom() == null || dto.getPrenom().trim().isEmpty())
             throw new BusinessException("Le prénom est obligatoire");
-        }
-        if (dto.getEmail() == null || dto.getEmail().trim().isEmpty()) {
+        if (dto.getEmail() == null || dto.getEmail().trim().isEmpty())
             throw new BusinessException("L'email est obligatoire");
-        }
-        if (dto.getDateEmbauche() == null) {
+        if (dto.getDateEmbauche() == null)
             throw new BusinessException("La date d'embauche est obligatoire");
-        }
-        if (dto.getSalaire() == null) {
+        if (dto.getSalaire() == null)
             throw new BusinessException("Le salaire est obligatoire");
-        }
 
-        if (employeRepository.existsByMatricule(dto.getMatricule())) {
+        if (employeRepository.existsByMatricule(dto.getMatricule()))
             throw new BusinessException("Un employé avec ce matricule existe déjà");
-        }
-        if (employeRepository.findByEmail(dto.getEmail()).isPresent()) {
+        if (employeRepository.findByEmail(dto.getEmail()).isPresent())
             throw new BusinessException("Un employé avec cet email existe déjà");
-        }
 
         Employe employe = mapper.toEntity(dto);
-        // Gérer le service
+
+        // Service
         if (dto.getServiceId() != null) {
             com.codeWithProject.ecom.entity.Service service = serviceRepository.findById(dto.getServiceId())
                     .orElseThrow(() -> new ResourceNotFoundException("Service", dto.getServiceId()));
             employe.setService(service);
         }
-        // Gérer le manager
+
+        // Manager
         if (dto.getManagerId() != null) {
             Manager manager = managerRepository.findById(dto.getManagerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Manager", dto.getManagerId()));
@@ -140,11 +151,11 @@ public class EmployeServiceImpl implements EmployeService {
             employe.setManager(manager);
         }
 
-        // Encoder le mot de passe
+        // Mot de passe
         String rawPassword = dto.getPassword() != null ? dto.getPassword() : "default123";
         employe.setPassword(passwordEncoder.encode(rawPassword));
 
-        // Définir le rôle et le type
+        // Rôle et type
         String role = dto.getRole() != null ? dto.getRole() : "user";
         employe.setRole(role);
         employe.setTypeEmploye(determineTypeFromRole(role));
@@ -172,8 +183,6 @@ public class EmployeServiceImpl implements EmployeService {
         }
     }
 
-    // ===== UPDATE =====
-
     @Override
     public EmployeDTO update(Long id, EmployeDTO dto) {
         log.debug("Mise à jour de l'employé ID: {}", id);
@@ -182,17 +191,15 @@ public class EmployeServiceImpl implements EmployeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Employé", id));
 
         if (dto.getMatricule() != null && !dto.getMatricule().equals(employe.getMatricule())) {
-            if (employeRepository.existsByMatricule(dto.getMatricule())) {
+            if (employeRepository.existsByMatricule(dto.getMatricule()))
                 throw new BusinessException("Un employé avec ce matricule existe déjà");
-            }
             employe.setMatricule(dto.getMatricule());
         }
         if (dto.getNom() != null) employe.setNom(dto.getNom());
         if (dto.getPrenom() != null) employe.setPrenom(dto.getPrenom());
         if (dto.getEmail() != null) {
-            if (!dto.getEmail().equals(employe.getEmail()) && employeRepository.findByEmail(dto.getEmail()).isPresent()) {
+            if (!dto.getEmail().equals(employe.getEmail()) && employeRepository.findByEmail(dto.getEmail()).isPresent())
                 throw new BusinessException("Un employé avec cet email existe déjà");
-            }
             employe.setEmail(dto.getEmail());
         }
         if (dto.getTelephone() != null) employe.setTelephone(dto.getTelephone());
@@ -247,7 +254,6 @@ public class EmployeServiceImpl implements EmployeService {
     }
 
     // ===== STATISTIQUES =====
-
     @Override
     @Transactional(readOnly = true)
     public Map<String, Long> countByDepartement() {
@@ -322,8 +328,7 @@ public class EmployeServiceImpl implements EmployeService {
         return Double.parseDouble(value.toString());
     }
 
-    // ===== MÉTHODES POUR L'UTILISATEUR AUTHENTIFIÉ (sans Utilisateur) =====
-
+    // ===== MÉTHODES POUR L'UTILISATEUR AUTHENTIFIÉ =====
     @Override
     @Transactional(readOnly = true)
     public Optional<EmployeDTO> findByEmail(String email) {
@@ -411,22 +416,50 @@ public class EmployeServiceImpl implements EmployeService {
     public void changePasswordByEmail(String email, ChangePasswordRequest request) {
         Employe employe = employeRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
-        if (!passwordEncoder.matches(request.getOldPassword(), employe.getPassword())) {
+        if (!passwordEncoder.matches(request.getOldPassword(), employe.getPassword()))
             throw new BusinessException("Ancien mot de passe incorrect");
-        }
         employe.setPassword(passwordEncoder.encode(request.getNewPassword()));
         employeRepository.save(employe);
     }
 
     @Override
     public EmployeDTO changeEmailByEmail(String email, String newEmail) {
-        if (employeRepository.findByEmail(newEmail).isPresent()) {
+        if (employeRepository.findByEmail(newEmail).isPresent())
             throw new BusinessException("Cet email est déjà utilisé");
-        }
         Employe employe = employeRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
         employe.setEmail(newEmail);
         return mapper.toDto(employeRepository.save(employe));
+    }
+
+    // ===== MÉTHODES POUR MANAGER =====
+    @Override
+    @Transactional(readOnly = true)
+    public List<EmployeDTO> findAllManagers() {
+        return employeRepository.findByTypeEmploye(Employe.TYPE_MANAGER)
+                .stream().map(mapper::toDto).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EmployeDTO> getEquipeByManagerEmail(String managerEmail) {
+        Employe manager = employeRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager non trouvé avec email: " + managerEmail));
+        return employeRepository.findByManagerId(manager.getId())
+                .stream().map(mapper::toDto).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EmployeDTO getEmployeForManager(Long employeId, String managerEmail) {
+        Employe manager = employeRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager non trouvé"));
+        Employe employe = employeRepository.findById(employeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
+        if (employe.getManager() == null || !employe.getManager().getId().equals(manager.getId())) {
+            throw new BusinessException("Cet employé n'appartient pas à votre équipe");
+        }
+        return mapper.toDto(employe);
     }
 
     @Override

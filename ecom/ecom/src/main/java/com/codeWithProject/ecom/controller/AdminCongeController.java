@@ -2,6 +2,7 @@ package com.codeWithProject.ecom.controller;
 
 import com.codeWithProject.ecom.controller.dto.ApiResponse;
 import com.codeWithProject.ecom.service.AdminCongeService;
+import com.codeWithProject.ecom.service.WorkflowService;
 import com.codeWithProject.ecom.service.dto.DemandeCongeAdminDTO;
 import com.codeWithProject.ecom.service.exception.BusinessException;
 import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
@@ -28,14 +29,17 @@ import java.util.Map;
 public class AdminCongeController {
 
     private final AdminCongeService adminCongeService;
+    private final WorkflowService workflowService;
 
     @GetMapping("/a-valider")
-    @Operation(summary = "Récupère les demandes en attente avec plus de 10 jours")
-    public ResponseEntity<ApiResponse<List<DemandeCongeAdminDTO>>> getDemandesAValider() {
-        log.info("GET /api/admin/conges/a-valider - Récupération des demandes à valider");
+    @Operation(summary = "Récupère les demandes en attente avec plus de 10 jours (tâches Camunda)")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getDemandesAValider(
+            @AuthenticationPrincipal Jwt jwt) {
+        log.info("GET /api/admin/conges/a-valider - Récupération des tâches RH");
+        String adminEmail = extractEmail(jwt);
         try {
-            List<DemandeCongeAdminDTO> demandes = adminCongeService.getDemandesEnAttentePlusDe10Jours();
-            return ResponseEntity.ok(ApiResponse.success(demandes, "Demandes récupérées avec succès"));
+            List<Map<String, Object>> tasks = workflowService.getRHTasks(adminEmail);
+            return ResponseEntity.ok(ApiResponse.success(tasks, "Tâches récupérées avec succès"));
         } catch (Exception e) {
             log.error("Erreur lors de la récupération: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
