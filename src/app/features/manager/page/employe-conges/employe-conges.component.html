@@ -1,0 +1,56 @@
+<div class="conges-container">
+  <div class="header">
+    <a routerLink="/manager/employe/{{ employeId }}" class="back-link">
+      ← Retour au profil
+    </a>
+    <h2>📅 Historique des congés</h2>
+    <p *ngIf="employeNom">pour <strong>{{ employeNom }}</strong></p>
+  </div>
+
+  <div class="loader" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Chargement des demandes...</p>
+  </div>
+
+  <div class="error-card" *ngIf="error && !loading">
+    <span class="error-icon">⚠️</span>
+    <h3>Impossible de charger les congés</h3>
+    <p>Cet employé n'existe pas ou vous n'avez pas les droits.</p>
+    <a routerLink="/manager/equipe" class="back-link">← Retour à l'équipe</a>
+  </div>
+
+  <div class="conges-list" *ngIf="!loading && !error">
+    <div class="conge-card" *ngFor="let c of conges">
+      <div class="card-header">
+        <div class="type-badge" [class]="c.type.toLowerCase()">
+          {{ getTypeLabel(c.type) }}
+        </div>
+        <div class="status-chip" [class]="getStatutClass(c.statut || '')">
+          {{ getStatutLabel(c.statut || '') }}
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="date-range">
+          <span class="date">{{ formatDate(c.dateDebut) }}</span>
+          <span class="arrow">→</span>
+          <span class="date">{{ formatDate(c.dateFin) }}</span>
+        </div>
+        <div class="info">
+          <span class="jours">{{ c.joursOuvres || 0 }} jour(s) ouvré(s)</span>
+          <span class="demande">Demandé le {{ formatDate(c.dateDemande) }}</span>
+        </div>
+        <div class="commentaire" *ngIf="c.commentaire">
+          <span class="label">Commentaire :</span> {{ c.commentaire }}
+        </div>
+        <div class="motif-refus" *ngIf="c.statut === 'REFUSE' && c.motifRefus">
+          <span class="label">Motif du refus :</span> {{ c.motifRefus }}
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="conges.length === 0">
+      <span class="empty-icon">📭</span>
+      <p>Aucune demande de congé trouvée pour cet employé.</p>
+    </div>
+  </div>
+</div>

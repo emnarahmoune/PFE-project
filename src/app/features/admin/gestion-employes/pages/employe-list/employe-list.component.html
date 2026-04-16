@@ -1,5 +1,6 @@
+<!-- src/app/features/admin/pages/employe-list/employe-list.component.html -->
 <div class="employe-saas">
-  <!-- Hero section avec dégradé (comme formations) -->
+  <!-- Hero -->
   <div class="hero-section">
     <div class="hero-content">
       <h1>👥 Gestion des employés</h1>
@@ -13,7 +14,7 @@
   </div>
 
   <div class="main-content">
-    <!-- Cartes statistiques (4 cartes alignées) -->
+    <!-- Stats -->
     <div class="stats-dashboard">
       <div class="stat-block">
         <div class="stat-icon purple">👥</div>
@@ -45,13 +46,10 @@
       </div>
     </div>
 
-    <!-- Barre de filtres -->
+    <!-- Filtres -->
     <div class="filter-toolbar">
       <div class="search-box">
-        <input type="text"
-               [(ngModel)]="searchText"
-               (input)="applyFilter()"
-               placeholder="Rechercher un employé...">
+        <input type="text" [(ngModel)]="searchText" (input)="applyFilter()" placeholder="Rechercher un employé...">
         <span class="search-icon">🔍</span>
       </div>
       <div class="domain-filters">
@@ -64,12 +62,8 @@
         <select class="dept-select" [(ngModel)]="selectedDepartement" (change)="applyFilter()">
           <option *ngFor="let dept of departements" [value]="dept">{{ dept }}</option>
         </select>
-        <button class="reset-btn" (click)="resetFilters()">
-          <span>↺</span> Réinitialiser
-        </button>
-        <button class="icon-btn" (click)="loadEmployes()" title="Rafraîchir">
-          <span>⟳</span>
-        </button>
+        <button class="reset-btn" (click)="resetFilters()"><span>↺</span> Réinitialiser</button>
+        <button class="icon-btn" (click)="loadEmployes()" title="Rafraîchir"><span>⟳</span></button>
       </div>
     </div>
 
@@ -79,16 +73,14 @@
       <span>Chargement des employés...</span>
     </div>
 
-    <!-- Grille de cartes employés -->
+    <!-- Grille -->
     <div class="employe-grid" *ngIf="!loading">
       <div class="employe-card" *ngFor="let emp of getPagedData()" (click)="viewDetail(emp.id!)">
         <div class="card-header">
           <div class="avatar" [style.background]="getAvatarColor(emp.departement ?? '')">
             {{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}
           </div>
-          <div class="status-badge" [class]="'status-' + emp.statut.toLowerCase()">
-            {{ emp.statut }}
-          </div>
+          <div class="status-badge" [class]="'status-' + emp.statut.toLowerCase()">{{ emp.statut }}</div>
         </div>
         <div class="card-body">
           <h3 class="employe-name">{{ emp.prenom }} {{ emp.nom }}</h3>
@@ -107,7 +99,6 @@
         </div>
       </div>
 
-      <!-- Empty state -->
       <div class="empty-state" *ngIf="getPagedData().length === 0">
         <span class="empty-icon">🔍</span>
         <p>Aucun employé trouvé</p>

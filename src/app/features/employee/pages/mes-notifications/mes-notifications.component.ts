@@ -1,5 +1,3 @@
-// src/app/features/employee/pages/mes-notifications/mes-notifications.component.ts
-
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -11,7 +9,8 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDividerModule } from '@angular/material/divider';
-import { NotificationApiService, AppNotification } from '../../../../core/services/notification-api.service';
+import { NotificationService, AppNotification } from '../../../../core/services/notification.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-mes-notifications',
@@ -26,13 +25,13 @@ import { NotificationApiService, AppNotification } from '../../../../core/servic
   styleUrls: ['./mes-notifications.component.scss']
 })
 export class MesNotificationsComponent implements OnInit, OnDestroy {
-
   notifications: AppNotification[] = [];
   filteredNotifications: AppNotification[] = [];
   loading = false;
   selectedFilter = 'all';
   private refreshInterval: any;
   private readonly REFRESH_INTERVAL_MS = 30000;
+  private notificationsSub?: Subscription;
 
   filters = [
     { value: 'all', label: 'Toutes', icon: '📋' },
@@ -51,48 +50,37 @@ export class MesNotificationsComponent implements OnInit, OnDestroy {
   };
 
   constructor(
-    private notificationService: NotificationApiService,
+    private notificationService: NotificationService,
     private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
     this.loadNotifications();
     this.startAutoRefresh();
+
+    // Réactivité : mise à jour automatique des notifications
+    this.notificationsSub = this.notificationService.notifications$.subscribe(notifications => {
+      this.notifications = notifications;
+      this.updateStats();
+      this.applyFilter();
+    });
   }
 
   ngOnDestroy(): void {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
+    if (this.refreshInterval) clearInterval(this.refreshInterval);
+    this.notificationsSub?.unsubscribe();
   }
 
   startAutoRefresh(): void {
     this.refreshInterval = setInterval(() => {
-      this.loadNotifications(false);
+      this.notificationService.loadNotifications();
     }, this.REFRESH_INTERVAL_MS);
   }
 
-  loadNotifications(showLoading = true): void {
-    if (showLoading) this.loading = true;
-
-    this.notificationService.getNotifications().subscribe({
-      next: (response: any) => {
-        this.loading = false;
-        // Gérer les deux formats possibles : ApiResponse ou tableau direct
-        let data = response;
-        if (response && response.success) {
-          data = response.data;
-        }
-        this.notifications = Array.isArray(data) ? data : [];
-        this.updateStats();
-        this.applyFilter();
-      },
-      error: (error: any) => {
-        this.loading = false;
-        console.error('Erreur chargement notifications:', error);
-        this.showToast('Erreur de connexion au serveur', 'error');
-      }
-    });
+  loadNotifications(): void {
+    this.loading = true;
+    this.notificationService.loadNotifications();
+    this.loading = false;
   }
 
   updateStats(): void {
@@ -111,7 +99,6 @@ export class MesNotificationsComponent implements OnInit, OnDestroy {
     } else {
       this.filteredNotifications = this.notifications.filter(n => n.type === this.selectedFilter);
     }
-    // Trier par date décroissante
     this.filteredNotifications.sort((a, b) => 
       new Date(b.dateCreation).getTime() - new Date(a.dateCreation).getTime()
     );
@@ -124,21 +111,7 @@ export class MesNotificationsComponent implements OnInit, OnDestroy {
 
   markAsRead(notification: AppNotification): void {
     if (notification.lu) return;
-
-    this.notificationService.markAsRead(notification.id).subscribe({
-      next: (response: any) => {
-        if (response.success || response.statusCode === 200) {
-          notification.lu = true;
-          this.updateStats();
-          this.applyFilter();
-          this.showToast('Notification marquée comme lue', 'success');
-        }
-      },
-      error: (error: any) => {
-        console.error('Erreur marquage lecture:', error);
-        this.showToast('Erreur lors du marquage', 'error');
-      }
-    });
+    this.notificationService.markAsRead(notification.id);
   }
 
   markAllAsRead(): void {
@@ -146,41 +119,13 @@ export class MesNotificationsComponent implements OnInit, OnDestroy {
       this.showToast('Aucune notification non lue', 'info');
       return;
     }
-
-    this.notificationService.markAllAsRead().subscribe({
-      next: (response: any) => {
-        if (response.success || response.statusCode === 200) {
-          this.notifications.forEach(n => n.lu = true);
-          this.updateStats();
-          this.applyFilter();
-          this.showToast('Toutes les notifications ont été marquées comme lues', 'success');
-        }
-      },
-      error: (error: any) => {
-        console.error('Erreur marquage tout lu:', error);
-        this.showToast('Erreur lors du marquage', 'error');
-      }
-    });
+    this.notificationService.markAllAsRead();
   }
 
   deleteNotification(notification: AppNotification, event: Event): void {
     event.stopPropagation();
-    
     if (confirm('Supprimer cette notification ?')) {
-      this.notificationService.deleteNotification(notification.id).subscribe({
-        next: (response: any) => {
-          if (response.success || response.statusCode === 200) {
-            this.notifications = this.notifications.filter(n => n.id !== notification.id);
-            this.updateStats();
-            this.applyFilter();
-            this.showToast('Notification supprimée', 'success');
-          }
-        },
-        error: (error: any) => {
-          console.error('Erreur suppression:', error);
-          this.showToast('Erreur lors de la suppression', 'error');
-        }
-      });
+      this.notificationService.deleteNotification(notification.id);
     }
   }
 
@@ -189,22 +134,8 @@ export class MesNotificationsComponent implements OnInit, OnDestroy {
       this.showToast('Aucune notification à supprimer', 'info');
       return;
     }
-
     if (confirm('Supprimer toutes les notifications ? Cette action est irréversible.')) {
-      this.notificationService.deleteAllNotifications().subscribe({
-        next: (response: any) => {
-          if (response.success || response.statusCode === 200) {
-            this.notifications = [];
-            this.updateStats();
-            this.applyFilter();
-            this.showToast('Toutes les notifications ont été supprimées', 'success');
-          }
-        },
-        error: (error: any) => {
-          console.error('Erreur suppression tout:', error);
-          this.showToast('Erreur lors de la suppression', 'error');
-        }
-      });
+      this.notificationService.deleteAllNotifications();
     }
   }
 
@@ -253,6 +184,6 @@ export class MesNotificationsComponent implements OnInit, OnDestroy {
   }
 
   refresh(): void {
-    this.loadNotifications(true);
+    this.notificationService.loadNotifications();
   }
 }

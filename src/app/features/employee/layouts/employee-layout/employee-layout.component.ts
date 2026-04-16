@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, RouterOutlet, Router } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
@@ -11,7 +11,8 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../../../core/services/auth.service';
-import { NotificationApiService, AppNotification } from '../../../../core/services/notification-api.service';
+import { NotificationService, AppNotification } from '../../../../core/services/notification.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-employee-layout',
@@ -33,7 +34,7 @@ import { NotificationApiService, AppNotification } from '../../../../core/servic
   templateUrl: './employee-layout.component.html',
   styleUrls: ['./employee-layout.component.scss']
 })
-export class EmployeeLayoutComponent implements OnInit {
+export class EmployeeLayoutComponent implements OnInit, OnDestroy {
   isSidebarOpen = true;
   currentYear = new Date().getFullYear();
 
@@ -44,22 +45,40 @@ export class EmployeeLayoutComponent implements OnInit {
   notificationCount = 0;
   recentNotifications: AppNotification[] = [];
 
+  // ✅ Ajout de la propriété menuItems utilisée dans le template
   menuItems = [
-    { path: '/employee/dashboard', icon: 'dashboard', label: 'Dashboard' },
+    { path: '/employee/dashboard', icon: 'dashboard', label: 'Tableau de bord' },
     { path: '/employee/mon-profil', icon: 'person', label: 'Mon profil' },
     { path: '/employee/mes-conges', icon: 'event', label: 'Mes congés' },
     { path: '/employee/mes-formations', icon: 'school', label: 'Mes formations' }
   ];
 
+  private unreadCountSub?: Subscription;
+  private notificationsSub?: Subscription;
+
   constructor(
     private authService: AuthService,
     private router: Router,
-    private notifApi: NotificationApiService
+    private notificationService: NotificationService
   ) {}
 
   ngOnInit(): void {
     this.loadUserInfo();
-    this.loadNotifications();
+    this.notificationService.loadNotifications();
+    this.notificationService.loadUnreadCount();
+
+    this.unreadCountSub = this.notificationService.unreadCount$.subscribe(count => {
+      this.notificationCount = count;
+    });
+
+    this.notificationsSub = this.notificationService.notifications$.subscribe(notifications => {
+      this.recentNotifications = notifications.slice(0, 5);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.unreadCountSub?.unsubscribe();
+    this.notificationsSub?.unsubscribe();
   }
 
   loadUserInfo(): void {
@@ -72,51 +91,28 @@ export class EmployeeLayoutComponent implements OnInit {
     }
   }
 
-  loadNotifications(): void {
-    this.notifApi.getMyNotifications().subscribe({
-      next: (res) => {
-        if (res.success) {
-          const allNotifs = res.data as AppNotification[];
-          this.recentNotifications = allNotifs.slice(0, 5);
-          this.notificationCount = allNotifs.filter(n => !n.lu).length;
-        }
-      },
-      error: (err) => console.error('Erreur chargement notifications', err)
-    });
-  }
-
   markNotificationRead(id: number): void {
-    this.notifApi.markAsRead(id).subscribe(() => {
-      this.loadNotifications(); // recharger après mise à jour
-    });
+    this.notificationService.markAsRead(id);
   }
 
   markAllNotificationsRead(): void {
-    this.notifApi.markAllAsRead().subscribe(() => {
-      this.loadNotifications();
-    });
+    this.notificationService.markAllAsRead();
   }
 
-  toggleSidebar() {
+  toggleSidebar(): void {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
-  logout() {
+  logout(): void {
     this.authService.logout();
   }
 
   getUserName(): string {
-    if (this.userPrenom && this.userNom) {
-      return `${this.userPrenom} ${this.userNom}`;
-    }
-    return 'Utilisateur';
+    return this.userPrenom && this.userNom ? `${this.userPrenom} ${this.userNom}` : 'Utilisateur';
   }
 
   getUserInitials(): string {
-    if (this.userPrenom && this.userNom) {
-      return `${this.userPrenom.charAt(0)}${this.userNom.charAt(0)}`.toUpperCase();
-    }
-    return 'U';
+    return this.userPrenom && this.userNom ? `${this.userPrenom.charAt(0)}${this.userNom.charAt(0)}`.toUpperCase() : 'U';
   }
 
   goToProfile(): void {

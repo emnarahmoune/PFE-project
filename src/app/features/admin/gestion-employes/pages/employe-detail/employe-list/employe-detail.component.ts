@@ -74,10 +74,13 @@ export class EmployeDetailComponent implements OnInit {
     });
   }
 
+  // ✅ CORRECTION : la méthode getAll() retourne un objet { success, data }
   loadManagers(): void {
-    this.managerSvc.getAll().subscribe({
-      next: (managers: Manager[]) => {
-        this.managersList = managers;
+    tgoghis.managerSvc.getAll().subscribe({
+      next: (response: { success: boolean; data: Manager[] }) => {
+        if (response.success) {
+          this.managersList = response.data;
+        }
       },
       error: (err: any) => {
         console.error('Erreur chargement managers', err);
@@ -107,7 +110,6 @@ export class EmployeDetailComponent implements OnInit {
       });
   }
 
-  // Mettre à jour le manager
   updateManager(): void {
     if (!this.employe?.id) return;
     
@@ -121,7 +123,6 @@ export class EmployeDetailComponent implements OnInit {
           if (res.success) {
             this.toast('Manager mis à jour avec succès', 'success');
             this.editManagerMode = false;
-            // Recharger l'employé pour afficher le nouveau manager
             if (this.employe?.id) {
               this.loadEmploye(this.employe.id);
             }

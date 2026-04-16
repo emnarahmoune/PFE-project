@@ -1,0 +1,71 @@
+<div class="detail-container">
+  <div class="loader" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Chargement du profil...</p>
+  </div>
+
+  <div class="error-card" *ngIf="error && !loading">
+    <span class="error-icon">⚠️</span>
+    <h3>Impossible de charger l'employé</h3>
+    <p>Vérifiez que vous avez les droits d'accès.</p>
+    <a routerLink="/manager/equipe" class="back-link">← Retour à l'équipe</a>
+  </div>
+
+  <div class="profile-card" *ngIf="employe && !loading">
+    <div class="card-header">
+      <div class="avatar" [style.background]="getAvatarColor(employe.departement ?? '')">
+        {{ (employe.prenom?.charAt(0) ?? '') + (employe.nom?.charAt(0) ?? '') }}
+      </div>
+      <div class="status-badge" [class]="'status-' + employe.statut.toLowerCase()">
+        {{ employe.statut }}
+      </div>
+    </div>
+
+    <h2 class="name">{{ employe.prenom }} {{ employe.nom }}</h2>
+    <p class="role">{{ employe.poste }}</p>
+
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="label">Matricule</span>
+        <span class="value">{{ employe.matricule }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Email</span>
+        <span class="value">{{ employe.email }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Téléphone</span>
+        <span class="value">{{ employe.telephone ?? 'Non renseigné' }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Département</span>
+        <span class="value">{{ employe.departement }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Date d'embauche</span>
+        <span class="value">{{ employe.dateEmbauche | date:'dd/MM/yyyy' }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Salaire annuel</span>
+        <span class="value">{{ formatEur(employe.salaire) }}</span>
+      </div>
+      <div class="info-item">
+        <span class="label">Solde congés</span>
+        <span class="value">{{ employe.soldeConges }} jours</span>
+      </div>
+      <div class="info-item" *ngIf="employe.managerNom">
+        <span class="label">Manager</span>
+        <span class="value">{{ employe.managerNom }}</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <a [routerLink]="['/manager/employe', employe.id, 'conges']" class="btn-primary">
+        📋 Voir ses congés
+      </a>
+      <a routerLink="/manager/equipe" class="btn-secondary">
+        ← Retour à l'équipe
+      </a>
+    </div>
+  </div>
+</div>

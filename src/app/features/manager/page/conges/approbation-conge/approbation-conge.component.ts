@@ -4,9 +4,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { WorkflowService, Task } from '../../../../core/services/workflow.service';
-import { AuthService } from '../../../../core/services/auth.service';
-import { NotificationService } from '../../../../core/services/notification.service';
+import { WorkflowService, Task } from '../../../../../core/services/workflow.service';
+import { AuthService } from '../../../../../core/services/auth.service';
+import { NotificationService } from '../../../../../core/services/notification.service';
 
 @Component({
   selector: 'app-approbation-conge',

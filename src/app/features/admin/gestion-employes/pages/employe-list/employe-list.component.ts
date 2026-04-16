@@ -1,3 +1,4 @@
+// src/app/features/admin/pages/employe-list/employe-list.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
@@ -10,7 +11,6 @@ import { EmployeService } from '../../services/employe.service';
 import { Employe } from '../../models/employe.model';
 import { ConfirmationDialogComponent } from '../../../../../shared/layouts/components/confirmation-dialog/confirmation-dialog.component';
 import { AuthService } from '../../../../../core/services/auth.service';
-import { ManagerAssignmentService } from '../../../../../core/services/manager-assignment.service';
 
 @Component({
   selector: 'app-employe-list',
@@ -23,20 +23,19 @@ import { ManagerAssignmentService } from '../../../../../core/services/manager-a
   styleUrls: ['./employe-list.component.scss']
 })
 export class EmployeListComponent implements OnInit {
-
-  dataSource       = new MatTableDataSource<Employe>([]);
-  loading          = false;
-  searchText       = '';
-  selectedStatut   = 'TOUS';
+  dataSource = new MatTableDataSource<Employe>([]);
+  loading = false;
+  searchText = '';
+  selectedStatut = 'TOUS';
   selectedDepartement = 'TOUS';
-  currentPage      = 0;
+  currentPage = 0;
   readonly pageSize = 12;
 
-  userNom    = '';
+  userNom = '';
   userPrenom = '';
-  userRole   = '';
+  userRole = '';
 
-  statuts      = ['TOUS', 'ACTIF', 'INACTIF', 'CONGE'];
+  statuts = ['TOUS', 'ACTIF', 'INACTIF', 'CONGE'];
   departements = ['TOUS','RH','Technique','Commercial','Finance','Marketing','Direction','Logistique'];
 
   managersList: any[] = [];
@@ -55,12 +54,11 @@ export class EmployeListComponent implements OnInit {
   };
 
   constructor(
-    private svc:    EmployeService,
-    private snack:  MatSnackBar,
+    private employeService: EmployeService,
+    private snack: MatSnackBar,
     private dialog: MatDialog,
     private router: Router,
-    private auth:   AuthService,
-    private managerAssignmentSvc: ManagerAssignmentService
+    private auth: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -79,9 +77,9 @@ export class EmployeListComponent implements OnInit {
   }
 
   loadManagers(): void {
-    this.managerAssignmentSvc.getAllManagers().subscribe({
-      next: (res: any) => {
-        this.managersList = res.data || [];
+    this.employeService.getAllManagers().subscribe({
+      next: (res) => {
+        this.managersList = res.success && Array.isArray(res.data) ? res.data : [];
       },
       error: (err) => {
         console.error('Erreur chargement managers', err);
@@ -92,7 +90,7 @@ export class EmployeListComponent implements OnInit {
 
   loadEmployes(): void {
     this.loading = true;
-    this.svc.getAll()
+    this.employeService.getAll()
       .pipe(finalize(() => this.loading = false))
       .subscribe({
         next: (res) => {
@@ -126,7 +124,7 @@ export class EmployeListComponent implements OnInit {
     }
 
     this.loading = true;
-    this.managerAssignmentSvc.assignManager(this.selectedEmploye.id!, this.selectedManagerId).subscribe({
+    this.employeService.assignManager(this.selectedEmploye.id!, this.selectedManagerId).subscribe({
       next: (res) => {
         this.loading = false;
         if (res.success) {
@@ -151,7 +149,7 @@ export class EmployeListComponent implements OnInit {
         e.nom, e.prenom, e.matricule, e.email, e.poste, e.departement
       ].some(v => v?.toLowerCase().includes(search));
 
-      const matchStatut = this.selectedStatut   === 'TOUS' || e.statut      === this.selectedStatut;
+      const matchStatut = this.selectedStatut === 'TOUS' || e.statut === this.selectedStatut;
       const matchDept   = this.selectedDepartement === 'TOUS' || e.departement === this.selectedDepartement;
       return matchSearch && matchStatut && matchDept;
     });
@@ -215,7 +213,7 @@ export class EmployeListComponent implements OnInit {
     ref.afterClosed().subscribe(confirmed => {
       if (!confirmed) return;
       this.loading = true;
-      this.svc.delete(id).subscribe({
+      this.employeService.delete(id).subscribe({
         next: (res) => {
           if (res.success) {
             const updatedData = this.dataSource.data.filter(e => e.id !== id);

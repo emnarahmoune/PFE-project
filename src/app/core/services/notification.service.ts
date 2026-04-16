@@ -1,108 +1,140 @@
-// core/services/notification.service.ts
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, of } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { NotificationApiService, AppNotification, ApiResponse } from './notification-api.service';
+import { tap, catchError } from 'rxjs/operators';
 
-export interface AppNotification {
-  id: string;
-  message: string;
-  type: 'success' | 'error' | 'info' | 'warning';
-  date: Date;
-  read: boolean;
-  relatedDemandeId?: number;
-}
+// ✅ Réexportation pour que les composants puissent l’utiliser
+export { AppNotification } from './notification-api.service';
 
 @Injectable({ providedIn: 'root' })
 export class NotificationService {
   private notificationsSubject = new BehaviorSubject<AppNotification[]>([]);
   public notifications$ = this.notificationsSubject.asObservable();
-  private storageKey = 'app_notifications';
+  private unreadCountSubject = new BehaviorSubject<number>(0);
+  public unreadCount$ = this.unreadCountSubject.asObservable();
 
-  constructor(private snackBar: MatSnackBar) {
-    this.loadFromLocalStorage();
+  constructor(
+    private api: NotificationApiService,
+    private snackBar: MatSnackBar
+  ) {}
+
+  loadNotifications(): void {
+    this.api.getNotifications().pipe(
+      tap(response => {
+        if (response.success) {
+          this.notificationsSubject.next(response.data);
+          this.updateUnreadCount(response.data);
+        }
+      }),
+      catchError(err => {
+        console.error('Erreur chargement notifications', err);
+        this.showError('Impossible de charger les notifications');
+        return of(null);
+      })
+    ).subscribe();
   }
 
-  private loadFromLocalStorage() {
-    const stored = localStorage.getItem(this.storageKey);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const notifs = parsed.map((n: any) => ({ ...n, date: new Date(n.date) }));
-      this.notificationsSubject.next(notifs);
-    }
+  loadUnreadCount(): void {
+    this.api.getUnreadNotifications().pipe(
+      tap(response => {
+        if (response.success) {
+          this.unreadCountSubject.next(response.data.length);
+        }
+      }),
+      catchError(err => {
+        console.error('Erreur compteur non lues', err);
+        return of(null);
+      })
+    ).subscribe();
   }
 
-  private saveToLocalStorage(notifications: AppNotification[]) {
-    localStorage.setItem(this.storageKey, JSON.stringify(notifications));
-  }
-
-  addNotification(message: string, type: AppNotification['type'], demandeId?: number) {
-    const newNotif: AppNotification = {
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 6),
-      message,
-      type,
-      date: new Date(),
-      read: false,
-      relatedDemandeId: demandeId
-    };
-    const current = this.notificationsSubject.value;
-    const updated = [newNotif, ...current];
-    this.notificationsSubject.next(updated);
-    this.saveToLocalStorage(updated);
-
-    // Affiche également une snackbar
-    if (type === 'success') this.showSuccess(message);
-    else if (type === 'error') this.showError(message);
-    else if (type === 'info') this.showInfo(message);
-    return newNotif;
-  }
-
-  markAsRead(id: string) {
-    const current = this.notificationsSubject.value;
-    const updated = current.map(n => n.id === id ? { ...n, read: true } : n);
-    this.notificationsSubject.next(updated);
-    this.saveToLocalStorage(updated);
-  }
-
-  markAllAsRead() {
-    const current = this.notificationsSubject.value;
-    const updated = current.map(n => ({ ...n, read: true }));
-    this.notificationsSubject.next(updated);
-    this.saveToLocalStorage(updated);
-  }
-
-  removeNotification(id: string) {
-    const current = this.notificationsSubject.value;
-    const updated = current.filter(n => n.id !== id);
-    this.notificationsSubject.next(updated);
-    this.saveToLocalStorage(updated);
-  }
-
-  getUnreadCount(): Observable<number> {
-    return new Observable(observer => {
-      this.notifications$.subscribe(notifs => {
-        observer.next(notifs.filter(n => !n.read).length);
-      });
+  markAsRead(id: number): void {
+    this.api.markAsRead(id).subscribe({
+      next: (response) => {
+        if (response.success) {
+          const current = this.notificationsSubject.value;
+          const updated = current.map(n => n.id === id ? { ...n, lu: true } : n);
+          this.notificationsSubject.next(updated);
+          this.updateUnreadCount(updated);
+        }
+      },
+      error: (err) => console.error('Erreur markAsRead', err)
     });
   }
 
-  // Implémentations MatSnackBar
-  showSuccess(message: string) {
+  markAllAsRead(): void {
+    this.api.markAllAsRead().subscribe({
+      next: (response) => {
+        if (response.success) {
+          const current = this.notificationsSubject.value;
+          const updated = current.map(n => ({ ...n, lu: true }));
+          this.notificationsSubject.next(updated);
+          this.unreadCountSubject.next(0);
+        }
+      },
+      error: (err) => console.error('Erreur markAllAsRead', err)
+    });
+  }
+
+  createNotification(message: string, type: string, demandeId?: number): void {
+    this.api.createNotification(message, type, demandeId).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.loadNotifications();
+          this.loadUnreadCount();
+          this.showInfo('Notification envoyée');
+        }
+      },
+      error: (err) => console.error('Erreur création notification', err)
+    });
+  }
+
+  deleteNotification(id: number): void {
+    this.api.deleteNotification(id).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.loadNotifications();
+          this.loadUnreadCount();
+          this.showSuccess('Notification supprimée');
+        }
+      },
+      error: (err) => console.error('Erreur suppression notification', err)
+    });
+  }
+
+  deleteAllNotifications(): void {
+    this.api.deleteAllNotifications().subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.loadNotifications();
+          this.loadUnreadCount();
+          this.showSuccess('Toutes les notifications ont été supprimées');
+        }
+      },
+      error: (err) => console.error('Erreur suppression toutes notifications', err)
+    });
+  }
+
+  // Méthodes d'affichage Snackbar
+  showSuccess(message: string): void {
     this.snackBar.open(message, 'Fermer', { duration: 5000, panelClass: 'snackbar-success' });
   }
 
-  showError(message: string) {
+  showError(message: string): void {
     this.snackBar.open(message, 'Fermer', { duration: 5000, panelClass: 'snackbar-error' });
   }
 
-  showInfo(message: string) {
+  showInfo(message: string): void {
     this.snackBar.open(message, 'Fermer', { duration: 3000, panelClass: 'snackbar-info' });
   }
-   showWarning(message: string): void {  // ✅ Ajouter cette méthode si nécessaire
-    this.snackBar.open(message, 'Fermer', {
-      duration: 4000,
-      panelClass: ['warning-snackbar'],
-      horizontalPosition: 'right',
-      verticalPosition: 'top'
-    });
+
+  showWarning(message: string): void {
+    this.snackBar.open(message, 'Fermer', { duration: 4000, panelClass: 'snackbar-warning' });
+  }
+
+  private updateUnreadCount(notifications: AppNotification[]): void {
+    const count = notifications.filter(n => !n.lu).length;
+    this.unreadCountSubject.next(count);
   }
 }

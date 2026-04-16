@@ -1,18 +1,16 @@
+// src/app/features/employee/services/employee-conge.service.ts
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
-import { DemandeConge, CongeResponse } from '../models/conge.model';
+import { DemandeConge, SoldeConges, CongeResponse } from '../models/conge.model';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class EmployeeCongeService {
   private endpoint = 'conges';
 
   constructor(private api: ApiService) {}
 
   // ===== EMPLOYÉ =====
-  
   getMesConges(): Observable<CongeResponse> {
     return this.api.get<CongeResponse>(`${this.endpoint}/mes-conges`);
   }
@@ -22,7 +20,6 @@ export class EmployeeCongeService {
   }
 
   soumettreDemande(demande: DemandeConge): Observable<CongeResponse> {
-    // Formater les dates pour le backend
     const demandeFormatted = {
       ...demande,
       dateDebut: this.formatDateForBackend(demande.dateDebut),
@@ -46,22 +43,19 @@ export class EmployeeCongeService {
     return this.api.put<CongeResponse>(`${this.endpoint}/annuler`, id, {});
   }
 
-  getMonSoldeConges(): Observable<CongeResponse> {
-    return this.api.get<CongeResponse>(`${this.endpoint}/mon-solde-conges`);
+  // ✅ Solde typé explicitement
+  getMonSoldeConges(): Observable<CongeResponse & { data: SoldeConges }> {
+    return this.api.get<CongeResponse & { data: SoldeConges }>(`${this.endpoint}/mon-solde-conges`);
   }
 
-
-
-  
-  // ===== ADMIN =====
-  
+  // ===== ADMIN (si besoin) =====
   getAllDemandesAdmin(): Observable<CongeResponse> {
     return this.api.get<CongeResponse>(`${this.endpoint}/admin/all`);
   }
-   
-   getNotifications(): Observable<CongeResponse> {
+
+  getNotifications(): Observable<CongeResponse> {
     return this.api.get<CongeResponse>(`${this.endpoint}/notifications`);
-}
+  }
 
   getDemandesEnAttenteAdmin(): Observable<CongeResponse> {
     return this.api.get<CongeResponse>(`${this.endpoint}/statut/EN_ATTENTE`);
@@ -83,16 +77,15 @@ export class EmployeeCongeService {
     return this.api.get<CongeResponse>(`${this.endpoint}/stats/statut`);
   }
 
-  // ✅ CORRECTION: delete avec 2 arguments (endpoint, id)
   deleteDemandeAdmin(id: number): Observable<CongeResponse> {
     return this.api.delete<CongeResponse>(this.endpoint, id);
   }
 
   // ===== UTILITAIRES =====
-  
   private formatDateForBackend(date: string | Date | undefined): string | undefined {
     if (!date) return undefined;
     const d = new Date(date);
     return d.toISOString().split('T')[0];
   }
+  
 }

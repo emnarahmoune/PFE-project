@@ -77,33 +77,46 @@ export const routes: Routes = [
     children: [
       { 
         path: 'dashboard', 
-        loadComponent: () => import('./features/manager/dashboard-manager/dashboard-manager.component')
+        loadComponent: () => import('./features/manager/page/dashboard-manager/dashboard-manager.component')
           .then(m => m.DashboardManagerComponent) 
       },
       { 
         path: 'equipe', 
-        loadComponent: () => import('./features/manager/equipe/equipe.component')
+        loadComponent: () => import('./features/manager/page/equipe/equipe.component')
           .then(m => m.EquipeComponent) 
       },
       // ✅ MODIFIÉ - Utiliser le nouveau composant d'approbation
       { 
         path: 'conges', 
-        loadComponent: () => import('./features/manager/conges/approbation-conge/approbation-conge.component')
+        loadComponent: () => import('./features/manager/page/conges/approbation-conge/approbation-conge.component')
           .then(m => m.ApprobationCongeComponent) 
       },
       { 
         path: 'stats', 
-        loadComponent: () => import('./features/manager/stats/stats.component')
+        loadComponent: () => import('./features/manager/page/stats/stats.component')
           .then(m => m.StatsComponent) 
       },
       { 
         path: 'alertes', 
-        loadComponent: () => import('./features/manager/alertes/alertes.component')
+        loadComponent: () => import('./features/manager/page/alertes/alertes.component')
           .then(m => m.AlertesComponent) 
+
       },
+      // Dans le bloc "ROUTES MANAGER", ajouter ces deux routes après "equipe" par exemple :
+
+{ 
+  path: 'employe/:id', 
+  loadComponent: () => import('./features/manager/page/employe-detail/employe-detail.component')
+    .then(m => m.EmployeDetailComponent) 
+},
+{ 
+  path: 'employe/:id/conges', 
+  loadComponent: () => import('./features/manager/page/employe-conges/employe-conges.component')
+    .then(m => m.EmployeCongesComponent) 
+},
       { 
         path: 'indicateurs', 
-        loadComponent: () => import('./features/manager/indicateurs/indicateurs.component')
+        loadComponent: () => import('./features/manager/page/indicateurs/indicateurs.component')
           .then(m => m.IndicateursComponent) 
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }

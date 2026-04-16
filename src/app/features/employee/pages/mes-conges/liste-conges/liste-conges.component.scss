@@ -8,12 +8,15 @@
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   --card-bg: rgba(255, 255, 255, 0.9);
   --primary-gradient: linear-gradient(135deg, #6366F1, #8B5CF6);
+  --danger-gradient: linear-gradient(135deg, #EF4444, #DC2626);
+  --success-gradient: linear-gradient(135deg, #10B981, #059669);
   --accent-orange: #F97316;
   --accent-green: #10B981;
   --accent-blue: #3B82F6;
   --accent-yellow: #F59E0B;
   --radius-xl: 28px;
   --radius-md: 18px;
+  --radius-sm: 12px;
 }
 
 * {
@@ -326,6 +329,126 @@
 .action-pill.edit:hover { background: #FEF3C7; border-color: #F59E0B; color: #B45309; }
 .action-pill.delete:hover { background: #FEE2E2; border-color: #EF4444; color: #B91C1C; }
 
+/* ===== NOUVELLE BARRE D'OUTILS MODERNE ===== */
+.selection-toolbar {
+  max-width: 1200px;
+  margin: 0 auto 24px;
+  padding: 0 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.selection-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  padding: 8px 20px;
+  border-radius: 60px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.selection-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1E293B;
+  background: #E2E8F0;
+  padding: 4px 12px;
+  border-radius: 40px;
+  letter-spacing: -0.2px;
+}
+
+/* Bouton d'activation de la sélection */
+.select-mode-btn {
+  background: var(--primary-gradient);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 40px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(99,102,241,0.3);
+}
+
+.select-mode-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+}
+
+.select-mode-btn.active {
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+}
+
+/* Bouton suppression groupée */
+.delete-selected {
+  background: var(--danger-gradient);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 40px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(239,68,68,0.3);
+}
+
+.delete-selected:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(239,68,68,0.4);
+}
+
+/* Checkbox "Tout sélectionner" stylisée */
+.select-all-checkbox {
+  --mdc-checkbox-selected-icon-color: #6366F1;
+  --mdc-checkbox-selected-focus-icon-color: #4F46E5;
+  --mdc-checkbox-selected-hover-icon-color: #4F46E5;
+  --mdc-checkbox-unselected-icon-color: #9CA3AF;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Cases à cocher sur les cartes */
+.card-select {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  background: white;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+}
+
+.card-select mat-checkbox {
+  margin: 0;
+}
+
+.card-not-selectable {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  font-size: 1.2rem;
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: white;
+  border-radius: 12px;
+  padding: 4px 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
 /* Loader */
 .glass-loader {
   text-align: center;
@@ -371,7 +494,9 @@
 }
 
 /* Animations */
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 
 /* Responsive */
 @media (max-width: 900px) {
@@ -395,5 +520,19 @@
   .card-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+  .selection-controls {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  .card-select, .card-not-selectable {
+    top: 8px;
+    right: 8px;
+  }
+  .select-mode-btn, .delete-selected {
+    padding: 6px 14px;
+    font-size: 0.75rem;
   }
 }

@@ -1,12 +1,22 @@
+// src/app/core/services/manager.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { Employe } from '../../features/admin/gestion-employes/models/employe.model';
+import { DemandeConge } from '../../features/employee/models/conge.model';
 
 export interface ManagerStats {
-  employes: number;
-  congesEnAttente: number;
-  absenteisme: number;
-  turnover: number;
+  employes?: number;
+  congesEnAttente?: number;
+  absenteisme?: number;
+  turnover?: number;
+  totalEmployes?: number;
+  employesActifs?: number;
+  masseSalariale?: number;
+  salaireMoyen?: number;
+  parDepartement?: Record<string, number>;
+  tauxPresence?: number;
 }
 
 export interface Manager {
@@ -14,35 +24,41 @@ export interface Manager {
   nom: string;
   prenom: string;
   email: string;
+  departement?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class ManagerService {
-
-  private apiUrl = 'http://localhost:8082/api/manager';
-  private adminUrl = 'http://localhost:8082/api/managers'; // 🔥 endpoint pour lister tous les managers
+  private apiUrl = `${environment.apiUrl}/employes`;
+  private managerApiUrl = `${environment.apiUrl}/manager`;
 
   constructor(private http: HttpClient) {}
 
-  getStats(): Observable<ManagerStats> {
-    return this.http.get<ManagerStats>(`${this.apiUrl}/stats`);
+  getEquipe(): Observable<{ success: boolean; data: Employe[] }> {
+    return this.http.get<{ success: boolean; data: Employe[] }>(`${this.apiUrl}/equipe`);
   }
 
-  getEquipe(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/equipe`);
+  getEmployeDetails(employeId: number): Observable<{ success: boolean; data: Employe }> {
+    return this.http.get<{ success: boolean; data: Employe }>(`${this.apiUrl}/manager/employe/${employeId}`);
   }
 
-  getConges(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/conges`);
+  getEmployeConges(employeId: number): Observable<{ success: boolean; data: DemandeConge[] }> {
+    return this.http.get<{ success: boolean; data: DemandeConge[] }>(`${environment.apiUrl}/conges/employe/${employeId}`);
   }
 
-  getAlertes(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.apiUrl}/alertes`);
+  getAllManagers(): Observable<{ success: boolean; data: Manager[] }> {
+    return this.http.get<{ success: boolean; data: Manager[] }>(`${this.apiUrl}/managers`);
   }
 
-  getAll(): Observable<Manager[]> {
-    return this.http.get<Manager[]>(this.adminUrl);
+  getAll(): Observable<{ success: boolean; data: Manager[] }> {
+    return this.getAllManagers();
+  }
+
+  getStats(): Observable<{ success: boolean; data: ManagerStats }> {
+    return this.http.get<{ success: boolean; data: ManagerStats }>(`${this.managerApiUrl}/stats`);
+  }
+
+  getConges(): Observable<{ success: boolean; data: DemandeConge[] }> {
+    return this.http.get<{ success: boolean; data: DemandeConge[] }>(`${this.managerApiUrl}/conges`);
   }
 }

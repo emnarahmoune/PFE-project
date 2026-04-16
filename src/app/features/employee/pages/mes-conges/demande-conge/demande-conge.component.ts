@@ -17,6 +17,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { EmployeeCongeService } from '../../../services/employee-conge.service';
 import { DemandeConge, CongeResponse } from '../../../models/conge.model';
+import { NotificationService } from '../../../../../core/services/notification.service'; // ⬅️ AJOUT
 
 @Component({
   selector: 'app-demande-conge',
@@ -52,7 +53,8 @@ export class DemandeCongeComponent implements OnInit {
     private fb: FormBuilder,
     private congeService: EmployeeCongeService,
     private router: Router,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private notificationService: NotificationService  // ⬅️ AJOUT
   ) {
     this.demandeForm = this.fb.group({
       type: ['', Validators.required],
@@ -191,6 +193,10 @@ export class DemandeCongeComponent implements OnInit {
           const message = response.message || '✅ Demande de congé soumise avec succès';
           this.snackBar.open(message, 'Fermer', { duration: 3000, panelClass: ['success-snackbar'] });
           
+          // ✅ RECHARGER LES NOTIFICATIONS APRÈS SUCCÈS
+          this.notificationService.loadNotifications();
+          this.notificationService.loadUnreadCount();
+          
           // ✅ Redirection après succès
           setTimeout(() => {
             this.router.navigate(['/employee/mes-conges']);
@@ -199,6 +205,10 @@ export class DemandeCongeComponent implements OnInit {
           const errorMsg = response.message || response.error || 'Erreur lors de la soumission';
           this.errorMessage = errorMsg;
           this.snackBar.open(errorMsg, 'Fermer', { duration: 5000, panelClass: ['error-snackbar'] });
+          
+          // ✅ MÊME EN CAS D'ERREUR, ON RECHARGE LES NOTIFICATIONS (EX: REFUS AUTO)
+          this.notificationService.loadNotifications();
+          this.notificationService.loadUnreadCount();
         }
       },
       error: (error: any) => {
@@ -216,6 +226,10 @@ export class DemandeCongeComponent implements OnInit {
         
         this.errorMessage = errorMessage;
         this.snackBar.open(errorMessage, 'Fermer', { duration: 5000, panelClass: ['error-snackbar'] });
+        
+        // ✅ RECHARGER LES NOTIFICATIONS MÊME EN CAS D'ERREUR (REFUS AUTO)
+        this.notificationService.loadNotifications();
+        this.notificationService.loadUnreadCount();
       }
     });
   }
