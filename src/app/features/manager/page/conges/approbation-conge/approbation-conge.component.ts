@@ -1,5 +1,4 @@
 // src/app/features/manager/conges/approbation-conge/approbation-conge.component.ts
-
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -150,7 +149,6 @@ export class ApprobationCongeComponent implements OnInit {
     return date.toLocaleDateString('fr-FR');
   }
 
-  // ✅ Méthode pour obtenir le libellé du type de congé
   getTypeLabel(type: string | undefined): string {
     switch (type) {
       case 'ANNUEL': return 'Annuel';
@@ -162,7 +160,6 @@ export class ApprobationCongeComponent implements OnInit {
     }
   }
 
-  // ✅ Méthode pour obtenir la couleur du type de congé
   getTypeColor(type: string | undefined): string {
     switch (type) {
       case 'ANNUEL': return '#1976d2';

@@ -18,20 +18,19 @@ export interface Task {
   commentaire?: string;
   employeNom?: string;
   employePrenom?: string;
+  employeEmail?: string;
 }
 
 export interface ApiResponse<T> {
   data: T;
   message: string;
   success: boolean;
-  status?: number;
+  statusCode?: number;
+  timestamp?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class WorkflowService {
-  // ✅ URL relative – le proxy se chargera de la redirection
   private apiUrl = '/api';
 
   constructor(
@@ -43,81 +42,70 @@ export class WorkflowService {
     const token = this.authService.getToken();
     return new HttpHeaders({
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      Authorization: `Bearer ${token}`
     });
   }
 
   // ==================== MANAGER ====================
-
+  // ✅ Récupère les tâches du manager (demandes en attente)
   getManagerTasks(): Observable<Task[]> {
     return this.http.get<ApiResponse<Task[]>>(
-      `${this.apiUrl}/workflow/manager/tasks`,
+      `${this.apiUrl}/manager/conges`,
       { headers: this.getHeaders() }
-    ).pipe(
-      map(response => {
-        if (Array.isArray(response)) {
-          return response as unknown as Task[];
-        }
-        return response?.data ?? [];
-      })
-    );
+    ).pipe(map(res => res.data || []));
   }
 
+  // ✅ Approbation par le manager
   approveTask(taskId: string, commentaire: string): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(
-      `${this.apiUrl}/workflow/manager/decide`,
-      { taskId, approve: true, comment: commentaire },
+      `${this.apiUrl}/manager/approuver-demande`,
+      { taskId, commentaire },
       { headers: this.getHeaders() }
     );
   }
 
+  // ✅ Refus par le manager
   rejectTask(taskId: string, motif: string): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(
-      `${this.apiUrl}/workflow/manager/decide`,
-      { taskId, approve: false, comment: motif },
+      `${this.apiUrl}/manager/refuser-demande`,
+      { taskId, motif },
       { headers: this.getHeaders() }
     );
   }
 
-  // ==================== RH ====================
-
+  // ==================== ADMIN RH ====================
+  // ✅ Récupère les tâches RH
   getRHTasks(): Observable<Task[]> {
     return this.http.get<ApiResponse<Task[]>>(
-      `${this.apiUrl}/workflow/rh/tasks`,
+      `${this.apiUrl}/admin/conges/a-valider`,
       { headers: this.getHeaders() }
-    ).pipe(
-      map(response => {
-        if (Array.isArray(response)) {
-          return response as unknown as Task[];
-        }
-        return response?.data ?? [];
-      })
-    );
+    ).pipe(map(res => res.data || []));
   }
 
-  approveRHTask(taskId: string, commentaire: string): Observable<ApiResponse<string>> {
-    return this.http.post<ApiResponse<string>>(
-      `${this.apiUrl}/workflow/rh/decide`,
-      { taskId, approve: true, comment: commentaire },
-      { headers: this.getHeaders() }
-    );
+  // ✅ Approbation RH (PUT avec demandeId, pas taskId)
+  approveRHTask(demandeId: number, commentaire?: string): Observable<void> {
+    const url = commentaire
+      ? `${this.apiUrl}/admin/conges/${demandeId}/valider?commentaire=${encodeURIComponent(commentaire)}`
+      : `${this.apiUrl}/admin/conges/${demandeId}/valider`;
+    return this.http.put<void>(url, {}, { headers: this.getHeaders() });
   }
 
-  rejectRHTask(taskId: string, motif: string): Observable<ApiResponse<string>> {
-    return this.http.post<ApiResponse<string>>(
-      `${this.apiUrl}/workflow/rh/decide`,
-      { taskId, approve: false, comment: motif },
+  // ✅ Refus RH
+  rejectRHTask(demandeId: number, motif: string): Observable<void> {
+    return this.http.put<void>(
+      `${this.apiUrl}/admin/conges/${demandeId}/refuser?motif=${encodeURIComponent(motif)}`,
+      {},
       { headers: this.getHeaders() }
     );
   }
 
-  // ==================== ADMIN ====================
-
+  // ==================== AUTRES ====================
   getOrphanRequests(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/workflow/orphan-requests`, { headers: this.getHeaders() });
+    return this.http.get(`${this.apiUrl}/admin/conges/orphan-requests`, { headers: this.getHeaders() });
   }
 
   getProcessStatus(processInstanceId: string): Observable<any> {
+    // Si vous avez un endpoint pour ça, sinon à créer
     return this.http.get(`${this.apiUrl}/workflow/instance/${processInstanceId}`, { headers: this.getHeaders() });
   }
 }

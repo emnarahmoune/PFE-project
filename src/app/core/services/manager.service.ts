@@ -27,6 +27,24 @@ export interface Manager {
   departement?: string;
 }
 
+// ✅ Interface pour les tâches du manager (identique à Task dans workflow.service)
+export interface TacheManager {
+  taskId: string;
+  taskName: string;
+  createTime: string;
+  processInstanceId: string;
+  employeId?: string;
+  nbJours?: number;
+  demandeId?: number;
+  dateDebut?: string;
+  dateFin?: string;
+  type?: string;
+  commentaire?: string;
+  employeNom?: string;
+  employePrenom?: string;
+  employeEmail?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ManagerService {
   private apiUrl = `${environment.apiUrl}/employes`;
@@ -43,7 +61,9 @@ export class ManagerService {
   }
 
   getEmployeConges(employeId: number): Observable<{ success: boolean; data: DemandeConge[] }> {
-    return this.http.get<{ success: boolean; data: DemandeConge[] }>(`${environment.apiUrl}/conges/employe/${employeId}`);
+    return this.http.get<{ success: boolean; data: DemandeConge[] }>(
+      `${environment.apiUrl}/conges/employe/${employeId}`
+    );
   }
 
   getAllManagers(): Observable<{ success: boolean; data: Manager[] }> {
@@ -54,10 +74,33 @@ export class ManagerService {
     return this.getAllManagers();
   }
 
+  // ✅ Récupère les tâches du manager (demandes en attente)
+  getTachesManager(): Observable<{ success: boolean; data: TacheManager[] }> {
+    return this.http.get<{ success: boolean; data: TacheManager[] }>(`${this.managerApiUrl}/conges`);
+  }
+
+  // ✅ Approbation d'une demande
+  approuverDemande(taskId: string, commentaire?: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<{ success: boolean; message: string }>(
+      `${this.managerApiUrl}/approuver-demande`,
+      { taskId, commentaire }
+    );
+  }
+
+  // ✅ Refus d'une demande
+  refuserDemande(taskId: string, motif: string): Observable<{ success: boolean; message: string }> {
+    return this.http.post<{ success: boolean; message: string }>(
+      `${this.managerApiUrl}/refuser-demande`,
+      { taskId, motif }
+    );
+  }
+
+  // ✅ Statistiques pour le manager
   getStats(): Observable<{ success: boolean; data: ManagerStats }> {
     return this.http.get<{ success: boolean; data: ManagerStats }>(`${this.managerApiUrl}/stats`);
   }
 
+  // ✅ Récupère toutes les demandes de congé (manager)
   getConges(): Observable<{ success: boolean; data: DemandeConge[] }> {
     return this.http.get<{ success: boolean; data: DemandeConge[] }>(`${this.managerApiUrl}/conges`);
   }

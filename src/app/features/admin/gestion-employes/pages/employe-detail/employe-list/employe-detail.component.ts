@@ -1,3 +1,4 @@
+// src/app/features/admin/gestion-employes/pages/employe-detail/employe-list/employe-detail.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -30,7 +31,6 @@ export class EmployeDetailComponent implements OnInit {
   activeTab = 'competences';
   managersList: Manager[] = [];
   
-  // Pour l'édition du manager
   editManagerMode = false;
   managerForm!: FormGroup;
   updatingManager = false;
@@ -74,9 +74,9 @@ export class EmployeDetailComponent implements OnInit {
     });
   }
 
-  // ✅ CORRECTION : la méthode getAll() retourne un objet { success, data }
+  // ✅ Correction : appel correct à getAllManagers()
   loadManagers(): void {
-    tgoghis.managerSvc.getAll().subscribe({
+    this.managerSvc.getAllManagers().subscribe({
       next: (response: { success: boolean; data: Manager[] }) => {
         if (response.success) {
           this.managersList = response.data;

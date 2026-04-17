@@ -16,7 +16,7 @@ export class EmployeCongesComponent implements OnInit {
   loading = true;
   error = false;
   employeNom = '';
-  employeId!: number;  // ✅ public pour le template
+  employeId!: number;
 
   constructor(
     private route: ActivatedRoute,
@@ -26,14 +26,18 @@ export class EmployeCongesComponent implements OnInit {
   ngOnInit(): void {
     this.employeId = +this.route.snapshot.params['id'];
     if (this.employeId) {
+      // Charger le nom de l'employé
       this.managerService.getEmployeDetails(this.employeId).subscribe({
         next: (res) => {
           if (res.success && res.data) {
             const emp = res.data as any;
             this.employeNom = `${emp.prenom} ${emp.nom}`;
           }
-        }
+        },
+        error: () => console.error('Erreur chargement employé')
       });
+
+      // Charger les congés de l'employé
       this.managerService.getEmployeConges(this.employeId).subscribe({
         next: (res) => {
           this.loading = false;

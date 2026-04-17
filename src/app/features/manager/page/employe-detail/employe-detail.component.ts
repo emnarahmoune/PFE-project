@@ -52,7 +52,7 @@ export class EmployeDetailComponent implements OnInit {
     });
   }
 
-  // ✅ Correction ABSOLUE : utiliser la syntaxe classique de subscribe
+  // ✅ Version corrigée (subscribe classique)
   loadManagers(): void {
     this.managerService.getAllManagers().subscribe(
       (response) => {
@@ -81,13 +81,13 @@ export class EmployeDetailComponent implements OnInit {
 
   getAvatarColor(dept: string): string {
     const colors: Record<string, string> = {
-      'RH': '#8b5cf6',
-      'Technique': '#0891b2',
-      'Commercial': '#d97706',
-      'Finance': '#059669',
-      'Marketing': '#db2777',
-      'Direction': '#7c3aed',
-      'Logistique': '#4f46e5'
+      RH: '#8b5cf6',
+      Technique: '#0891b2',
+      Commercial: '#d97706',
+      Finance: '#059669',
+      Marketing: '#db2777',
+      Direction: '#7c3aed',
+      Logistique: '#4f46e5'
     };
     return colors[dept] || '#6366f1';
   }
