@@ -20,6 +20,8 @@ public class DemandeCongeAdminDTO {
     private String statut;
     private LocalDate dateDemande;
     private String commentaire;
+    private Long adminRhId;          // ✅ NOUVEAU
+    private String adminRhNom;
     private LocalDate dateDecision;
     private String motifRefus;
     private Integer joursOuvres;

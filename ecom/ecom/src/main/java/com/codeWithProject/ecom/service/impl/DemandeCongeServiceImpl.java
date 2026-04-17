@@ -358,38 +358,32 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
                 .build();
     }
 
-    // ========== MODIFICATION POUR UTILISATEUR AUTHENTIFIÉ (CORRIGÉE) ==========
+// Seule la méthode modifiée est présentée ci-dessous.
+// Le reste de la classe reste identique à votre version.
+
     @Override
     public DemandeCongeDTO modifierForAuthenticatedUser(Long id, DemandeCongeDTO dto, String email) {
         Employe employe = getEmployeByEmail(email);
         DemandeConge demande = demandeCongeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("DemandeConge", id));
 
-        // Vérifier que la demande appartient à l'utilisateur
         if (!demande.getEmploye().getId().equals(employe.getId()))
             throw new BusinessException("Vous ne pouvez pas modifier une demande qui ne vous appartient pas");
-
-        // Vérifier que la demande est en attente
         if (!"EN_ATTENTE".equals(demande.getStatut()))
             throw new BusinessException("Seules les demandes en attente peuvent être modifiées");
 
         LocalDate newDebut = dto.getDateDebut() != null ? dto.getDateDebut() : demande.getDateDebut();
         LocalDate newFin = dto.getDateFin() != null ? dto.getDateFin() : demande.getDateFin();
 
-        // Vérifier que les nouvelles dates ne sont pas dans le passé
         if (newDebut.isBefore(LocalDate.now()))
             throw new BusinessException("La date de début ne peut pas être dans le passé");
         if (newDebut.isAfter(newFin))
             throw new BusinessException("La date de début doit être antérieure à la date de fin");
 
-        // Vérifier les conflits de dates
         if (checkConflitDates(employe.getId(), newDebut, newFin, id))
             throw new BusinessException("Une demande de congé existe déjà sur cette période");
 
-        // Recalculer les jours ouvrables
         int nouveauxJours = calculateJoursOuvres(newDebut, newFin);
-
-        // Vérifier le solde si le type est ANNUEL
         String nouveauType = dto.getType() != null ? dto.getType() : demande.getType();
         if ("ANNUEL".equals(nouveauType)) {
             int annee = LocalDate.now().getYear();
@@ -403,7 +397,6 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
             }
         }
 
-        // Appliquer la modification
         demande.setDateDebut(newDebut);
         demande.setDateFin(newFin);
         demande.setType(nouveauType);
@@ -411,10 +404,9 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         demande.setJoursOuvres(nouveauxJours);
         demande.setUrgente(ChronoUnit.DAYS.between(LocalDate.now(), newDebut) < 7);
 
-        // Sauvegarder
         DemandeConge saved = demandeCongeRepository.save(demande);
 
-        // Optionnel : mettre à jour les variables du workflow Camunda (si nécessaire)
+        // Mise à jour des variables du workflow si instance existante
         if (saved.getProcessInstanceId() != null && !saved.getProcessInstanceId().isEmpty()) {
             try {
                 runtimeService.setVariable(saved.getProcessInstanceId(), "nbJours", nouveauxJours);
@@ -425,10 +417,8 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
                 log.warn("Impossible de mettre à jour les variables du workflow: {}", e.getMessage());
             }
         }
-
         return mapper.toDto(saved);
     }
-
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     private void supprimerInstanceCamunda(String processInstanceId) {
         if (processInstanceId != null) {

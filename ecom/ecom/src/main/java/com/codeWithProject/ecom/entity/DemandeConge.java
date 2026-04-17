@@ -16,6 +16,7 @@ import java.util.Set;
         indexes = {
                 @Index(name = "idx_dc_employe", columnList = "employe_id"),
                 @Index(name = "idx_dc_manager", columnList = "manager_id"),
+                @Index(name = "idx_dc_admin",   columnList = "admin_rh_id"),
                 @Index(name = "idx_dc_statut",  columnList = "statut"),
                 @Index(name = "idx_dc_type",    columnList = "type"),
                 @Index(name = "idx_dc_dates",   columnList = "date_debut, date_fin")
@@ -64,6 +65,7 @@ public class DemandeConge {
     @Builder.Default
     private Boolean urgente = false;
 
+    // ========== RELATIONS ==========
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "employe_id", nullable = false)
     @ToString.Exclude
@@ -76,17 +78,24 @@ public class DemandeConge {
     @JsonIgnoreProperties({"demandesCongeAValider", "employesGeres"})
     private Manager manager;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "admin_rh_id")
+    @ToString.Exclude
+    @JsonIgnoreProperties({"demandesConge", "competences", "formations"})
+    private AdministrateurRH adminRh;
+
+    // ========== WORKFLOW ==========
     @Column(name = "process_instance_id", length = 100)
     private String processInstanceId;
 
     @Column(name = "task_id", length = 100)
     private String currentTaskId;
 
+    // ========== CONSTANTES ET LOGIQUE MÉTIER ==========
     private static final Set<DayOfWeek> WEEKEND = Set.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY);
     private static final Set<LocalDate> JOURS_FERIES = new HashSet<>();
 
     static {
-        // Initialisation des jours fériés pour 2026
         JOURS_FERIES.add(LocalDate.of(2026, 1, 1));
         JOURS_FERIES.add(LocalDate.of(2026, 4, 6));
         JOURS_FERIES.add(LocalDate.of(2026, 5, 1));
@@ -100,6 +109,7 @@ public class DemandeConge {
         JOURS_FERIES.add(LocalDate.of(2026, 12, 25));
     }
 
+    // ========== MÉTHODES MÉTIER ==========
     public void soumettre() {
         validerDates();
         validerType();
@@ -110,7 +120,6 @@ public class DemandeConge {
         this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
     }
 
-    // Modification sans vérification du solde (déléguée au service)
     public void modifier(LocalDate nouvelleDateDebut, LocalDate nouvelleDateFin,
                          String nouveauType, String nouveauCommentaire) {
         verifierModificationAutorisee();
@@ -164,12 +173,7 @@ public class DemandeConge {
         log.info("NOTIFICATION : {}", msg);
     }
 
-    // getters / setters manuels si Lombok ne fonctionne pas (mais @Data les fournit)
-    public String getProcessInstanceId() { return processInstanceId; }
-    public void setProcessInstanceId(String processInstanceId) { this.processInstanceId = processInstanceId; }
-    public String getCurrentTaskId() { return currentTaskId; }
-    public void setCurrentTaskId(String currentTaskId) { this.currentTaskId = currentTaskId; }
-
+    // ========== MÉTHODES PRIVÉES ==========
     private void validerDates() {
         if (this.dateDebut == null || this.dateFin == null)
             throw new IllegalStateException("Les dates sont obligatoires");
@@ -217,37 +221,38 @@ public class DemandeConge {
         return count;
     }
 
+    // ========== MÉTHODES TRANSIENTES ==========
     @Transient
     public long getNombreJoursCalendaires() {
         if (this.dateDebut == null || this.dateFin == null) return 0;
         return ChronoUnit.DAYS.between(this.dateDebut, this.dateFin) + 1;
     }
 
-    @Transient public long getJoursAvantDebut() {
+    @Transient
+    public long getJoursAvantDebut() {
         return ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut);
     }
 
-    @Transient public boolean estEnCours() {
+    @Transient
+    public boolean estEnCours() {
         LocalDate aj = LocalDate.now();
         return "APPROUVE".equals(this.statut) && !aj.isBefore(this.dateDebut) && !aj.isAfter(this.dateFin);
     }
 
-    @Transient public boolean estTermine() {
+    @Transient
+    public boolean estTermine() {
         return "APPROUVE".equals(this.statut) && LocalDate.now().isAfter(this.dateFin);
     }
 
-    public boolean chevauche(DemandeConge autre) {
-        if (autre == null) return false;
-        return !(this.dateFin.isBefore(autre.dateDebut) || this.dateDebut.isAfter(autre.dateFin));
-    }
-
-    @Transient public boolean isValide() {
+    @Transient
+    public boolean isValide() {
         return this.dateDebut != null && this.dateFin != null
                 && !this.dateDebut.isAfter(this.dateFin)
                 && this.type != null && !this.type.isBlank();
     }
 
-    @Transient public String getResume() {
+    @Transient
+    public String getResume() {
         return String.format("%s: %s du %s au %s (%d j) — %s%s",
                 this.type,
                 this.employe != null ? this.employe.getMatricule() : "???",
@@ -257,6 +262,7 @@ public class DemandeConge {
                 Boolean.TRUE.equals(this.urgente) ? " [URGENT]" : "");
     }
 
+    // ========== CALLBACKS JPA ==========
     @PrePersist
     protected void onCreate() {
         initialiserValeursParDefaut();

@@ -13,6 +13,7 @@ import java.util.Optional;
 @Repository
 public interface ManagerRepository extends JpaRepository<Manager, Long> {
 
+
     // ===== RECHERCHES PAR IDENTIFIANTS =====
     Optional<Manager> findByMatricule(String matricule);
     Optional<Manager> findByEmail(String email);
