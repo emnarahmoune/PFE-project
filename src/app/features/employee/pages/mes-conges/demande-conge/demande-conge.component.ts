@@ -1,3 +1,4 @@
+// src/app/features/employee/pages/demande-conge/demande-conge.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -15,9 +16,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { EmployeeCongeService } from '../../../services/employee-conge.service';
 import { DemandeConge, CongeResponse } from '../../../models/conge.model';
-import { NotificationService } from '../../../../../core/services/notification.service'; // ⬅️ AJOUT
+import { NotificationService } from '../../../../../core/services/notification.service';
 
 @Component({
   selector: 'app-demande-conge',
@@ -27,7 +29,7 @@ import { NotificationService } from '../../../../../core/services/notification.s
     MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatDatepickerModule, MatNativeDateModule, MatButtonModule, MatIconModule,
     MatSnackBarModule, MatProgressSpinnerModule, MatDividerModule,
-    MatChipsModule, MatProgressBarModule
+    MatChipsModule, MatProgressBarModule, MatCheckboxModule
   ],
   templateUrl: './demande-conge.component.html',
   styleUrls: ['./demande-conge.component.css']
@@ -54,13 +56,14 @@ export class DemandeCongeComponent implements OnInit {
     private congeService: EmployeeCongeService,
     private router: Router,
     private snackBar: MatSnackBar,
-    private notificationService: NotificationService  // ⬅️ AJOUT
+    private notificationService: NotificationService
   ) {
     this.demandeForm = this.fb.group({
       type: ['', Validators.required],
       dateDebut: ['', Validators.required],
       dateFin: ['', Validators.required],
-      commentaire: ['']
+      commentaire: [''],
+      urgente: [false]  // ✅ AJOUT
     }, { validators: this.dateRangeValidator });
   }
 
@@ -90,36 +93,24 @@ export class DemandeCongeComponent implements OnInit {
   dateRangeValidator(form: FormGroup): { [key: string]: boolean } | null {
     const debut = form.get('dateDebut')?.value;
     const fin = form.get('dateFin')?.value;
-    
-    if (debut && fin && new Date(debut) > new Date(fin)) {
-      return { dateInvalide: true };
-    }
-    
-    if (debut && new Date(debut) < new Date()) {
-      return { datePassee: true };
-    }
-    
+    if (debut && fin && new Date(debut) > new Date(fin)) return { dateInvalide: true };
+    if (debut && new Date(debut) < new Date()) return { datePassee: true };
     return null;
   }
 
   calculerNombreJours(): number {
     const debut = this.demandeForm.get('dateDebut')?.value;
     const fin = this.demandeForm.get('dateFin')?.value;
-    
     if (!debut || !fin) return 0;
-    
     const debutDate = new Date(debut);
     const finDate = new Date(fin);
     const diffTime = Math.abs(finDate.getTime() - debutDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    
-    return diffDays;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   }
 
   verifierSolde(): boolean {
     const type = this.demandeForm.get('type')?.value;
     if (type !== 'ANNUEL') return true;
-    
     const joursDemandes = this.calculerNombreJours();
     return joursDemandes <= this.congesRestants;
   }
@@ -149,85 +140,57 @@ export class DemandeCongeComponent implements OnInit {
 
     if (this.demandeForm.invalid) {
       this.markFormGroupTouched(this.demandeForm);
-      
-      if (this.demandeForm.get('type')?.hasError('required')) {
+      if (this.demandeForm.get('type')?.hasError('required'))
         this.snackBar.open('Veuillez sélectionner un type de congé', 'Fermer', { duration: 3000 });
-      } else if (this.demandeForm.get('dateDebut')?.hasError('required')) {
+      else if (this.demandeForm.get('dateDebut')?.hasError('required'))
         this.snackBar.open('Veuillez sélectionner une date de début', 'Fermer', { duration: 3000 });
-      } else if (this.demandeForm.get('dateFin')?.hasError('required')) {
+      else if (this.demandeForm.get('dateFin')?.hasError('required'))
         this.snackBar.open('Veuillez sélectionner une date de fin', 'Fermer', { duration: 3000 });
-      } else if (this.demandeForm.hasError('dateInvalide')) {
+      else if (this.demandeForm.hasError('dateInvalide'))
         this.snackBar.open('La date de fin doit être postérieure à la date de début', 'Fermer', { duration: 3000 });
-      } else if (this.demandeForm.hasError('datePassee')) {
+      else if (this.demandeForm.hasError('datePassee'))
         this.snackBar.open('La date de début ne peut pas être dans le passé', 'Fermer', { duration: 3000 });
-      }
       return;
     }
 
     if (!this.verifierSolde()) {
-      this.snackBar.open(
-        `❌ Solde insuffisant. Vous avez ${this.congesRestants} jours restants.`,
-        'Fermer',
-        { duration: 5000, panelClass: ['error-snackbar'] }
-      );
+      this.snackBar.open(`❌ Solde insuffisant. Vous avez ${this.congesRestants} jours restants.`, 'Fermer', { duration: 5000, panelClass: ['error-snackbar'] });
       return;
     }
 
     this.submitting = true;
-    
     const demande = {
       dateDebut: this.demandeForm.value.dateDebut,
       dateFin: this.demandeForm.value.dateFin,
       type: this.demandeForm.value.type,
-      commentaire: this.demandeForm.value.commentaire || ''
+      commentaire: this.demandeForm.value.commentaire || '',
+      urgente: this.demandeForm.value.urgente  // ✅ AJOUT
     };
-
-    console.log('📤 Envoi de la demande:', demande);
 
     this.congeService.soumettreDemande(demande).subscribe({
       next: (response: any) => {
         this.submitting = false;
-        console.log('📥 Réponse du serveur:', response);
-        
         if (response.success || response.statusCode === 200 || response.statusCode === 201) {
-          const message = response.message || '✅ Demande de congé soumise avec succès';
-          this.snackBar.open(message, 'Fermer', { duration: 3000, panelClass: ['success-snackbar'] });
-          
-          // ✅ RECHARGER LES NOTIFICATIONS APRÈS SUCCÈS
+          this.snackBar.open('✅ Demande de congé soumise avec succès', 'Fermer', { duration: 3000, panelClass: ['success-snackbar'] });
           this.notificationService.loadNotifications();
           this.notificationService.loadUnreadCount();
-          
-          // ✅ Redirection après succès
-          setTimeout(() => {
-            this.router.navigate(['/employee/mes-conges']);
-          }, 1500);
+          setTimeout(() => this.router.navigate(['/employee/mes-conges']), 1500);
         } else {
           const errorMsg = response.message || response.error || 'Erreur lors de la soumission';
           this.errorMessage = errorMsg;
           this.snackBar.open(errorMsg, 'Fermer', { duration: 5000, panelClass: ['error-snackbar'] });
-          
-          // ✅ MÊME EN CAS D'ERREUR, ON RECHARGE LES NOTIFICATIONS (EX: REFUS AUTO)
           this.notificationService.loadNotifications();
           this.notificationService.loadUnreadCount();
         }
       },
       error: (error: any) => {
         this.submitting = false;
-        console.error('❌ Erreur complète:', error);
-        
         let errorMessage = 'Erreur lors de la soumission de la demande';
-        if (error.error?.message) {
-          errorMessage = error.error.message;
-        } else if (error.error?.error) {
-          errorMessage = error.error.error;
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        
+        if (error.error?.message) errorMessage = error.error.message;
+        else if (error.error?.error) errorMessage = error.error.error;
+        else if (error.message) errorMessage = error.message;
         this.errorMessage = errorMessage;
         this.snackBar.open(errorMessage, 'Fermer', { duration: 5000, panelClass: ['error-snackbar'] });
-        
-        // ✅ RECHARGER LES NOTIFICATIONS MÊME EN CAS D'ERREUR (REFUS AUTO)
         this.notificationService.loadNotifications();
         this.notificationService.loadUnreadCount();
       }
@@ -237,9 +200,7 @@ export class DemandeCongeComponent implements OnInit {
   private markFormGroupTouched(formGroup: FormGroup) {
     Object.values(formGroup.controls).forEach(control => {
       control.markAsTouched();
-      if (control instanceof FormGroup) {
-        this.markFormGroupTouched(control);
-      }
+      if (control instanceof FormGroup) this.markFormGroupTouched(control);
     });
   }
 

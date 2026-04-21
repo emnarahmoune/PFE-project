@@ -19,6 +19,7 @@ export interface Task {
   employeNom?: string;
   employePrenom?: string;
   employeEmail?: string;
+  urgente?: boolean
 }
 
 export interface ApiResponse<T> {
@@ -47,15 +48,28 @@ export class WorkflowService {
   }
 
   // ==================== MANAGER ====================
-  // ✅ Récupère les tâches du manager (demandes en attente)
   getManagerTasks(): Observable<Task[]> {
-    return this.http.get<ApiResponse<Task[]>>(
-      `${this.apiUrl}/manager/conges`,
-      { headers: this.getHeaders() }
-    ).pipe(map(res => res.data || []));
+    return this.http.get<any>(`${this.apiUrl}/manager/conges`, { headers: this.getHeaders() })
+      .pipe(map(response => {
+        console.log('📦 Réponse brute de /api/manager/conges :', response);
+        let tasks: Task[] = [];
+        // Cas 1: réponse avec wrapper { data: [...] }
+        if (response && response.data && Array.isArray(response.data)) {
+          tasks = response.data;
+        }
+        // Cas 2: réponse directe sous forme de tableau
+        else if (Array.isArray(response)) {
+          tasks = response;
+        }
+        // Cas 3: réponse paginée { content: [...] }
+        else if (response && response.content && Array.isArray(response.content)) {
+          tasks = response.content;
+        }
+        console.log('✅ Tâches extraites :', tasks);
+        return tasks;
+      }));
   }
 
-  // ✅ Approbation par le manager
   approveTask(taskId: string, commentaire: string): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(
       `${this.apiUrl}/manager/approuver-demande`,
@@ -64,7 +78,6 @@ export class WorkflowService {
     );
   }
 
-  // ✅ Refus par le manager
   rejectTask(taskId: string, motif: string): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(
       `${this.apiUrl}/manager/refuser-demande`,
@@ -74,15 +87,22 @@ export class WorkflowService {
   }
 
   // ==================== ADMIN RH ====================
-  // ✅ Récupère les tâches RH
   getRHTasks(): Observable<Task[]> {
-    return this.http.get<ApiResponse<Task[]>>(
-      `${this.apiUrl}/admin/conges/a-valider`,
-      { headers: this.getHeaders() }
-    ).pipe(map(res => res.data || []));
+    return this.http.get<any>(`${this.apiUrl}/admin/conges/a-valider`, { headers: this.getHeaders() })
+      .pipe(map(response => {
+        console.log('📦 Réponse brute de /api/admin/conges/a-valider :', response);
+        let tasks: Task[] = [];
+        if (response && response.data && Array.isArray(response.data)) {
+          tasks = response.data;
+        } else if (Array.isArray(response)) {
+          tasks = response;
+        } else if (response && response.content && Array.isArray(response.content)) {
+          tasks = response.content;
+        }
+        return tasks;
+      }));
   }
 
-  // ✅ Approbation RH (PUT avec demandeId, pas taskId)
   approveRHTask(demandeId: number, commentaire?: string): Observable<void> {
     const url = commentaire
       ? `${this.apiUrl}/admin/conges/${demandeId}/valider?commentaire=${encodeURIComponent(commentaire)}`
@@ -90,7 +110,6 @@ export class WorkflowService {
     return this.http.put<void>(url, {}, { headers: this.getHeaders() });
   }
 
-  // ✅ Refus RH
   rejectRHTask(demandeId: number, motif: string): Observable<void> {
     return this.http.put<void>(
       `${this.apiUrl}/admin/conges/${demandeId}/refuser?motif=${encodeURIComponent(motif)}`,
@@ -105,7 +124,6 @@ export class WorkflowService {
   }
 
   getProcessStatus(processInstanceId: string): Observable<any> {
-    // Si vous avez un endpoint pour ça, sinon à créer
     return this.http.get(`${this.apiUrl}/workflow/instance/${processInstanceId}`, { headers: this.getHeaders() });
   }
 }

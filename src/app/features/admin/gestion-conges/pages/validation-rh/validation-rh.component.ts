@@ -14,7 +14,7 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
-import { AdminCongeService, TacheRh, StatsConges } from '../../../../../core/services/admin-conge.service';
+import { AdminCongeService, TacheRh, StatsConges, DemandeRefusManager } from '../../../../../core/services/admin-conge.service';
 
 @Component({
   selector: 'app-validation-rh',
@@ -31,10 +31,17 @@ import { AdminCongeService, TacheRh, StatsConges } from '../../../../../core/ser
 })
 export class ValidationRhComponent implements OnInit, OnDestroy {
   
+  // Onglet 1 : demandes à valider
   taches: TacheRh[] = [];
-  loading = false;
+  loadingTaches = false;
+  
+  // Onglet 2 : refus manager
+  refusManager: DemandeRefusManager[] = [];
+  loadingRefus = false;
+  
   selectedTabIndex = 0;
   
+  // Modals
   showApproveModal = false;
   showRejectModal = false;
   selectedTache: TacheRh | null = null;
@@ -52,6 +59,7 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
   private readonly REFRESH_INTERVAL_MS = 15000;
 
   displayedColumns = ['employe', 'periode', 'jours', 'type', 'statut', 'actions'];
+  displayedColumnsRefus = ['employe', 'manager', 'periode', 'motif', 'dateDecision'];
 
   constructor(
     private adminCongeService: AdminCongeService,
@@ -61,47 +69,57 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadTaches();
+    this.loadRefusManager();
     this.loadStats();
     this.startAutoRefresh();
   }
 
   ngOnDestroy(): void {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
+    if (this.refreshInterval) clearInterval(this.refreshInterval);
   }
 
   startAutoRefresh(): void {
     this.refreshInterval = setInterval(() => {
       this.loadTaches(false);
+      this.loadRefusManager();
       this.loadStats();
     }, this.REFRESH_INTERVAL_MS);
   }
 
   loadTaches(showLoading = true): void {
-    if (showLoading) this.loading = true;
-    
+    if (showLoading) this.loadingTaches = true;
     this.adminCongeService.getDemandesAValider().subscribe({
       next: (data) => {
-        this.loading = false;
         this.taches = data || [];
         this.stats.EN_ATTENTE = this.taches.length;
+        this.loadingTaches = false;
       },
       error: (error) => {
-        this.loading = false;
+        this.loadingTaches = false;
         console.error('Erreur chargement tâches:', error);
         this.showToast('Erreur de connexion au serveur', 'error');
       }
     });
   }
 
+  loadRefusManager(): void {
+    this.loadingRefus = true;
+    this.adminCongeService.getRefusManager().subscribe({
+      next: (data) => {
+        this.refusManager = data || [];
+        this.loadingRefus = false;
+      },
+      error: (err) => {
+        console.error('Erreur chargement refus manager:', err);
+        this.loadingRefus = false;
+        this.showToast('Erreur chargement des refus manager', 'error');
+      }
+    });
+  }
+
   loadStats(): void {
     this.adminCongeService.getStats().subscribe({
-      next: (data) => {
-        if (data) {
-          this.stats = data;
-        }
-      },
+      next: (data) => { if (data) this.stats = data; },
       error: (err) => console.error('Erreur chargement stats:', err)
     });
   }
@@ -129,15 +147,13 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
   confirmApprove(): void {
     if (!this.selectedTache || this.isSubmitting) return;
     this.isSubmitting = true;
-
-    const demandeId = this.selectedTache.demandeId;   // ✅ nombre, pas string
-
-    this.adminCongeService.approuverDemande(demandeId, this.commentaire).subscribe({
+    this.adminCongeService.approuverDemande(this.selectedTache.demandeId, this.commentaire).subscribe({
       next: () => {
         this.isSubmitting = false;
-        this.showToast(`✅ Demande approuvée avec succès`, 'success');
+        this.showToast('✅ Demande approuvée avec succès', 'success');
         this.closeModals();
         this.loadTaches();
+        this.loadRefusManager();
         this.loadStats();
       },
       error: (error) => {
@@ -150,22 +166,18 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
 
   confirmReject(): void {
     if (!this.selectedTache || this.isSubmitting) return;
-    
     if (!this.motifRefus.trim()) {
       this.showToast('Veuillez saisir un motif de refus', 'error');
       return;
     }
-
     this.isSubmitting = true;
-
-    const demandeId = this.selectedTache.demandeId;
-
-    this.adminCongeService.refuserDemande(demandeId, this.motifRefus).subscribe({
+    this.adminCongeService.refuserDemande(this.selectedTache.demandeId, this.motifRefus).subscribe({
       next: () => {
         this.isSubmitting = false;
-        this.showToast(`❌ Demande refusée avec succès`, 'success');
+        this.showToast('❌ Demande refusée avec succès', 'success');
         this.closeModals();
         this.loadTaches();
+        this.loadRefusManager();
         this.loadStats();
       },
       error: (error) => {

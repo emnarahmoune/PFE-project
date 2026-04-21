@@ -1,6 +1,6 @@
 // src/app/features/admin/services/employe.service.ts
 import { Injectable } from '@angular/core';
-import { Observable, catchError, map, of } from 'rxjs';
+import { Observable, catchError, of } from 'rxjs';
 import { ApiService } from '../../../../core/services/api.service';
 import { Employe, EmployeResponse } from '../models/employe.model';
 
@@ -52,9 +52,24 @@ export class EmployeService {
     );
   }
 
-  // ✅ NOUVELLE MÉTHODE
+  // Alias pour assignManager
   updateManager(employeId: number, managerId: number): Observable<EmployeResponse> {
     return this.assignManager(employeId, managerId);
+  }
+
+  // ✅ NOUVEAU : Récupérer l'équipe d'un manager
+  getEquipeByManagerId(managerId: number): Observable<EmployeResponse> {
+    return this.api.get<EmployeResponse>(`${this.endpoint}/manager/${managerId}/equipe`).pipe(
+      catchError(this.handleError('getEquipeByManagerId', { success: false, data: [] }))
+    );
+  }
+
+  // ✅ NOUVEAU : Récupérer les congés d'un employé
+  getEmployeConges(employeId: number): Observable<any> {
+    // Utilise l'endpoint des congés (à adapter selon votre API)
+    return this.api.get<any>(`conges/employe/${employeId}`).pipe(
+      catchError(this.handleError('getEmployeConges', { success: false, data: [] }))
+    );
   }
 
   findByDepartement(departement: string): Observable<EmployeResponse> {

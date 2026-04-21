@@ -37,6 +37,18 @@ export interface StatsConges {
   REFUSE: number;
   [key: string]: number;
 }
+export interface DemandeRefusManager {
+  id: number;
+  dateDebut: string;
+  dateFin: string;
+  type: string;
+  statut: string;
+  motifRefus: string;
+  dateDecision: string;
+  employeNom: string;
+  employePrenom: string;
+  managerNom: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AdminCongeService {
@@ -79,7 +91,14 @@ export class AdminCongeService {
       { headers: this.getHeaders() }
     );
   }
+  
 
+  // ✅ NOUVEAU : récupérer les demandes refusées par les managers
+  getRefusManager(): Observable<DemandeRefusManager[]> {
+    return this.http
+      .get<ApiResponse<DemandeRefusManager[]>>(`${this.apiUrl}/refus-manager`, { headers: this.getHeaders() })
+      .pipe(map(res => res.data || []));
+  }  
   // Statistiques
   getStats(): Observable<StatsConges> {
     return this.http.get<ApiResponse<StatsConges>>(

@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Employe } from '../../features/admin/gestion-employes/models/employe.model';
-import { DemandeConge } from '../../features/employee/models/conge.model';
+import { DemandeConge,SoldeConges} from '../../features/employee/models/conge.model';
 
 export interface ManagerStats {
   employes?: number;
@@ -86,6 +86,15 @@ export class ManagerService {
       { taskId, commentaire }
     );
   }
+    getEmployeSoldeConges(employeId: number): Observable<{ success: boolean; data: SoldeConges }> {
+    return this.http.get<{ success: boolean; data: SoldeConges }>(
+      `${environment.apiUrl}/employes/${employeId}/solde-conges`
+    );
+  }
+   getEmployeHistoriqueConges(employeId: number): Observable<{ success: boolean; data: DemandeConge[] }> {
+    return this.http.get<{ success: boolean; data: DemandeConge[] }>(
+      `${environment.apiUrl}/conges/employe/${employeId}/historique`
+    );}
 
   // ✅ Refus d'une demande
   refuserDemande(taskId: string, motif: string): Observable<{ success: boolean; message: string }> {

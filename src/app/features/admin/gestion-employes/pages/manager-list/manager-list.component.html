@@ -1,0 +1,50 @@
+<!-- src/app/features/admin/pages/manager-list/manager-list.component.html -->
+<div class="manager-saas">
+  <div class="hero-section">
+    <div class="hero-content">
+      <h1>👨‍💼 Organisation des managers</h1>
+      <p>Consultez les équipes et l'historique des congés par manager</p>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="loading-area" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Chargement des managers...</span>
+    </div>
+
+    <div class="manager-accordion" *ngIf="!loading">
+      <div class="manager-card" *ngFor="let mgr of managers">
+        <div class="manager-header" (click)="toggleEquipe(mgr)">
+          <div class="avatar" [style.background]="getAvatarColor(mgr.manager.departement ?? '')">
+            {{ (mgr.manager.prenom?.charAt(0) ?? '') + (mgr.manager.nom?.charAt(0) ?? '') }}
+          </div>
+          <div class="manager-info">
+            <h3>{{ mgr.manager.prenom }} {{ mgr.manager.nom }}</h3>
+            <p>{{ mgr.manager.poste }} · {{ mgr.manager.departement }}</p>
+            <span class="badge">{{ mgr.equipe.length }} membre(s)</span>
+          </div>
+          <span class="chevron">{{ mgr.expanded ? '▲' : '▼' }}</span>
+        </div>
+
+        <div class="equipe-list" *ngIf="mgr.expanded">
+          <div class="employe-row" *ngFor="let emp of mgr.equipe">
+            <div class="employe-info">
+              <div class="avatar-small" [style.background]="getAvatarColor(emp.departement ?? '')">
+                {{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}
+              </div>
+              <div>
+                <strong>{{ emp.prenom }} {{ emp.nom }}</strong><br>
+                <small>{{ emp.poste }} · {{ emp.matricule }}</small>
+              </div>
+            </div>
+            <button class="btn-conges" (click)="voirHistoriqueConges(emp)">📅 Historique des congés</button>
+          </div>
+          <div class="empty-equipe" *ngIf="mgr.equipe.length === 0">
+            Aucun employé dans cette équipe.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

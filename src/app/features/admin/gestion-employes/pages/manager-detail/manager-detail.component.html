@@ -1,0 +1,46 @@
+<!-- src/app/features/admin/pages/manager-detail/manager-detail.component.html -->
+<div class="manager-detail-container">
+  <!-- En-tête avec bouton retour -->
+  <div class="detail-header" *ngIf="manager">
+    <button class="back-button" routerLink="/admin/managers">
+      ← Retour à la liste des managers
+    </button>
+    <div class="manager-title">
+      <h1>{{ manager.prenom }} {{ manager.nom }}</h1>
+      <p class="manager-meta">{{ manager.poste }} · {{ manager.departement }}</p>
+    </div>
+  </div>
+
+  <!-- État de chargement -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner"></div>
+    <span>Chargement des informations...</span>
+  </div>
+
+  <!-- Section équipe -->
+  <div class="equipe-section" *ngIf="!loading && equipe.length > 0">
+    <div class="section-header">
+      <h2>👥 Équipe ({{ equipe.length }})</h2>
+    </div>
+    <div class="employe-grid">
+      <div class="employe-card" *ngFor="let emp of equipe">
+        <div class="employe-avatar" [style.backgroundColor]="getAvatarColor(emp.departement ?? '')">
+          {{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}
+        </div>
+        <div class="employe-info">
+          <div class="employe-name">{{ emp.prenom }} {{ emp.nom }}</div>
+          <div class="employe-details">{{ emp.poste }} · {{ emp.matricule }}</div>
+        </div>
+        <button class="btn-historique" (click)="voirHistorique(emp)">
+          📅 Congés
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message si équipe vide -->
+  <div class="empty-state" *ngIf="!loading && equipe.length === 0">
+    <div class="empty-icon">👥</div>
+    <p>Aucun employé n'est rattaché à ce manager.</p>
+  </div>
+</div>

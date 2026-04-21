@@ -1,5 +1,4 @@
 // src/app/app.routes.ts
-
 import { Routes } from '@angular/router';
 import { AuthLayoutComponent } from './shared/layouts/auth-layout/auth-layout.component';
 import { AdminLayoutComponent } from './shared/layouts/admin-layout/admin-layout.component';
@@ -11,7 +10,7 @@ import { ManagerLayoutComponent } from './shared/layouts/manager-layout/manager-
 export const routes: Routes = [
   { path: '', redirectTo: '/auth/login', pathMatch: 'full' },
 
-  // ✅ ROUTES PUBLIQUES
+  // ==================== ROUTES PUBLIQUES ====================
   {
     path: 'auth',
     component: AuthLayoutComponent,
@@ -21,12 +20,14 @@ export const routes: Routes = [
     ]
   },
 
-  // ✅ ROUTES ADMIN
+  // ==================== ROUTES ADMIN ====================
   {
     path: 'admin',
     component: AdminLayoutComponent,
     canActivate: [authGuard],
     children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+
       {
         path: 'dashboard',
         loadComponent: () => import('./features/admin/dashboard-admin/dashboard-admin.component')
@@ -47,83 +48,91 @@ export const routes: Routes = [
         loadChildren: () => import('./features/admin/gestion-formations/formations.routes')
           .then(m => m.formationsRoutes)
       },
-      // ✅ NOUVEAU - Validation RH des congés (>10 jours)
+      // Gestion des congés (validation RH)
       {
-      path: 'conges',
-      redirectTo: 'conges/validation-rh',
-      pathMatch: 'full'
-    },
-    {
-      path: 'conges/validation-rh',
-      loadComponent: () => import('./features/admin/gestion-conges/pages/validation-rh/validation-rh.component')
-        .then(m => m.ValidationRhComponent)
-    },
-      // ✅ NOUVEAU - Assignation des managers
+        path: 'conges',
+        redirectTo: 'conges/validation-rh',
+        pathMatch: 'full'
+      },
+      {
+        path: 'conges/validation-rh',
+        loadComponent: () => import('./features/admin/gestion-conges/pages/validation-rh/validation-rh.component')
+          .then(m => m.ValidationRhComponent)
+      },
+      // Assignation des managers
       {
         path: 'manager-assignment',
         loadComponent: () => import('./features/admin/gestion-employes/pages/employe-list/employe-list.component')
           .then(m => m.EmployeListComponent)
       },
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
+      // Liste des managers avec équipes
+      {
+        path: 'managers',
+        loadComponent: () => import('./features/admin/gestion-employes/pages/manager-list/manager-list.component')
+          .then(m => m.ManagerListComponent)
+      },
+      // Détail d'un manager
+      {
+        path: 'managers/:id',
+        loadComponent: () => import('./features/admin/gestion-employes/pages/manager-detail/manager-detail.component')
+          .then(m => m.ManagerDetailComponent)
+      }
     ]
   },
 
-  // ✅ ROUTES MANAGER
+  // ==================== ROUTES MANAGER ====================
   {
     path: 'manager',
     component: ManagerLayoutComponent,
     canActivate: [authGuard, roleGuard],
     data: { roles: ['manager'] },
     children: [
-      { 
-        path: 'dashboard', 
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+
+      {
+        path: 'dashboard',
         loadComponent: () => import('./features/manager/page/dashboard-manager/dashboard-manager.component')
-          .then(m => m.DashboardManagerComponent) 
+          .then(m => m.DashboardManagerComponent)
       },
-      { 
-        path: 'equipe', 
+      {
+        path: 'equipe',
         loadComponent: () => import('./features/manager/page/equipe/equipe.component')
-          .then(m => m.EquipeComponent) 
+          .then(m => m.EquipeComponent)
       },
-      // ✅ MODIFIÉ - Utiliser le nouveau composant d'approbation
-      { 
-        path: 'conges', 
+      {
+        path: 'conges',
         loadComponent: () => import('./features/manager/page/conges/approbation-conge/approbation-conge.component')
-          .then(m => m.ApprobationCongeComponent) 
+          .then(m => m.ApprobationCongeComponent)
       },
-      { 
-        path: 'stats', 
+      {
+        path: 'stats',
         loadComponent: () => import('./features/manager/page/stats/stats.component')
-          .then(m => m.StatsComponent) 
+          .then(m => m.StatsComponent)
       },
-      { 
-        path: 'alertes', 
+      {
+        path: 'alertes',
         loadComponent: () => import('./features/manager/page/alertes/alertes.component')
-          .then(m => m.AlertesComponent) 
-
+          .then(m => m.AlertesComponent)
       },
-      // Dans le bloc "ROUTES MANAGER", ajouter ces deux routes après "equipe" par exemple :
-
-{ 
-  path: 'employe/:id', 
-  loadComponent: () => import('./features/manager/page/employe-detail/employe-detail.component')
-    .then(m => m.EmployeDetailComponent) 
-},
-{ 
-  path: 'employe/:id/conges', 
-  loadComponent: () => import('./features/manager/page/employe-conges/employe-conges.component')
-    .then(m => m.EmployeCongesComponent) 
-},
-      { 
-        path: 'indicateurs', 
+      {
+        path: 'employe/:id',
+        loadComponent: () => import('./features/manager/page/employe-detail/employe-detail.component')
+          .then(m => m.EmployeDetailComponent)
+      },
+      {
+        path: 'employe/:id/conges',
+        loadComponent: () => import('./features/manager/page/employe-conges/employe-conges.component')
+          .then(m => m.EmployeCongesComponent)
+      },
+      {
+        path: 'indicateurs',
         loadComponent: () => import('./features/manager/page/indicateurs/indicateurs.component')
-          .then(m => m.IndicateursComponent) 
-      },
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
+          .then(m => m.IndicateursComponent)
+      }
     ]
   },
 
-  // ✅ ROUTES EMPLOYEE
+  // ==================== ROUTES EMPLOYEE ====================
   {
     path: 'employee',
     canActivate: [authGuard],
@@ -131,6 +140,6 @@ export const routes: Routes = [
       .then(m => m.employeeRoutes)
   },
 
-  // Redirection par défaut
+  // Redirection par défaut (page non trouvée)
   { path: '**', redirectTo: '/auth/login' }
 ];

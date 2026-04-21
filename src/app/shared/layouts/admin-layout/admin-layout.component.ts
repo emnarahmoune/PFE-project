@@ -26,7 +26,9 @@ export class AdminLayoutComponent implements OnInit {
     { path: '/admin/formations', icon: '📚', label: 'Formations' },
     { path: '/admin/conges', icon: '🏖️', label: 'Congés' },
     { path: '/admin/indicateurs', icon: '📈', label: 'Indicateurs' },
-    { path: '/admin/scores', icon: '⚠️', label: 'Scores risque' }
+    { path: '/admin/scores', icon: '⚠️', label: 'Scores risque' },
+    // ✅ NOUVEAU : gestion des managers et équipes
+    { path: '/admin/managers', icon: '👨‍💼', label: 'Managers & équipes' }
   ];
 
   constructor(
@@ -88,6 +90,7 @@ export class AdminLayoutComponent implements OnInit {
     if (path.includes('/admin/conges')) return 'Congés';
     if (path.includes('/admin/indicateurs')) return 'Indicateurs RH';
     if (path.includes('/admin/scores')) return 'Scores de risque';
+    if (path.includes('/admin/managers')) return 'Managers & équipes';
     return 'Administration';
   }
 }

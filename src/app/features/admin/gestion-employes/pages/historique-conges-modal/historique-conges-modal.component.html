@@ -1,0 +1,53 @@
+<!-- src/app/features/admin/pages/historique-conges-modal/historique-conges-modal.component.html -->
+<div class="modal-header">
+  <h2 mat-dialog-title>📅 Historique des congés</h2>
+  <button class="close-btn" (click)="dialogRef.close()">✕</button>
+</div>
+
+<mat-dialog-content class="modal-content">
+  <!-- Chargement -->
+  <div class="loading-state" *ngIf="loading">
+    <div class="spinner-small"></div>
+    <span>Chargement des demandes...</span>
+  </div>
+
+  <!-- Tableau des congés -->
+  <div class="table-wrapper" *ngIf="!loading && conges.length > 0">
+    <table class="conges-table">
+      <thead>
+        <tr>
+          <th>Période</th>
+          <th>Type</th>
+          <th>Jours</th>
+          <th>Statut</th>
+          <th>Date décision</th>
+         </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of conges">
+          <td class="date-range">
+            {{ c.dateDebut | date:'dd/MM/yyyy' }} → {{ c.dateFin | date:'dd/MM/yyyy' }}
+          </td>
+          <td>{{ c.type }}</td>
+          <td class="center">{{ c.joursOuvres }}</td>
+          <td>
+            <span class="status-badge" [ngClass]="'status-' + c.statut.toLowerCase()">
+              {{ c.statut }}
+            </span>
+          </td>
+          <td>{{ (c.dateDecision | date:'dd/MM/yyyy') || '-' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Aucune donnée -->
+  <div class="empty-state" *ngIf="!loading && conges.length === 0">
+    <div class="empty-icon">📭</div>
+    <p>Aucune demande de congé trouvée.</p>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="modal-actions">
+  <button mat-button class="btn-secondary" (click)="dialogRef.close()">Fermer</button>
+</mat-dialog-actions>
