@@ -1,4 +1,7 @@
 // src/app/features/admin/pages/employe-list/employe-list.component.ts
+// ─── MODIFICATION FRONT ONLY : ajout de `Math` pour la pagination avancée dans le template
+// Aucun changement backend — toutes les méthodes de service restent identiques
+
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
@@ -30,6 +33,9 @@ export class EmployeListComponent implements OnInit {
   selectedDepartement = 'TOUS';
   currentPage = 0;
   readonly pageSize = 12;
+
+  // ✅ FRONT ONLY : expose Math pour ngFor pagination dans le template
+  Math = Math;
 
   userNom = '';
   userPrenom = '';
@@ -128,16 +134,16 @@ export class EmployeListComponent implements OnInit {
       next: (res) => {
         this.loading = false;
         if (res.success) {
-          this.toast(`✅ Manager assigné à ${this.selectedEmploye!.prenom} ${this.selectedEmploye!.nom}`, 'success');
+          this.toast(`Manager assigné à ${this.selectedEmploye!.prenom} ${this.selectedEmploye!.nom}`, 'success');
           this.closeAssignModal();
           this.loadEmployes();
         } else {
-          this.toast(res.message || 'Erreur lors de l\'assignation', 'error');
+          this.toast(res.message || "Erreur lors de l'assignation", 'error');
         }
       },
       error: (err) => {
         this.loading = false;
-        this.toast(err.error?.message || 'Erreur lors de l\'assignation', 'error');
+        this.toast(err.error?.message || "Erreur lors de l'assignation", 'error');
       }
     });
   }
@@ -203,8 +209,8 @@ export class EmployeListComponent implements OnInit {
       autoFocus: true,
       restoreFocus: false,
       data: {
-        title:       '⚠️ Supprimer définitivement',
-        message:     `Êtes-vous sûr de vouloir SUPPRIMER DÉFINITIVEMENT ${nom} ?\n\nCette action est irréversible et supprimera toutes les données associées.`,
+        title:       'Supprimer définitivement',
+        message:     `Êtes-vous sûr de vouloir supprimer définitivement ${nom} ?\n\nCette action est irréversible.`,
         confirmText: 'Supprimer définitivement',
         cancelText:  'Annuler'
       }

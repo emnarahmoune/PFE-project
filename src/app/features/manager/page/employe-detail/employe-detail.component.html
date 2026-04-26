@@ -59,6 +59,25 @@
       </div>
     </div>
 
+    <!-- Indicateurs RH -->
+    <div class="indicateurs-rh">
+      <h3>📊 Indicateurs RH</h3>
+      <div class="indicateurs-grid">
+        <div class="indicator" [class]="getAbsenteismeClass(absenteisme)">
+          <span class="icon">📉</span>
+          <span class="value">{{ absenteisme != null ? (absenteisme | number:'1.1-1') : '?' }}%</span>
+          <span class="label">Absentéisme</span>
+          <div class="date" *ngIf="absenteismeDate">Dernier calcul : {{ absenteismeDate | date:'dd/MM/yyyy' }}</div>
+        </div>
+        <div class="indicator" [class]="getScoreClass(scoreTurnover)">
+          <span class="icon">⚠️</span>
+          <span class="value">{{ scoreTurnover ?? '?' }}</span>
+          <span class="label">Risque turnover</span>
+          <div class="niveau" *ngIf="scoreTurnoverNiveau">Niveau : {{ scoreTurnoverNiveau }}</div>
+        </div>
+      </div>
+    </div>
+
     <div class="actions">
       <a [routerLink]="['/manager/employe', employe.id, 'conges']" class="btn-primary">
         📋 Voir ses congés

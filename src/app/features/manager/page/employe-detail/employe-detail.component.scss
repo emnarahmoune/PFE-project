@@ -100,6 +100,50 @@
   }
 }
 
+/* Indicateurs RH */
+.indicateurs-rh {
+  background: #f8fafc;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+  }
+
+  .indicateurs-grid {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .indicator {
+    flex: 1;
+    background: white;
+    border-radius: 1rem;
+    padding: 1rem 1.5rem;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+
+    .icon { font-size: 1.5rem; display: block; margin-bottom: 0.5rem; }
+    .value { font-size: 2rem; font-weight: bold; display: block; }
+    .label { font-size: 0.75rem; color: #64748b; }
+    .date, .niveau { font-size: 0.7rem; color: #64748b; margin-top: 0.5rem; }
+
+    &.abs-low .value { color: #10b981; }
+    &.abs-medium .value { color: #f59e0b; }
+    &.abs-high .value { color: #ef4444; }
+
+    &.score-low .value { color: #10b981; }
+    &.score-medium .value { color: #f59e0b; }
+    &.score-high .value { color: #f97316; }
+    &.score-critical .value { color: #dc2626; font-weight: bold; }
+    &.badge-neutral .value { color: #94a3b8; }
+  }
+}
+
 .actions {
   display: flex;
   gap: 1rem;

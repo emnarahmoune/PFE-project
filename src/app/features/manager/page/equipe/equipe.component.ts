@@ -2,6 +2,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { ManagerService } from '../../../../core/services/manager.service';
 import { Employe } from '../../../admin/gestion-employes/models/employe.model';
 
@@ -9,41 +10,74 @@ import { Employe } from '../../../admin/gestion-employes/models/employe.model';
   selector: 'app-equipe',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  template: `
-    <div class="equipe-container">
-      <h2>👥 Mon équipe</h2>
-      <div class="cards-grid">
-        <div class="employe-card" *ngFor="let emp of employes" [routerLink]="['/manager/employe', emp.id]">
-          <div class="avatar">{{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}</div>
-          <h3>{{ emp.prenom }} {{ emp.nom }}</h3>
-          <p>{{ emp.poste }}</p>
-          <span class="dept">{{ emp.departement }}</span>
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .equipe-container { padding: 2rem; }
-    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 1.5rem; margin-top: 1.5rem; }
-    .employe-card { background: white; border-radius: 1rem; padding: 1.5rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    .employe-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-    .avatar { width: 56px; height: 56px; background: #6366f1; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-bottom: 1rem; }
-    h3 { margin: 0 0 0.25rem; font-size: 1.1rem; }
-    p { margin: 0; color: #4b5563; font-size: 0.9rem; }
-    .dept { display: inline-block; margin-top: 0.75rem; font-size: 0.75rem; background: #eef2ff; padding: 0.25rem 0.75rem; border-radius: 20px; color: #4f46e5; }
-  `]
+  templateUrl: './equipe.component.html',
+  styleUrls: ['./equipe.component.scss']
 })
 export class EquipeComponent implements OnInit {
   employes: Employe[] = [];
+  loading = true;
 
   constructor(private managerService: ManagerService) {}
 
   ngOnInit(): void {
     this.managerService.getEquipe().subscribe({
       next: (res) => {
-        if (res.success) this.employes = res.data as Employe[];
+        if (res.success) {
+          this.employes = res.data as Employe[];
+          this.loadIndicators();
+        }
+        this.loading = false;
       },
-      error: (err) => console.error(err)
+      error: (err) => {
+        console.error(err);
+        this.loading = false;
+      }
     });
+  }
+
+  private loadIndicators(): void {
+    this.employes.forEach(emp => {
+      if (!emp.id) return;
+      forkJoin({
+        score: this.managerService.getDernierScoreTurnover(emp.id),
+        abs: this.managerService.getDernierAbsenteisme(emp.id)
+      }).subscribe({
+        next: (results) => {
+          // Score
+          emp.scoreTurnover = results.score?.data?.score ?? 0;
+          emp.scoreTurnoverNiveau = results.score?.data?.niveauRisque ?? 'NON CALCULE';
+
+          // Absentéisme : l'API retourne un tableau, on extrait l'indicateur pour cet employé
+          const absData = results.abs?.data;
+          if (Array.isArray(absData) && absData.length > 0) {
+            const monAbs = absData.find((item: any) => item.employeId === emp.id);
+            if (monAbs) {
+              emp.absenteisme = monAbs.valeur ?? 0;
+              emp.absenteismeDate = monAbs.dateCalcul;
+            } else {
+              emp.absenteisme = 0;
+            }
+          } else {
+            emp.absenteisme = 0;
+          }
+        },
+        error: (err) => console.error(`Erreur pour ${emp.id}`, err)
+      });
+    });
+  }
+
+  getScoreClass(score: number | undefined): string {
+    if (score === undefined) return 'badge-neutral';
+    if (score < 20) return 'score-low';
+    if (score < 40) return 'score-medium';
+    if (score < 70) return 'score-high';
+    return 'score-critical';
+  }
+
+  getAbsenteismeClass(taux: number | undefined): string {
+    if (taux === undefined) return 'badge-neutral';
+    if (taux < 5) return 'abs-low';
+    if (taux < 10) return 'abs-medium';
+    return 'abs-high';
   }
 }

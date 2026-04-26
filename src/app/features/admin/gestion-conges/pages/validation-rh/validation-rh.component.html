@@ -1,253 +1,253 @@
-<!-- src/app/features/admin/gestion-conges/pages/validation-rh/validation-rh.component.html -->
-<div class="validation-rh-container">
-  
-  <!-- En-tête -->
-  <div class="page-header">
-    <h1>Validation des demandes de congé</h1>
-    <p class="subtitle">Gérez les demandes en attente et consultez les refus manager</p>
-  </div>
+<div class="validation-container">
 
-  <!-- Cartes statistiques -->
-  <div class="stats-cards">
-    <div class="stat-card">
-      <div class="stat-icon en-attente">⏳</div>
-      <div class="stat-value">{{ stats.EN_ATTENTE }}</div>
-      <div class="stat-label">En attente</div>
+  <!-- HEADER MODERNE -->
+  <div class="header">
+    <div class="header-left">
+      <h1>📅 Validation des congés</h1>
+      <p>Gestion intelligente des demandes et visualisation calendrier</p>
     </div>
-    <div class="stat-card">
-      <div class="stat-icon approuve">✅</div>
-      <div class="stat-value">{{ stats.APPROUVE }}</div>
-      <div class="stat-label">Approuvées</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon refuse">❌</div>
-      <div class="stat-value">{{ stats.REFUSE }}</div>
-      <div class="stat-label">Refusées</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon total">📊</div>
-      <div class="stat-value">{{ stats.EN_ATTENTE + stats.APPROUVE + stats.REFUSE }}</div>
-      <div class="stat-label">Total</div>
+    <div class="header-actions">
+      <button mat-raised-button class="btn-refresh" (click)="loadTaches(); loadRefusManager(); loadStats();">
+        <mat-icon>sync</mat-icon>
+        Actualiser
+      </button>
     </div>
   </div>
 
-  <mat-tab-group [(selectedIndex)]="selectedTabIndex">
-    <!-- Onglet 1 : Demandes à valider -->
-    <mat-tab label="📋 À valider ({{ taches.length }})">
-      <div class="tab-content">
-        <div *ngIf="loadingTaches" class="loading-container">
-          <mat-spinner diameter="40"></mat-spinner>
-          <p>Chargement des demandes...</p>
+  <!-- STATS DASHBOARD (cartes animées) -->
+  <div class="stats-grid">
+    <div class="stat-card pending" [style.animation-delay]="'0s'">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-info">
+        <h2>{{ stats.EN_ATTENTE }}</h2>
+        <p>En attente</p>
+      </div>
+    </div>
+    <div class="stat-card approved" [style.animation-delay]="'0.1s'">
+      <div class="stat-icon">✅</div>
+      <div class="stat-info">
+        <h2>{{ stats.APPROUVE }}</h2>
+        <p>Approuvées</p>
+      </div>
+    </div>
+    <div class="stat-card refused" [style.animation-delay]="'0.2s'">
+      <div class="stat-icon">❌</div>
+      <div class="stat-info">
+        <h2>{{ stats.REFUSE }}</h2>
+        <p>Refusées</p>
+      </div>
+    </div>
+    <div class="stat-card total" [style.animation-delay]="'0.3s'">
+      <div class="stat-icon">📊</div>
+      <div class="stat-info">
+        <h2>{{ stats.EN_ATTENTE + stats.APPROUVE + stats.REFUSE }}</h2>
+        <p>Total demandes</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONGLETS -->
+  <mat-tab-group animationDuration="0ms" class="custom-tabs">
+    <!-- TAB 1 : Demandes à valider -->
+    <mat-tab label="📋 Demandes à valider">
+      <div class="card-table">
+        <div class="table-header">
+          <h2>Demandes en attente</h2>
+          <mat-chip class="pending-chip">{{ taches.length }} en attente</mat-chip>
         </div>
 
-        <div *ngIf="!loadingTaches" class="table-container">
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>
-                <mat-icon>assignment_turned_in</mat-icon>
-                Demandes à valider
-              </mat-card-title>
-              <mat-card-subtitle>
-                Demandes de congé nécessitant votre validation
-              </mat-card-subtitle>
-            </mat-card-header>
-            <mat-card-content>
-              <div *ngIf="taches.length === 0" class="empty-state">
-                <mat-icon>check_circle</mat-icon>
-                <p>Aucune demande en attente de validation</p>
-                <span>Toutes les demandes ont été traitées</span>
-              </div>
+        <div class="table-responsive">
+          <table mat-table [dataSource]="taches" class="modern-table">
+            <!-- Colonne Employé -->
+            <ng-container matColumnDef="employe">
+              <th mat-header-cell *matHeaderCellDef> Employé </th>
+              <td mat-cell *matCellDef="let t">
+                <div class="employee-cell">
+                  <div class="avatar" [style.background]="getAvatarColor(t.employeDepartement)">
+                    {{ t.employePrenom?.charAt(0) }}{{ t.employeNom?.charAt(0) }}
+                  </div>
+                  <div class="employee-info">
+                    <strong>{{ t.employePrenom }} {{ t.employeNom }}</strong>
+                    <small>{{ t.employeEmail }}</small>
+                  </div>
+                </div>
+              </td>
+            </ng-container>
 
-              <table *ngIf="taches.length > 0" mat-table [dataSource]="taches" class="demandes-table">
-                <!-- Colonnes identiques à votre version -->
-                <ng-container matColumnDef="employe">
-                  <th mat-header-cell *matHeaderCellDef>Employé</th>
-                  <td mat-cell *matCellDef="let tache">
-                    <div class="employe-info">
-                      <strong>{{ tache.employePrenom }} {{ tache.employeNom }}</strong>
-                      <small>{{ tache.employeEmail }}</small>
-                    </div>
-                  </td>
-                </ng-container>
+            <!-- Colonne Période -->
+            <ng-container matColumnDef="periode">
+              <th mat-header-cell *matHeaderCellDef> Période </th>
+              <td mat-cell *matCellDef="let t">
+                {{ formatDate(t.dateDebut) }} → {{ formatDate(t.dateFin) }}
+              </td>
+            </ng-container>
 
-                <ng-container matColumnDef="periode">
-                  <th mat-header-cell *matHeaderCellDef>Période</th>
-                  <td mat-cell *matCellDef="let tache">
-                    <div class="periode-info">
-                      <span>{{ formatDate(tache.dateDebut) }}</span>
-                      <span>→</span>
-                      <span>{{ formatDate(tache.dateFin) }}</span>
-                    </div>
-                   </td>
-                </ng-container>
+            <!-- Colonne Jours -->
+            <ng-container matColumnDef="jours">
+              <th mat-header-cell *matHeaderCellDef> Jours </th>
+              <td mat-cell *matCellDef="let t">
+                <mat-chip class="days-chip" [style.background]="getTypeColor(t.type)">
+                  {{ t.nbJours }} jours
+                </mat-chip>
+              </td>
+            </ng-container>
 
-                <ng-container matColumnDef="jours">
-                  <th mat-header-cell *matHeaderCellDef>Jours</th>
-                  <td mat-cell *matCellDef="let tache">
-                    <mat-chip [style.background]="getTypeColor(tache.type)" [style.color]="'white'">
-                      {{ tache.nbJours }} jours
-                    </mat-chip>
-                   </td>
-                </ng-container>
+            <!-- Colonne Type -->
+            <ng-container matColumnDef="type">
+              <th mat-header-cell *matHeaderCellDef> Type </th>
+              <td mat-cell *matCellDef="let t">
+                <span class="type-label">{{ getTypeLabel(t.type) }}</span>
+              </td>
+            </ng-container>
 
-                <ng-container matColumnDef="type">
-                  <th mat-header-cell *matHeaderCellDef>Type</th>
-                  <td mat-cell *matCellDef="let tache">
-                    <mat-chip [style.background]="getTypeColor(tache.type)" [style.color]="'white'">
-                      {{ getTypeLabel(tache.type) }}
-                    </mat-chip>
-                   </td>
-                </ng-container>
+            <!-- Colonne Actions -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef> Actions </th>
+              <td mat-cell *matCellDef="let t">
+                <div class="actions-group">
+                  <button mat-icon-button class="action-view" (click)="openDetails(t)" matTooltip="Voir détails">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-icon-button class="action-approve" (click)="openApproveModal(t)" matTooltip="Approuver">
+                    <mat-icon>check_circle</mat-icon>
+                  </button>
+                  <button mat-icon-button class="action-reject" (click)="openRejectModal(t)" matTooltip="Refuser">
+                    <mat-icon>cancel</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </ng-container>
 
-                <ng-container matColumnDef="statut">
-                  <th mat-header-cell *matHeaderCellDef>Statut</th>
-                  <td mat-cell *matCellDef="let tache">
-                    <span class="statut-badge statut-attente">⏳ En attente</span>
-                   </td>
-                </ng-container>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+        </div>
 
-                <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef>Actions</th>
-                  <td mat-cell *matCellDef="let tache">
-                    <div class="action-buttons">
-                      <button mat-raised-button color="primary" (click)="openApproveModal(tache)" matTooltip="Approuver">
-                        <mat-icon>check_circle</mat-icon> Approuver
-                      </button>
-                      <button mat-raised-button color="warn" (click)="openRejectModal(tache)" matTooltip="Refuser">
-                        <mat-icon>cancel</mat-icon> Refuser
-                      </button>
-                    </div>
-                   </td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-              </table>
-            </mat-card-content>
-          </mat-card>
+        <!-- État vide -->
+        <div *ngIf="taches.length === 0 && !loadingTaches" class="empty-state">
+          <mat-icon>check_circle_outline</mat-icon>
+          <p>Aucune demande en attente</p>
+        </div>
+        <div *ngIf="loadingTaches" class="loading-spinner">
+          <mat-spinner diameter="40"></mat-spinner>
         </div>
       </div>
     </mat-tab>
 
-    <!-- Onglet 2 : Refus manager -->
-    <mat-tab label="❌ Refus manager ({{ refusManager.length }})">
-      <div class="tab-content">
-        <div *ngIf="loadingRefus" class="loading-container">
-          <mat-spinner diameter="40"></mat-spinner>
-          <p>Chargement des refus...</p>
+    <!-- TAB 2 : Calendrier -->
+    <mat-tab label="📅 Calendrier">
+      <div class="calendar-layout">
+        <div class="calendar-sidebar">
+          <h3>Légende</h3>
+          <div class="legend-item"><span class="legend-color approved"></span> Approuvé</div>
+          <div class="legend-item"><span class="legend-color pending"></span> En attente</div>
+          <div class="legend-item"><span class="legend-color refused"></span> Refusé</div>
+          <div class="legend-item"><span class="legend-color other"></span> Autre</div>
         </div>
+        <div class="calendar-container">
+          <full-calendar [options]="calendarOptions"></full-calendar>
+        </div>
+      </div>
+    </mat-tab>
 
-        <div *ngIf="!loadingRefus" class="table-container">
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>
-                <mat-icon>block</mat-icon>
-                Demandes refusées par les managers
-              </mat-card-title>
-              <mat-card-subtitle>
-                Historique des demandes refusées au niveau manager
-              </mat-card-subtitle>
-            </mat-card-header>
-            <mat-card-content>
-              <div *ngIf="refusManager.length === 0" class="empty-state">
-                <mat-icon>info</mat-icon>
-                <p>Aucun refus manager enregistré</p>
+    <!-- TAB 3 : Refus manager -->
+    <mat-tab label="⚠️ Refus manager">
+      <div class="refus-grid">
+      <div class="refus-card" *ngFor="let r of refusManager; trackBy: trackByRefusId">
+          <div class="refus-header">
+            <div class="refus-user">
+              <div class="avatar-sm" [style.background]="getAvatarColor(r.employeDepartement)">
+                {{ r.employePrenom.charAt(0) }}{{ r.employeNom.charAt(0) }}
               </div>
-
-              <table *ngIf="refusManager.length > 0" mat-table [dataSource]="refusManager" class="demandes-table">
-                <ng-container matColumnDef="employe">
-                  <th mat-header-cell *matHeaderCellDef>Employé</th>
-                  <td mat-cell *matCellDef="let d">
-                    {{ d.employePrenom }} {{ d.employeNom }}
-                   </td>
-                </ng-container>
-
-                <ng-container matColumnDef="manager">
-                  <th mat-header-cell *matHeaderCellDef>Manager</th>
-                  <td mat-cell *matCellDef="let d">{{ d.managerNom }}</td>
-                </ng-container>
-
-                <ng-container matColumnDef="periode">
-                  <th mat-header-cell *matHeaderCellDef>Période</th>
-                  <td mat-cell *matCellDef="let d">
-                    {{ formatDate(d.dateDebut) }} → {{ formatDate(d.dateFin) }}
-                   </td>
-                </ng-container>
-
-                <ng-container matColumnDef="motif">
-                  <th mat-header-cell *matHeaderCellDef>Motif du refus</th>
-                  <td mat-cell *matCellDef="let d">{{ d.motifRefus || '-' }}</td>
-                </ng-container>
-
-                <ng-container matColumnDef="dateDecision">
-                  <th mat-header-cell *matHeaderCellDef>Date décision</th>
-                  <td mat-cell *matCellDef="let d">{{ formatDate(d.dateDecision) }}</td>
-                </ng-container>
-
-                <tr mat-header-row *matHeaderRowDef="displayedColumnsRefus"></tr>
-                <tr mat-row *matRowDef="let row; columns: displayedColumnsRefus;"></tr>
-              </table>
-            </mat-card-content>
-          </mat-card>
+              <strong>{{ r.employePrenom }} {{ r.employeNom }}</strong>
+            </div>
+            <span class="badge-refused">Refusé par manager</span>
+          </div>
+          <div class="refus-body">
+            <p><mat-icon>person</mat-icon> Manager : {{ r.managerNom }}</p>
+            <p><mat-icon>date_range</mat-icon> {{ formatDate(r.dateDebut) }} → {{ formatDate(r.dateFin) }}</p>
+            <p class="motif"><mat-icon>comment</mat-icon> Motif : {{ r.motifRefus }}</p>
+          </div>
+          <div class="refus-actions">
+            <button mat-stroked-button color="primary" (click)="openDetails(r)" class="btn-details">
+              Voir détails
+            </button>
+          </div>
+        </div>
+        <div *ngIf="refusManager.length === 0 && !loadingRefus" class="empty-state">
+          <mat-icon>check_circle_outline</mat-icon>
+          <p>Aucun refus manager</p>
         </div>
       </div>
     </mat-tab>
   </mat-tab-group>
+</div>
 
-  <!-- Modals (inchangées) -->
-  <div class="modal-overlay" *ngIf="showApproveModal" (click)="closeModals()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>Approuver la demande</h2>
-        <button class="close-btn" (click)="closeModals()">✕</button>
-      </div>
-      <div class="modal-body" *ngIf="selectedTache">
-        <div class="demande-details">
-          <p><strong>Employé :</strong> {{ selectedTache.employePrenom }} {{ selectedTache.employeNom }}</p>
-          <p><strong>Période :</strong> {{ formatDate(selectedTache.dateDebut) }} → {{ formatDate(selectedTache.dateFin) }}</p>
-          <p><strong>Jours :</strong> {{ selectedTache.nbJours }} jours</p>
-          <p><strong>Type :</strong> {{ getTypeLabel(selectedTache.type) }}</p>
-          <p *ngIf="selectedTache.commentaire"><strong>Commentaire :</strong> {{ selectedTache.commentaire }}</p>
-        </div>
-        <div class="form-group">
-          <label>Commentaire (optionnel)</label>
-          <textarea [(ngModel)]="commentaire" placeholder="Ajouter un commentaire..." rows="3"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" (click)="closeModals()">Annuler</button>
-        <button class="btn-primary" [disabled]="isSubmitting" (click)="confirmApprove()">
-          <span *ngIf="!isSubmitting">✅ Confirmer l'approbation</span>
-          <span *ngIf="isSubmitting">Traitement...</span>
-        </button>
-      </div>
+<!-- MODAL DÉTAILS -->
+<div class="modal-overlay" *ngIf="showDetailsModal" (click)="closeDetails()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Détails de la demande</h2>
+      <button class="close-btn" (click)="closeDetails()">✕</button>
+    </div>
+    <div class="modal-body" *ngIf="selectedDetails">
+      <p><strong>Employé :</strong> {{ selectedDetails.employePrenom }} {{ selectedDetails.employeNom }}</p>
+      <p><strong>Email :</strong> {{ selectedDetails.employeEmail }}</p>
+      <p><strong>Type :</strong> {{ getTypeLabel(selectedDetails.type) }}</p>
+      <p><strong>Période :</strong> {{ formatDate(selectedDetails.dateDebut) }} → {{ formatDate(selectedDetails.dateFin) }}</p>
+      <p><strong>Nombre de jours :</strong> {{ selectedDetails.nbJours }}</p>
+      <p><strong>Statut :</strong> {{ getStatutLabel(selectedDetails.statut) }}</p>
+    </div>
+    <div class="modal-footer">
+      <button mat-raised-button (click)="closeDetails()">Fermer</button>
     </div>
   </div>
+</div>
 
-  <div class="modal-overlay" *ngIf="showRejectModal" (click)="closeModals()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>Refuser la demande</h2>
-        <button class="close-btn" (click)="closeModals()">✕</button>
-      </div>
-      <div class="modal-body" *ngIf="selectedTache">
-        <div class="demande-details">
-          <p><strong>Employé :</strong> {{ selectedTache.employePrenom }} {{ selectedTache.employeNom }}</p>
-          <p><strong>Période :</strong> {{ formatDate(selectedTache.dateDebut) }} → {{ formatDate(selectedTache.dateFin) }}</p>
-          <p><strong>Jours :</strong> {{ selectedTache.nbJours }} jours</p>
-        </div>
-        <div class="form-group">
-          <label>Motif de refus <span class="required">*</span></label>
-          <textarea [(ngModel)]="motifRefus" placeholder="Expliquez le motif du refus..." rows="3" required></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-secondary" (click)="closeModals()">Annuler</button>
-        <button class="btn-danger" [disabled]="isSubmitting" (click)="confirmReject()">
-          <span *ngIf="!isSubmitting">❌ Confirmer le refus</span>
-          <span *ngIf="isSubmitting">Traitement...</span>
-        </button>
-      </div>
+<!-- MODAL APPROUVER -->
+<div class="modal-overlay" *ngIf="showApproveModal" (click)="closeModals()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>✅ Approuver la demande</h2>
+      <button class="close-btn" (click)="closeModals()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Confirmez-vous l'approbation de la demande de congé pour <strong>{{ selectedTache?.employePrenom }} {{ selectedTache?.employeNom }}</strong> ?</p>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Commentaire (optionnel)</mat-label>
+        <textarea matInput [(ngModel)]="commentaire" rows="3"></textarea>
+      </mat-form-field>
+    </div>
+    <div class="modal-footer">
+      <button mat-button (click)="closeModals()">Annuler</button>
+      <button mat-raised-button color="primary" [disabled]="isSubmitting" (click)="confirmApprove()">
+        <mat-icon *ngIf="isSubmitting">hourglass_empty</mat-icon>
+        <span *ngIf="!isSubmitting">Approuver</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REFUSER -->
+<div class="modal-overlay" *ngIf="showRejectModal" (click)="closeModals()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>❌ Refuser la demande</h2>
+      <button class="close-btn" (click)="closeModals()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>Confirmez-vous le refus de la demande de congé pour <strong>{{ selectedTache?.employePrenom }} {{ selectedTache?.employeNom }}</strong> ?</p>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Motif du refus *</mat-label>
+        <textarea matInput [(ngModel)]="motifRefus" rows="3" required></textarea>
+      </mat-form-field>
+    </div>
+    <div class="modal-footer">
+      <button mat-button (click)="closeModals()">Annuler</button>
+      <button mat-raised-button color="warn" [disabled]="isSubmitting" (click)="confirmReject()">
+        <mat-icon *ngIf="isSubmitting">hourglass_empty</mat-icon>
+        <span *ngIf="!isSubmitting">Refuser</span>
+      </button>
     </div>
   </div>
 </div>

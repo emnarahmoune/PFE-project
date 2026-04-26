@@ -5,6 +5,20 @@
     </a>
     <h2>📅 Historique des congés</h2>
     <p *ngIf="employeNom">pour <strong>{{ employeNom }}</strong></p>
+
+    <!-- Badges indicateurs (ajout) -->
+    <div class="indicateurs-mini" *ngIf="!loading">
+      <div class="indicator" [class]="getAbsenteismeClass(absenteisme)">
+        <span class="icon">📉</span>
+        <span class="value">{{ absenteisme != null ? (absenteisme | number:'1.1-1') : '?' }}%</span>
+        <span class="label">Absentéisme</span>
+      </div>
+      <div class="indicator" [class]="getScoreClass(scoreTurnover)">
+        <span class="icon">⚠️</span>
+        <span class="value">{{ scoreTurnover ?? '?' }}</span>
+        <span class="label">Risque turnover</span>
+      </div>
+    </div>
   </div>
 
   <div class="loader" *ngIf="loading">

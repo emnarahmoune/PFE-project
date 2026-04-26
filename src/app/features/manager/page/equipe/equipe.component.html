@@ -1,6 +1,50 @@
-<h2>👥 Mon équipe</h2>
+<!-- src/app/features/manager/pages/equipe/equipe.component.html -->
+<div class="equipe-container">
+  <div class="page-header">
+    <h2>👥 Mon équipe</h2>
+    <p class="subtitle">{{ employes.length }} collaborateur(s)</p>
+  </div>
 
-<div class="card" *ngFor="let emp of employes">
-  <h3>{{ emp.nom }}</h3>
-  <p>{{ emp.poste }}</p>
+  <!-- Loader -->
+  <div *ngIf="loading" class="loader">
+    <div class="spinner"></div>
+    <p>Chargement de l'équipe...</p>
+  </div>
+
+  <!-- Grille des cartes -->
+  <div *ngIf="!loading" class="cards-grid">
+    <div *ngFor="let emp of employes" class="employe-card" [routerLink]="['/manager/employe', emp.id]">
+      <div class="card-header">
+        <div class="avatar">{{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}</div>
+        <div class="status-badge" [class]="emp.statut.toLowerCase()">{{ emp.statut }}</div>
+      </div>
+      <h3>{{ emp.prenom }} {{ emp.nom }}</h3>
+      <p class="poste">{{ emp.poste }}</p>
+
+      <!-- Indicateurs -->
+      <div class="indicators">
+        <div class="indicator" [class]="getAbsenteismeClass(emp.absenteisme)">
+          <span class="icon">📉</span>
+          <span class="value">{{ emp.absenteisme != null ? (emp.absenteisme | number:'1.1-1') : '?' }}%</span>
+          <span class="label">Absentéisme</span>
+        </div>
+        <div class="indicator" [class]="getScoreClass(emp.scoreTurnover)">
+          <span class="icon">⚠️</span>
+          <span class="value">{{ emp.scoreTurnover ?? '?' }}</span>
+          <span class="label">Risque turnover</span>
+        </div>
+      </div>
+
+      <div class="footer">
+        <span class="dept">{{ emp.departement || 'Sans département' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message si aucun employé -->
+  <div *ngIf="!loading && employes.length === 0" class="empty-state">
+    <div class="empty-icon">👥</div>
+    <h3>Aucun membre dans votre équipe</h3>
+    <p>Les employés vous seront assignés par l'administrateur RH.</p>
+  </div>
 </div>

@@ -1,4 +1,3 @@
-// src/app/features/admin/gestion-conges/pages/validation-rh/validation-rh.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,7 +13,11 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { AdminCongeService, TacheRh, StatsConges, DemandeRefusManager } from '../../../../../core/services/admin-conge.service';
+import { FullCalendarModule } from '@fullcalendar/angular';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import interactionPlugin from '@fullcalendar/interaction';
 
 @Component({
   selector: 'app-validation-rh',
@@ -24,18 +27,17 @@ import { AdminCongeService, TacheRh, StatsConges, DemandeRefusManager } from '..
     MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatChipsModule, MatSnackBarModule,
     MatProgressSpinnerModule, MatDialogModule,
-    MatTooltipModule, MatTabsModule, MatBadgeModule
+    MatTooltipModule, MatTabsModule, MatBadgeModule,
+    FullCalendarModule,
+    MatFormFieldModule
   ],
   templateUrl: './validation-rh.component.html',
   styleUrls: ['./validation-rh.component.scss']
 })
 export class ValidationRhComponent implements OnInit, OnDestroy {
   
-  // Onglet 1 : demandes à valider
   taches: TacheRh[] = [];
   loadingTaches = false;
-  
-  // Onglet 2 : refus manager
   refusManager: DemandeRefusManager[] = [];
   loadingRefus = false;
   
@@ -58,8 +60,28 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
   private refreshInterval: any;
   private readonly REFRESH_INTERVAL_MS = 15000;
 
-  displayedColumns = ['employe', 'periode', 'jours', 'type', 'statut', 'actions'];
+  // Colonnes du tableau (sans "statut", car non utilisé dans le template)
+  displayedColumns = ['employe', 'periode', 'jours', 'type', 'actions'];
   displayedColumnsRefus = ['employe', 'manager', 'periode', 'motif', 'dateDecision'];
+
+  // Configuration FullCalendar (corrigée)
+  calendarOptions: any = {
+    initialView: 'dayGridMonth',
+    locale: 'fr',
+    plugins: [dayGridPlugin, interactionPlugin],
+    events: [],
+    height: 'auto',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,dayGridWeek'
+    },
+    buttonText: {
+      today: 'Aujourd\'hui',
+      month: 'Mois',
+      week: 'Semaine'
+    }
+  };
 
   constructor(
     private adminCongeService: AdminCongeService,
@@ -72,6 +94,7 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     this.loadRefusManager();
     this.loadStats();
     this.startAutoRefresh();
+    this.loadCalendarEvents();
   }
 
   ngOnDestroy(): void {
@@ -83,6 +106,7 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
       this.loadTaches(false);
       this.loadRefusManager();
       this.loadStats();
+      this.loadCalendarEvents();
     }, this.REFRESH_INTERVAL_MS);
   }
 
@@ -124,6 +148,15 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     });
   }
 
+  loadCalendarEvents(): void {
+    // À implémenter : charger les événements depuis le service
+    // L'API doit retourner des objets avec title, start, end, color, etc.
+    // Exemple :
+    // this.adminCongeService.getAllConges().subscribe(events => {
+    //   this.calendarOptions = { ...this.calendarOptions, events };
+    // });
+  }
+
   openApproveModal(tache: TacheRh): void {
     this.selectedTache = tache;
     this.commentaire = '';
@@ -155,6 +188,7 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
         this.loadTaches();
         this.loadRefusManager();
         this.loadStats();
+        this.loadCalendarEvents();
       },
       error: (error) => {
         this.isSubmitting = false;
@@ -179,6 +213,7 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
         this.loadTaches();
         this.loadRefusManager();
         this.loadStats();
+        this.loadCalendarEvents();
       },
       error: (error) => {
         this.isSubmitting = false;
@@ -236,6 +271,19 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     return date.toLocaleDateString('fr-FR');
   }
 
+  getAvatarColor(dept?: string): string {
+    const colors: Record<string, string> = {
+      RH: '#8b5cf6',
+      Technique: '#0891b2',
+      Commercial: '#d97706',
+      Finance: '#059669',
+      Marketing: '#db2777',
+      Direction: '#7c3aed',
+      Logistique: '#4f46e5'
+    };
+    return colors[dept || ''] || '#6366f1';
+  }
+
   private showToast(message: string, type: 'success' | 'error'): void {
     this.snackBar.open(message, 'Fermer', {
       duration: 4000,
@@ -245,7 +293,26 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     });
   }
 
-  trackByTaskId(index: number, item: TacheRh): string {
-    return item.taskId;
+  // Détails modal
+  selectedDetails: any = null;
+  showDetailsModal = false;
+
+  openDetails(tache: any) {
+    this.selectedDetails = tache;
+    this.showDetailsModal = true;
+  }
+
+  closeDetails() {
+    this.showDetailsModal = false;
+    this.selectedDetails = null;
+  }
+
+  // TrackBy pour optimisation
+  trackByTaskId(index: number, item: TacheRh): number {
+    return item.demandeId ?? index;
+  }
+
+  trackByRefusId(index: number, item: DemandeRefusManager): number {
+    return item.demandeId ?? index;
   }
 }

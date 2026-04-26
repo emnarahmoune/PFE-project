@@ -59,6 +59,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/gestion-conges/pages/validation-rh/validation-rh.component')
           .then(m => m.ValidationRhComponent)
       },
+         {
+  path: 'scores',
+  loadComponent: () => import('./features/admin/scores/admin-scores.component')
+    .then(m => m.AdminScoresComponent)
+},
       // Assignation des managers
       {
         path: 'manager-assignment',

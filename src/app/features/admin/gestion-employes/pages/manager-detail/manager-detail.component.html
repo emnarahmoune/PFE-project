@@ -1,46 +1,68 @@
-<!-- src/app/features/admin/pages/manager-detail/manager-detail.component.html -->
-<div class="manager-detail-container">
-  <!-- En-tête avec bouton retour -->
-  <div class="detail-header" *ngIf="manager">
-    <button class="back-button" routerLink="/admin/managers">
-      ← Retour à la liste des managers
-    </button>
-    <div class="manager-title">
-      <h1>{{ manager.prenom }} {{ manager.nom }}</h1>
-      <p class="manager-meta">{{ manager.poste }} · {{ manager.departement }}</p>
-    </div>
-  </div>
-
-  <!-- État de chargement -->
-  <div class="loading-state" *ngIf="loading">
-    <div class="spinner"></div>
-    <span>Chargement des informations...</span>
-  </div>
-
-  <!-- Section équipe -->
-  <div class="equipe-section" *ngIf="!loading && equipe.length > 0">
-    <div class="section-header">
-      <h2>👥 Équipe ({{ equipe.length }})</h2>
-    </div>
-    <div class="employe-grid">
-      <div class="employe-card" *ngFor="let emp of equipe">
-        <div class="employe-avatar" [style.backgroundColor]="getAvatarColor(emp.departement ?? '')">
-          {{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}
+<div class="manager-detail-modern">
+  <div class="hero-banner" *ngIf="manager">
+    <div class="banner-overlay"></div>
+    <div class="banner-content">
+      <button class="back-btn" routerLink="/admin/managers">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Retour
+      </button>
+      <div class="manager-head">
+        <div class="manager-avatar-large" [style.background]="getAvatarColor(manager.departement ?? '')">
+          {{ (manager.prenom?.charAt(0) ?? '') + (manager.nom?.charAt(0) ?? '') }}
         </div>
-        <div class="employe-info">
-          <div class="employe-name">{{ emp.prenom }} {{ emp.nom }}</div>
-          <div class="employe-details">{{ emp.poste }} · {{ emp.matricule }}</div>
+        <div class="manager-head-info">
+          <h1>{{ manager.prenom }} {{ manager.nom }}</h1>
+          <div class="meta">
+            <span class="poste">{{ manager.poste }}</span>
+            <span class="dept" [style.background]="getAvatarColor(manager.departement ?? '') + '20'" [style.color]="getAvatarColor(manager.departement ?? '')">
+              {{ manager.departement }}
+            </span>
+          </div>
         </div>
-        <button class="btn-historique" (click)="voirHistorique(emp)">
-          📅 Congés
-        </button>
       </div>
     </div>
   </div>
 
-  <!-- Message si équipe vide -->
-  <div class="empty-state" *ngIf="!loading && equipe.length === 0">
-    <div class="empty-icon">👥</div>
-    <p>Aucun employé n'est rattaché à ce manager.</p>
+  <div class="content-wrapper">
+    <div class="loading-modern" *ngIf="loading">
+      <div class="loader"></div>
+      <p>Chargement de l'équipe...</p>
+    </div>
+
+    <div class="equipe-modern" *ngIf="!loading && equipe.length > 0">
+      <div class="section-title">
+        <span class="icon">👥</span>
+        <h2>Équipe</h2>
+        <span class="count">{{ equipe.length }} membre{{ equipe.length > 1 ? 's' : '' }}</span>
+      </div>
+      <div class="employe-grid-modern">
+        <div class="employe-card-modern" *ngFor="let emp of equipe">
+          <div class="card-inner">
+            <div class="employe-avatar" [style.background]="getAvatarColor(emp.departement ?? '')">
+              {{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}
+            </div>
+            <div class="employe-info">
+              <div class="name">{{ emp.prenom }} {{ emp.nom }}</div>
+              <div class="details">{{ emp.poste }} • {{ emp.matricule }}</div>
+            </div>
+            <button class="conges-btn" (click)="voirHistorique(emp)">
+              📅 Congés
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-modern" *ngIf="!loading && equipe.length === 0">
+      <div class="empty-illustration">
+        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+          <path d="M12 4v16M8 8h8M8 16h8M4 8h16M4 16h16" stroke="#cbd5e1"/>
+        </svg>
+      </div>
+      <h3>Aucun membre dans l'équipe</h3>
+      <p>Ce manager n'a pas encore d'employés rattachés.</p>
+    </div>
   </div>
 </div>

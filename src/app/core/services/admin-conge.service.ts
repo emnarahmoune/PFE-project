@@ -14,6 +14,8 @@ interface ApiResponse<T> {
 }
 
 export interface TacheRh {
+statut: string;
+nombreJours: any;
   taskId: string;
   taskName: string;
   createTime: string;
@@ -38,6 +40,9 @@ export interface StatsConges {
   [key: string]: number;
 }
 export interface DemandeRefusManager {
+  demandeId: number;
+employeDepartement: string|undefined;
+motif: any;
   id: number;
   dateDebut: string;
   dateFin: string;

@@ -4,7 +4,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Employe } from '../../features/admin/gestion-employes/models/employe.model';
-import { DemandeConge,SoldeConges} from '../../features/employee/models/conge.model';
+import { DemandeConge, SoldeConges } from '../../features/employee/models/conge.model';
+import { ScoreTurnover } from '../../features/admin/scores/models/score-turnover.model';
 
 export interface ManagerStats {
   employes?: number;
@@ -27,7 +28,6 @@ export interface Manager {
   departement?: string;
 }
 
-// ✅ Interface pour les tâches du manager (identique à Task dans workflow.service)
 export interface TacheManager {
   taskId: string;
   taskName: string;
@@ -74,29 +74,29 @@ export class ManagerService {
     return this.getAllManagers();
   }
 
-  // ✅ Récupère les tâches du manager (demandes en attente)
   getTachesManager(): Observable<{ success: boolean; data: TacheManager[] }> {
     return this.http.get<{ success: boolean; data: TacheManager[] }>(`${this.managerApiUrl}/conges`);
   }
 
-  // ✅ Approbation d'une demande
   approuverDemande(taskId: string, commentaire?: string): Observable<{ success: boolean; message: string }> {
     return this.http.post<{ success: boolean; message: string }>(
       `${this.managerApiUrl}/approuver-demande`,
       { taskId, commentaire }
     );
   }
-    getEmployeSoldeConges(employeId: number): Observable<{ success: boolean; data: SoldeConges }> {
+
+  getEmployeSoldeConges(employeId: number): Observable<{ success: boolean; data: SoldeConges }> {
     return this.http.get<{ success: boolean; data: SoldeConges }>(
       `${environment.apiUrl}/employes/${employeId}/solde-conges`
     );
   }
-   getEmployeHistoriqueConges(employeId: number): Observable<{ success: boolean; data: DemandeConge[] }> {
+
+  getEmployeHistoriqueConges(employeId: number): Observable<{ success: boolean; data: DemandeConge[] }> {
     return this.http.get<{ success: boolean; data: DemandeConge[] }>(
       `${environment.apiUrl}/conges/employe/${employeId}/historique`
-    );}
+    );
+  }
 
-  // ✅ Refus d'une demande
   refuserDemande(taskId: string, motif: string): Observable<{ success: boolean; message: string }> {
     return this.http.post<{ success: boolean; message: string }>(
       `${this.managerApiUrl}/refuser-demande`,
@@ -104,13 +104,35 @@ export class ManagerService {
     );
   }
 
-  // ✅ Statistiques pour le manager
   getStats(): Observable<{ success: boolean; data: ManagerStats }> {
     return this.http.get<{ success: boolean; data: ManagerStats }>(`${this.managerApiUrl}/stats`);
   }
 
-  // ✅ Récupère toutes les demandes de congé (manager)
   getConges(): Observable<{ success: boolean; data: DemandeConge[] }> {
     return this.http.get<{ success: boolean; data: DemandeConge[] }>(`${this.managerApiUrl}/conges`);
+  }
+
+   getDernierScoreTurnover(employeId: number): Observable<{ success: boolean; data: { score: number; niveauRisque: string } }> {
+    return this.http.get<{ success: boolean; data: any }>(
+      `${environment.apiUrl}/scores-turnover/employe/${employeId}/dernier`
+    );
+  }
+   getDerniersScores(): Observable<{ success: boolean; data: ScoreTurnover[] }> {
+    return this.http.get<{ success: boolean; data: ScoreTurnover[] }>(
+      `${environment.apiUrl}/scores-turnover/derniers`
+    );
+  }
+
+    recalculerScoreTurnover(employeId: number): Observable<any> {
+    return this.http.post(
+      `${environment.apiUrl}/scores-turnover/calculer/employe/${employeId}?systemeBIId=1`,
+      {}
+    );
+  }
+
+ getDernierAbsenteisme(employeId: number): Observable<{ success: boolean; data: { valeur: number; dateCalcul: string } }> {
+    return this.http.get<{ success: boolean; data: any }>(
+      `${environment.apiUrl}/indicateurs/type/ABSENTEISME?employeId=${employeId}`
+    );
   }
 }

@@ -1,6 +1,8 @@
+// src/app/features/manager/pages/employe-conges/employe-conges.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { ManagerService } from '../../../../core/services/manager.service';
 import { DemandeConge } from '../../../employee/models/conge.model';
 
@@ -18,6 +20,10 @@ export class EmployeCongesComponent implements OnInit {
   employeNom = '';
   employeId!: number;
 
+  absenteisme: number | null = null;
+  scoreTurnover: number | null = null;
+  scoreTurnoverNiveau: string | null = null;
+
   constructor(
     private route: ActivatedRoute,
     private managerService: ManagerService
@@ -26,7 +32,6 @@ export class EmployeCongesComponent implements OnInit {
   ngOnInit(): void {
     this.employeId = +this.route.snapshot.params['id'];
     if (this.employeId) {
-      // Charger le nom de l'employé
       this.managerService.getEmployeDetails(this.employeId).subscribe({
         next: (res) => {
           if (res.success && res.data) {
@@ -37,25 +42,61 @@ export class EmployeCongesComponent implements OnInit {
         error: () => console.error('Erreur chargement employé')
       });
 
-      // Charger les congés de l'employé
       this.managerService.getEmployeConges(this.employeId).subscribe({
         next: (res) => {
           this.loading = false;
-          if (res.success) {
-            this.conges = res.data as DemandeConge[];
-          } else {
-            this.error = true;
-          }
+          if (res.success) this.conges = res.data as DemandeConge[];
+          else this.error = true;
         },
         error: () => {
           this.loading = false;
           this.error = true;
         }
       });
+
+      forkJoin({
+        score: this.managerService.getDernierScoreTurnover(this.employeId),
+        abs: this.managerService.getDernierAbsenteisme(this.employeId)
+      }).subscribe({
+        next: (res) => {
+          // Score
+          this.scoreTurnover = res.score?.data?.score ?? null;
+          this.scoreTurnoverNiveau = res.score?.data?.niveauRisque ?? null;
+
+          // Absentéisme
+          const absData = res.abs?.data;
+          if (Array.isArray(absData) && absData.length > 0) {
+            const monAbs = absData.find((item: any) => item.employeId === this.employeId);
+            if (monAbs) {
+              this.absenteisme = monAbs.valeur ?? null;
+            } else {
+              this.absenteisme = null;
+            }
+          } else {
+            this.absenteisme = null;
+          }
+        },
+        error: (err) => console.error(err)
+      });
     } else {
       this.loading = false;
       this.error = true;
     }
+  }
+
+  getAbsenteismeClass(taux: number | null): string {
+    if (taux === null) return 'badge-neutral';
+    if (taux < 5) return 'abs-low';
+    if (taux < 10) return 'abs-medium';
+    return 'abs-high';
+  }
+
+  getScoreClass(score: number | null): string {
+    if (score === null) return 'badge-neutral';
+    if (score < 20) return 'score-low';
+    if (score < 40) return 'score-medium';
+    if (score < 70) return 'score-high';
+    return 'score-critical';
   }
 
   getStatutClass(statut: string): string {
