@@ -32,7 +32,7 @@ public class AdminCongeController {
     private final WorkflowService workflowService;
 
     @GetMapping("/a-valider")
-    @Operation(summary = "Récupère les demandes en attente avec plus de 10 jours (tâches Camunda)")
+    @Operation(summary = "Récupère les demandes en attente (tâches Camunda)")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getDemandesAValider(
             @AuthenticationPrincipal Jwt jwt) {
         log.info("GET /api/admin/conges/a-valider - Récupération des tâches RH");
@@ -42,6 +42,21 @@ public class AdminCongeController {
             return ResponseEntity.ok(ApiResponse.success(tasks, "Tâches récupérées avec succès"));
         } catch (Exception e) {
             log.error("Erreur lors de la récupération: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // ✅ NOUVEAU : récupérer les demandes refusées par les managers
+    @GetMapping("/refus-manager")
+    @Operation(summary = "Récupère les demandes refusées par les managers")
+    public ResponseEntity<ApiResponse<List<DemandeCongeAdminDTO>>> getDemandesRefuseesParManager() {
+        log.info("GET /api/admin/conges/refus-manager");
+        try {
+            List<DemandeCongeAdminDTO> demandes = adminCongeService.getDemandesRefuseesParManager();
+            return ResponseEntity.ok(ApiResponse.success(demandes, "Refus manager récupérés"));
+        } catch (Exception e) {
+            log.error("Erreur: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error(e.getMessage()));
         }

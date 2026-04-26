@@ -26,7 +26,6 @@ public class AdminCongeServiceImpl implements AdminCongeService {
 
     @Override
     public List<DemandeCongeAdminDTO> getDemandesEnAttentePlusDe10Jours() {
-        // Cette méthode peut être utilisée pour une consultation directe en base
         List<DemandeConge> demandes = demandeRepository.findByStatutAndJoursOuvresGreaterThan("EN_ATTENTE", 10);
         return demandes.stream().map(DemandeCongeAdminDTO::fromEntity).collect(Collectors.toList());
     }
@@ -104,6 +103,14 @@ public class AdminCongeServiceImpl implements AdminCongeService {
     @Override
     public List<DemandeCongeAdminDTO> getOrphanRequests() {
         return demandeRepository.findByProcessInstanceIdIsNull().stream()
+                .map(DemandeCongeAdminDTO::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    // ✅ NOUVEAU
+    @Override
+    public List<DemandeCongeAdminDTO> getDemandesRefuseesParManager() {
+        return demandeRepository.findDemandesRefuseesParManager().stream()
                 .map(DemandeCongeAdminDTO::fromEntity)
                 .collect(Collectors.toList());
     }

@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @Transactional
 @Slf4j
 public class EmployeServiceImpl implements EmployeService {
-
+    private final IndicateurRHRepository indicateurRHRepository;
     private final EmployeRepository employeRepository;
     private final ServiceRepository serviceRepository;
     private final ManagerRepository managerRepository;
@@ -37,7 +37,7 @@ public class EmployeServiceImpl implements EmployeService {
     private final FormationRepository formationRepository;
     private final EmployeMapper mapper;
     private final PasswordEncoder passwordEncoder;
-
+    private final ScoreTurnoverRepository scoreTurnoverRepository;
     // ===== MÉTHODES DE BASE =====
     @Override
     @Transactional(readOnly = true)
@@ -249,6 +249,14 @@ public class EmployeServiceImpl implements EmployeService {
     public void delete(Long id) {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé", id));
+        scoreTurnoverRepository.deleteByEmployeId(id);
+        log.debug("Scores turnover supprimés pour l'employé ID: {}", id);
+
+        // 2. Supprimer les indicateurs RH
+        indicateurRHRepository.deleteByEmployeId(id);
+        log.debug("Indicateurs RH supprimés pour l'employé ID: {}", id);
+
+        // ✅ 2. Puis supprimer l'employé
         employeRepository.delete(employe);
         log.info("Employé supprimé - ID: {}", id);
     }

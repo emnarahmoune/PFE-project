@@ -286,7 +286,9 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         if (dto.getDateDebut().isBefore(LocalDate.now()))
             throw new BusinessException("La date de début ne peut pas être dans le passé");
 
-        if ("ANNUEL".equals(dto.getType())) {
+        // ✅ Vérification du solde : ne pas bloquer si la demande est urgente
+        boolean urgente = dto.getUrgente() != null && dto.getUrgente();
+        if ("ANNUEL".equals(dto.getType()) && !urgente) {
             int joursDemandes = calculateJoursOuvres(dto.getDateDebut(), dto.getDateFin());
             int annee = LocalDate.now().getYear();
             int joursPris = demandeCongeRepository.sumJoursOuvresApprouvesAnnee(employe.getId(), annee);
@@ -321,6 +323,7 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
             workflowVariables.put("dateFin", saved.getDateFin().toString());
             workflowVariables.put("managerEmail", getManagerEmailFromEmploye(employe));
             workflowVariables.put("adminEmail", getAdminRHEmail());
+            workflowVariables.put("urgente", saved.getUrgente()); // variable pour le BPMN
 
             var processInstance = runtimeService.startProcessInstanceByKey("LeaveRequestProcess", workflowVariables);
             saved.setProcessInstanceId(processInstance.getId());
@@ -358,9 +361,6 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
                 .build();
     }
 
-// Seule la méthode modifiée est présentée ci-dessous.
-// Le reste de la classe reste identique à votre version.
-
     @Override
     public DemandeCongeDTO modifierForAuthenticatedUser(Long id, DemandeCongeDTO dto, String email) {
         Employe employe = getEmployeByEmail(email);
@@ -385,7 +385,10 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
 
         int nouveauxJours = calculateJoursOuvres(newDebut, newFin);
         String nouveauType = dto.getType() != null ? dto.getType() : demande.getType();
-        if ("ANNUEL".equals(nouveauType)) {
+        boolean urgente = dto.getUrgente() != null && dto.getUrgente();
+
+        // ✅ Vérification du solde uniquement si non urgent
+        if ("ANNUEL".equals(nouveauType) && !urgente) {
             int annee = LocalDate.now().getYear();
             int joursPris = demandeCongeRepository.sumJoursOuvresApprouvesAnnee(employe.getId(), annee);
             Integer soldeTotal = employe.getSoldeConges() != null ? employe.getSoldeConges() : 25;
@@ -406,19 +409,20 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
 
         DemandeConge saved = demandeCongeRepository.save(demande);
 
-        // Mise à jour des variables du workflow si instance existante
         if (saved.getProcessInstanceId() != null && !saved.getProcessInstanceId().isEmpty()) {
             try {
                 runtimeService.setVariable(saved.getProcessInstanceId(), "nbJours", nouveauxJours);
                 runtimeService.setVariable(saved.getProcessInstanceId(), "dateDebut", newDebut.toString());
                 runtimeService.setVariable(saved.getProcessInstanceId(), "dateFin", newFin.toString());
                 runtimeService.setVariable(saved.getProcessInstanceId(), "typeConge", nouveauType);
+                runtimeService.setVariable(saved.getProcessInstanceId(), "urgente", saved.getUrgente());
             } catch (Exception e) {
                 log.warn("Impossible de mettre à jour les variables du workflow: {}", e.getMessage());
             }
         }
         return mapper.toDto(saved);
     }
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     private void supprimerInstanceCamunda(String processInstanceId) {
         if (processInstanceId != null) {
@@ -430,20 +434,28 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         }
     }
 
-
-
     @Override
     @Transactional(readOnly = true)
-    public List<DemandeCongeDTO> getCongesByEmployeIdForManager(Long employeId, String managerEmail) {
-        Employe manager = employeRepository.findByEmail(managerEmail)
-                .orElseThrow(() -> new ResourceNotFoundException("Manager non trouvé"));
+    public List<DemandeCongeDTO> getCongesByEmployeIdForManager(Long employeId, String email) {
+        Employe utilisateur = employeRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Utilisateur non trouvé"));
+
+        if ("ADMIN_RH".equalsIgnoreCase(utilisateur.getRole())) {
+            return demandeCongeRepository.findByEmployeId(employeId).stream()
+                    .map(mapper::toDto)
+                    .collect(Collectors.toList());
+        }
+
         Employe employe = employeRepository.findById(employeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
-        if (employe.getManager() == null || !employe.getManager().getId().equals(manager.getId())) {
+
+        if (employe.getManager() == null || !employe.getManager().getId().equals(utilisateur.getId())) {
             throw new BusinessException("Cet employé n'appartient pas à votre équipe");
         }
-        List<DemandeConge> demandes = demandeCongeRepository.findByEmployeId(employeId);
-        return demandes.stream().map(mapper::toDto).collect(Collectors.toList());
+
+        return demandeCongeRepository.findByEmployeId(employeId).stream()
+                .map(mapper::toDto)
+                .collect(Collectors.toList());
     }
 
     @Override

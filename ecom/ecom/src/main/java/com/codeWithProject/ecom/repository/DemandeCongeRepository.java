@@ -48,11 +48,8 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
     // ===== STATISTIQUES =====
     @Query("SELECT COUNT(d) FROM DemandeConge d WHERE d.employe.id = :employeId AND d.statut = 'APPROUVE' AND YEAR(d.dateDebut) = :annee")
     long countCongesPrisAnnee(@Param("employeId") Long employeId, @Param("annee") int annee);
-
-    // ✅ Méthode clé : somme des jours ouvrables des demandes approuvées (au lieu du COUNT)
     @Query("SELECT COALESCE(SUM(d.joursOuvres), 0) FROM DemandeConge d WHERE d.employe.id = :employeId AND d.statut = 'APPROUVE' AND YEAR(d.dateDebut) = :annee")
     int sumJoursOuvresApprouvesAnnee(@Param("employeId") Long employeId, @Param("annee") int annee);
-
     @Query("SELECT d.employe.id, COUNT(d) FROM DemandeConge d GROUP BY d.employe.id ORDER BY COUNT(d) DESC")
     List<Object[]> countDemandesByEmploye();
     @Query("SELECT d.type, COUNT(d) FROM DemandeConge d GROUP BY d.type")
@@ -75,11 +72,32 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
     List<DemandeConge> findDemandesEnAttentePlusDe10Jours();
     @Query("SELECT d FROM DemandeConge d WHERE d.statut = 'EN_ATTENTE' AND d.joursOuvres <= 10 ORDER BY d.dateDemande ASC")
     List<DemandeConge> findDemandesEnAttenteMoinsDe10Jours();
-
-
-
-
     @Query("SELECT d.currentTaskId FROM DemandeConge d WHERE d.processInstanceId = :processInstanceId")
     Optional<String> findCurrentTaskIdByProcessInstanceId(@Param("processInstanceId") String processInstanceId);
     List<DemandeConge> findByStatutAndJoursOuvresGreaterThan(String statut, int jours);
+
+    // Dans DemandeCongeRepository.java
+    @Query("SELECT COALESCE(SUM(d.joursOuvres), 0) FROM DemandeConge d " +
+            "WHERE d.employe.id = :employeId AND d.statut = 'APPROUVE' " +
+            "AND d.type IN ('MALADIE', 'SANS_SOLDE') AND d.dateDebut BETWEEN :debut AND :fin")
+    int sumJoursAbsenceEntreDates(@Param("employeId") Long employeId,
+                                  @Param("debut") LocalDate debut,
+                                  @Param("fin") LocalDate fin);
+
+
+    // Dans DemandeCongeRepository.java
+    @Query("SELECT COALESCE(SUM(d.joursOuvres), 0) FROM DemandeConge d " +
+            "WHERE d.employe.id = :employeId AND d.statut = 'APPROUVE' " +
+            "AND d.type IN ('MALADIE', 'SANS_SOLDE') AND YEAR(d.dateDebut) = :annee")
+    int sumJoursAbsence(@Param("employeId") Long employeId, @Param("annee") int annee);
+
+    // ===== NOUVELLES MÉTHODES POUR LES REFUS MANAGER =====
+    @Query("SELECT d FROM DemandeConge d WHERE d.statut = 'REFUSE' AND d.manager IS NOT NULL")
+    List<DemandeConge> findDemandesRefuseesParManager();
+
+
+
+
+    // Alternative générique
+    List<DemandeConge> findByStatutAndManagerIsNotNull(String statut);
 }

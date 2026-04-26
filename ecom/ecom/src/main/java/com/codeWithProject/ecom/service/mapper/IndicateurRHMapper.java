@@ -1,54 +1,45 @@
 package com.codeWithProject.ecom.service.mapper;
 
+import com.codeWithProject.ecom.entity.Employe;
 import com.codeWithProject.ecom.entity.IndicateurRH;
+import com.codeWithProject.ecom.entity.SystemeBI;
+import com.codeWithProject.ecom.repository.EmployeRepository;
+import com.codeWithProject.ecom.repository.SystemeBIRepository;
 import com.codeWithProject.ecom.service.dto.IndicateurRHDTO;
+import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Mapper pour l'entité IndicateurRH
- */
 @Component
+@RequiredArgsConstructor
 public class IndicateurRHMapper {
 
+    private final EmployeRepository employeRepository;
+    private final SystemeBIRepository systemeBIRepository;
+
     public IndicateurRHDTO toDto(IndicateurRH entity) {
-        if (entity == null) {
-            return null;
-        }
-
-        IndicateurRHDTO dto = new IndicateurRHDTO();
-        dto.setId(entity.getId());
-        dto.setType(entity.getType());
-        dto.setValeur(entity.getValeur());
-        dto.setDateCalcul(entity.getDateCalcul());
-        dto.setPeriode(entity.getPeriode());
-        dto.setAnnee(entity.getAnnee());
-        dto.setMois(entity.getMois());
-        dto.setTrimestre(entity.getTrimestre());
-        dto.setDepartement(entity.getDepartement());
-        dto.setCommentaire(entity.getCommentaire());
-        dto.setTendance(entity.getTendance());
-        dto.setValeurPrecedente(entity.getValeurPrecedente());
-        dto.setVariationPourcentage(entity.getVariationPourcentage());
-
-        if (entity.getSystemeBI() != null) {
-            dto.setSystemeBIId(entity.getSystemeBI().getId());
-            dto.setSystemeBIVersion(entity.getSystemeBI().getVersion());
-        }
-
-        // Métadonnées
-        dto.setDansLaNorme(entity.isDansLaNorme());
-        dto.setNiveauAlerte(entity.getNiveauAlerte());
-        dto.setDescription(entity.getDescription());
-
-        return dto;
+        if (entity == null) return null;
+        return IndicateurRHDTO.builder()
+                .id(entity.getId())
+                .type(entity.getType())
+                .valeur(entity.getValeur())
+                .dateCalcul(entity.getDateCalcul())
+                .periode(entity.getPeriode())
+                .annee(entity.getAnnee())
+                .mois(entity.getMois())
+                .trimestre(entity.getTrimestre())
+                .departement(entity.getDepartement())
+                .commentaire(entity.getCommentaire())
+                .tendance(entity.getTendance())
+                .valeurPrecedente(entity.getValeurPrecedente())
+                .employeId(entity.getEmploye() != null ? entity.getEmploye().getId() : null)
+                .systemeBIId(entity.getSystemeBI() != null ? entity.getSystemeBI().getId() : null)
+                .build();
     }
 
     public IndicateurRH toEntity(IndicateurRHDTO dto) {
-        if (dto == null) {
-            return null;
-        }
-
-        return IndicateurRH.builder()
+        if (dto == null) return null;
+        IndicateurRH.IndicateurRHBuilder builder = IndicateurRH.builder()
                 .id(dto.getId())
                 .type(dto.getType())
                 .valeur(dto.getValeur())
@@ -60,7 +51,18 @@ public class IndicateurRHMapper {
                 .departement(dto.getDepartement())
                 .commentaire(dto.getCommentaire())
                 .tendance(dto.getTendance())
-                .valeurPrecedente(dto.getValeurPrecedente())
-                .build();
+                .valeurPrecedente(dto.getValeurPrecedente());
+
+        if (dto.getEmployeId() != null) {
+            Employe employe = employeRepository.findById(dto.getEmployeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Employe", dto.getEmployeId()));
+            builder.employe(employe);
+        }
+        if (dto.getSystemeBIId() != null) {
+            SystemeBI systemeBI = systemeBIRepository.findById(dto.getSystemeBIId())
+                    .orElseThrow(() -> new ResourceNotFoundException("SystemeBI", dto.getSystemeBIId()));
+            builder.systemeBI(systemeBI);
+        }
+        return builder.build();
     }
 }

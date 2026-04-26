@@ -34,34 +34,37 @@ public class VerifierSoldeDelegate implements JavaDelegate {
         Long demandeId = execution.getVariable("demandeId") != null ?
                 Long.valueOf(execution.getVariable("demandeId").toString()) : null;
 
+        // 🔥 Récupération du flag "urgente" (depuis le formulaire de demande)
+        Boolean urgente = (Boolean) execution.getVariable("urgente");
+        if (urgente == null) urgente = false;
+
         Long employeId = Long.valueOf(employeIdStr);
         Employe employe = employeRepository.findById(employeId)
                 .orElseThrow(() -> new RuntimeException("Employé non trouvé: " + employeId));
 
-        // Solde total annuel
         Integer soldeTotal = employe.getSoldeConges() != null ? employe.getSoldeConges() : 25;
         int annee = LocalDate.now().getYear();
-
-        // Jours déjà approuvés dans l'année (congés consommés)
         int joursPris = demandeRepository.sumJoursOuvresApprouvesAnnee(employeId, annee);
         int soldeRestant = soldeTotal - joursPris;
-
         boolean soldeSuffisant = soldeRestant >= nbJours;
 
         execution.setVariable("soldeSuffisant", soldeSuffisant);
         execution.setVariable("soldeActuel", soldeRestant);
         execution.setVariable("nbJours", nbJours);
 
-        log.info("Employé ID: {}, Solde total: {}, Pris: {}, Restant: {}, Demandé: {}, Suffisant: {}",
-                employeId, soldeTotal, joursPris, soldeRestant, nbJours, soldeSuffisant);
+        log.info("Employé ID: {}, Solde total: {}, Pris: {}, Restant: {}, Demandé: {}, Suffisant: {}, Urgente: {}",
+                employeId, soldeTotal, joursPris, soldeRestant, nbJours, soldeSuffisant, urgente);
 
-        if (!soldeSuffisant && demandeId != null) {
+        // ❌ Refus automatique uniquement si solde insuffisant ET demande non urgente
+        if (!soldeSuffisant && demandeId != null && !urgente) {
             String motif = String.format("Solde de congés insuffisant (solde restant: %d jours, demandé: %d jours)",
                     soldeRestant, nbJours);
             refuserDemandeEtNotifier(demandeId, motif, employeId);
         }
+        // ✅ Si urgent + solde insuffisant : on ne fait rien, la demande reste en attente
+        //    La passerelle BPMN enverra la demande vers la tâche du manager (Flow_Urgence)
 
-        log.info("✅ Solde vérifié, poursuite du workflow");
+        log.info("✅ Vérification du solde terminée");
     }
 
     @Transactional
@@ -71,7 +74,7 @@ public class VerifierSoldeDelegate implements JavaDelegate {
             demande.setStatut("REFUSE");
             demande.setMotifRefus(motif);
             demandeRepository.save(demande);
-            log.info("❌ Demande {} refusée - Solde insuffisant", demandeId);
+            log.info("❌ Demande {} refusée automatiquement - Solde insuffisant", demandeId);
         }
 
         String message = String.format("❌ Votre demande de congé a été refusée automatiquement. Motif : %s", motif);

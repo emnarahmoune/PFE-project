@@ -84,6 +84,12 @@ public class EmployeController {
         return ResponseEntity.ok(ApiResponse.success(employeService.findByManagerId(managerId), "Employés du manager"));
     }
 
+    // ✅ Alias pour obtenir l'équipe d'un manager (utilisé par le front-end)
+    @GetMapping("/manager/{managerId}/equipe")
+    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEquipeByManager(@PathVariable Long managerId) {
+        return ResponseEntity.ok(ApiResponse.success(employeService.findByManagerId(managerId), "Équipe récupérée"));
+    }
+
     @GetMapping("/service/{serviceId}")
     public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesByService(@PathVariable Long serviceId) {
         return ResponseEntity.ok(ApiResponse.success(employeService.findByServiceId(serviceId), "Employés du service"));
@@ -220,9 +226,9 @@ public class EmployeController {
         return ResponseEntity.ok(ApiResponse.success(employeService.changeEmailByEmail(userDetails.getUsername(), newEmail), "Email changé"));
     }
 
-    // ===== NOUVEAUX ENDPOINTS POUR MANAGER =====
+    // ===== MÉTHODES POUR MANAGER ET ADMIN =====
     @GetMapping("/managers")
-    @Operation(summary = "Liste tous les managers (admin uniquement)")
+    @Operation(summary = "Liste tous les managers (admin)")
     public ResponseEntity<ApiResponse<List<EmployeDTO>>> getAllManagers() {
         return ResponseEntity.ok(ApiResponse.success(employeService.findAllManagers(), "Managers récupérés"));
     }

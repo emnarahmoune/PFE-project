@@ -67,7 +67,6 @@ public class DemandeCongeController {
         }
     }
 
-    // ✅ ENDPOINT DE MODIFICATION (AJOUTÉ)
     @PutMapping("/{id}")
     @Operation(summary = "Modifie une demande de congé existante (seulement si en attente)")
     public ResponseEntity<ApiResponse<DemandeCongeDTO>> modifierDemande(
@@ -175,7 +174,6 @@ public class DemandeCongeController {
         }
     }
 
-    // Endpoint alternatif pour la compatibilité avec le frontend
     @PutMapping("/annuler/{id}")
     @Operation(summary = "Annule une demande de congé (endpoint alternatif)")
     public ResponseEntity<ApiResponse<DemandeCongeDTO>> annulerDemandeAlternatif(
@@ -315,10 +313,11 @@ public class DemandeCongeController {
         Map<String, Long> stats = demandeCongeService.countByStatut();
         return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques par statut récupérées"));
     }
-    // ===== NOUVEAU : Récupérer les congés d'un employé (pour manager) =====
+
+    // ===== NOUVEAU : Récupérer les congés d'un employé (pour manager ou admin RH) =====
     @GetMapping("/employe/{employeId}")
-    @Operation(summary = "Récupère les congés d'un employé (réservé au manager de cet employé)")
-    @PreAuthorize("hasRole('manager')")
+    @Operation(summary = "Récupère les congés d'un employé (réservé au manager de cet employé ou admin RH)")
+    @PreAuthorize("hasRole('manager') or hasRole('ADMIN_RH')")
     public ResponseEntity<ApiResponse<List<DemandeCongeDTO>>> getCongesByEmployeForManager(
             @PathVariable Long employeId,
             @AuthenticationPrincipal Jwt jwt) {

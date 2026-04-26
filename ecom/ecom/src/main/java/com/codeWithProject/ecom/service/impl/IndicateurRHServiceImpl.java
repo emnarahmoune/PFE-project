@@ -4,6 +4,7 @@ import com.codeWithProject.ecom.entity.IndicateurRH;
 import com.codeWithProject.ecom.entity.SystemeBI;
 import com.codeWithProject.ecom.repository.IndicateurRHRepository;
 import com.codeWithProject.ecom.repository.SystemeBIRepository;
+import com.codeWithProject.ecom.service.AbsenteismeService;
 import com.codeWithProject.ecom.service.IndicateurRHService;
 import com.codeWithProject.ecom.service.dto.IndicateurRHDTO;
 import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
@@ -67,7 +68,20 @@ public class IndicateurRHServiceImpl implements IndicateurRHService {
                 .map(mapper::toDto)
                 .collect(Collectors.toList());
     }
+    // Dans IndicateurRHServiceImpl
+    private final AbsenteismeService absenteismeService;
 
+    @Override
+    public IndicateurRHDTO calculerAbsenteisme(LocalDate dateDebut, LocalDate dateFin, String periode, String departement, Long employeId) {
+        log.debug("Calcul de l'absentéisme pour l'employé {} période {} au {}", employeId, dateDebut, dateFin);
+        if (employeId != null && "ANNUEL".equals(periode)) {
+            int annee = dateDebut.getYear();
+            return absenteismeService.calculerEtSauvegarder(employeId, annee);
+        } else {
+            // Fallback : calcul global
+            return calculerAbsenteisme(dateDebut, dateFin, periode, departement);
+        }
+    }
     @Override
     @Transactional(readOnly = true)
     public List<IndicateurRHDTO> findByPeriode(String periode) {

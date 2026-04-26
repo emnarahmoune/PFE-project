@@ -211,7 +211,7 @@ public class SystemeBI {
                 .systemeBI(this)
                 .build();
 
-        score.calculerScore();
+
         this.scoresTurnover.add(score);
 
         return score;

@@ -14,6 +14,7 @@ public interface IndicateurRHRepository extends JpaRepository<IndicateurRH, Long
 
     // ===== RECHERCHES PAR TYPE =====
     List<IndicateurRH> findByType(String type);
+    void deleteByEmployeId(Long employeId);
 
     @Query("SELECT i FROM IndicateurRH i WHERE i.type = :type ORDER BY i.dateCalcul DESC")
     List<IndicateurRH> findDerniersIndicateursByType(@Param("type") String type);
@@ -54,6 +55,13 @@ public interface IndicateurRHRepository extends JpaRepository<IndicateurRH, Long
     // ===== DERNIERS INDICATEURS =====
     @Query("SELECT i.type, i.valeur, i.tendance, i.dateCalcul FROM IndicateurRH i WHERE i.dateCalcul = (SELECT MAX(i2.dateCalcul) FROM IndicateurRH i2 WHERE i2.type = i.type)")
     List<Object[]> getDerniersIndicateurs();
+    // ===== NOUVEAU : par employé =====
+    List<IndicateurRH> findByEmployeIdAndType(Long employeId, String type);
+
+    @Query("SELECT i FROM IndicateurRH i WHERE i.employe.id = :employeId AND i.type = :type ORDER BY i.dateCalcul DESC")
+    List<IndicateurRH> findDerniersIndicateursByEmployeAndType(@Param("employeId") Long employeId, @Param("type") String type);
+
+    Optional<IndicateurRH> findTopByEmployeIdAndTypeOrderByDateCalculDesc(Long employeId, String type);
 
     // ===== TABLEAU DE BORD =====
     @Query("SELECT new map(" +

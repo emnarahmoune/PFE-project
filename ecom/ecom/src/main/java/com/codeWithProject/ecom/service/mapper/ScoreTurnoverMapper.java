@@ -27,7 +27,6 @@ public class ScoreTurnoverMapper {
         dto.setScoreFormation(entity.getScoreFormation());
         dto.setScoreAbsenteisme(entity.getScoreAbsenteisme());
 
-        // Informations employé – directement via Employe
         if (entity.getEmploye() != null) {
             dto.setEmployeId(entity.getEmploye().getId());
             dto.setEmployeMatricule(entity.getEmploye().getMatricule());
@@ -36,16 +35,16 @@ public class ScoreTurnoverMapper {
             dto.setEmployePrenom(entity.getEmploye().getPrenom());
         }
 
-        // Informations système BI
         if (entity.getSystemeBI() != null) {
             dto.setSystemeBIId(entity.getSystemeBI().getId());
             dto.setSystemeBIVersion(entity.getSystemeBI().getVersion());
         }
 
-        dto.setNecessiteAlerte(entity.necessiteAlerte());
-        dto.setCouleurAffichage(entity.getCouleurAffichage());
-        dto.setResume(entity.getResume());
-        dto.setValide(entity.isValide());
+        // ⚠️ Les 4 lignes suivantes ont été supprimées car les méthodes n'existent pas dans ScoreTurnover
+        // dto.setNecessiteAlerte(entity.necessiteAlerte());
+        // dto.setCouleurAffichage(entity.getCouleurAffichage());
+        // dto.setResume(entity.getResume());
+        // dto.setValide(entity.isValide());
 
         return dto;
     }

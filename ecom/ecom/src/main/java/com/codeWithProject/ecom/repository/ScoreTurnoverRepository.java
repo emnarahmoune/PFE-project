@@ -7,18 +7,24 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ScoreTurnoverRepository extends JpaRepository<ScoreTurnover, Long> {
 
     // ===== RECHERCHES PAR EMPLOYÉ =====
     List<ScoreTurnover> findByEmployeId(Long employeId);
-
+    void deleteByEmployeId(Long employeId);
     @Query("SELECT s FROM ScoreTurnover s WHERE s.employe.id = :employeId ORDER BY s.datePrediction DESC")
     List<ScoreTurnover> findHistoriqueEmploye(@Param("employeId") Long employeId);
 
+    // 🔥 NOUVEAU - retourne la liste triée (pour récupérer le dernier)
     @Query("SELECT s FROM ScoreTurnover s WHERE s.employe.id = :employeId ORDER BY s.datePrediction DESC")
     List<ScoreTurnover> findDernierScoreEmploye(@Param("employeId") Long employeId);
+
+    // Variante avec Optional (si besoin)
+    @Query("SELECT s FROM ScoreTurnover s WHERE s.employe.id = :employeId ORDER BY s.datePrediction DESC")
+    Optional<ScoreTurnover> findTopByEmployeIdOrderByDatePredictionDesc(@Param("employeId") Long employeId);
 
     // ===== RECHERCHES PAR NIVEAU DE RISQUE =====
     List<ScoreTurnover> findByNiveauRisque(String niveauRisque);
