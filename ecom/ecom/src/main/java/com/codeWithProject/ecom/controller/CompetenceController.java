@@ -1,6 +1,8 @@
 package com.codeWithProject.ecom.controller;
 
 import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
+import com.codeWithProject.ecom.entity.Competence;
+import com.codeWithProject.ecom.repository.CompetenceRepository;
 import com.codeWithProject.ecom.service.CompetenceService;
 import com.codeWithProject.ecom.service.dto.CompetenceDTO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,8 +19,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.*;
 
 /**
  * Contrôleur REST pour la gestion des compétences
@@ -32,6 +36,7 @@ import java.util.Map;
 public class CompetenceController {
 
     private final CompetenceService competenceService;
+    private final CompetenceRepository competenceRepository;
 
     /**
      * Récupère toutes les compétences
@@ -228,6 +233,29 @@ public class CompetenceController {
         List<CompetenceDTO> top = competenceService.findTopCompetences(limit);
         return ResponseEntity.ok(ApiResponse.success(top, "Top compétences récupérées"));
     }
+
+
+
+     @GetMapping("/competences")
+    public List<Map<String, Object>> getAll() {
+
+        List<Competence> list = competenceRepository.findAll();
+
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Competence c : list) {
+
+            Map<String, Object> map = new HashMap<>();
+
+            map.put("id", c.getId());
+            map.put("nom", c.getNom());
+
+            result.add(map);
+        }
+
+        return result;
+    }
+
 
     /**
      * Récupère les compétences non attribuées

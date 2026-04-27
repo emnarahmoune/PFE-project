@@ -12,13 +12,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.*;
 
@@ -30,50 +25,74 @@ public class SecurityConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
     private String jwkSetUri;
 
-    @Bean
-    @Order(1)
-    public SecurityFilterChain publicFilterChain(HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/actuator/**")
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
-        return http.build();
-    }
-
+    // 🔥 CAMUNDA
     @Bean
     @Order(0)
     public SecurityFilterChain camundaFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/camunda/**", "/app/**", "/api/engine/**")
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .cors(cors -> {})                .securityMatcher("/camunda/**", "/app/**", "/api/engine/**")
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
     }
 
+    // // 🔥 SWAGGER / ACTUATOR
+    // @Bean
+    // @Order(1)
+    // public SecurityFilterChain publicFilterChain(HttpSecurity http) throws Exception {
+    //     http
+    //             .cors(cors -> {})
+    //             .securityMatcher("/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/actuator/**")
+    //             .csrf(csrf -> csrf.disable())
+    //             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+    //     return http.build();
+    // }
+
+    // 🔥 EMPLOYE FORMATION PUBLIC@Bean
+// @Order(2)
+// public SecurityFilterChain employeFormationSecure(HttpSecurity http) throws Exception {
+//     http
+//         .cors(cors -> {})
+//         .securityMatcher("/api/employe-formations/**")
+//         .csrf(csrf -> csrf.disable())
+//         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//         .authorizeHttpRequests(auth -> auth
+//                 .anyRequest().authenticated()
+//         )
+//         .oauth2ResourceServer(oauth2 -> oauth2.jwt());
+
+//     return http.build();
+// }
+
+    // 🔐 API SECURISEE
     @Bean
-    @Order(2)
+    @Order(3)
     public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> {})
                 .securityMatcher("/api/**")
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/conges/**").authenticated()
                         .requestMatchers("/api/workflow/manager/**").hasAnyRole("manager", "MANAGER")
                         .requestMatchers("/api/workflow/rh/**").hasAnyRole("admin_rh", "ADMIN_RH", "admin")
                         .requestMatchers("/api/workflow/instance/**").authenticated()
+                        .requestMatchers("/api/formations/**").authenticated()
+                        .requestMatchers("/api/competences/**").authenticated()
+                        .requestMatchers("/api/indicateurs/**").authenticated()
+                        .requestMatchers("/api/employes/**").authenticated()
+                        .requestMatchers("/api/employe-formations/**").authenticated()
                         .anyRequest().authenticated()
                 )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+                .oauth2ResourceServer(oauth2 ->
+                        oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 );
+
         return http.build();
     }
 
+    // 🔐 JWT ROLES
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
@@ -84,7 +103,6 @@ public class SecurityConfig {
             if (realmAccess != null && realmAccess.containsKey("roles")) {
                 List<String> roles = (List<String>) realmAccess.get("roles");
                 for (String role : roles) {
-                    // Mapping des rôles Keycloak vers les rôles Spring Security
                     if ("admin".equalsIgnoreCase(role)) {
                         authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN_RH"));
                     } else if ("manager".equalsIgnoreCase(role)) {
@@ -99,27 +117,10 @@ public class SecurityConfig {
         return converter;
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
-        configuration.setExposedHeaders(List.of("Authorization"));
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
-
+    // 🔑 PASSWORD
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-    }
 }

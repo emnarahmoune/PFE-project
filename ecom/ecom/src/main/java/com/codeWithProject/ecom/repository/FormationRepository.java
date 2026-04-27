@@ -1,80 +1,75 @@
 package com.codeWithProject.ecom.repository;
 
+import com.codeWithProject.ecom.entity.EmployeFormation;
 import com.codeWithProject.ecom.entity.Formation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import java.time.LocalDateTime;
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface FormationRepository extends JpaRepository<Formation, Long> {
 
-    // ===== RECHERCHES PAR ATTRIBUTS =====
-    Optional<Formation> findByTitre(String titre);
-    boolean existsByTitre(String titre);
-
+    // 🔍 rechercher par domaine
     List<Formation> findByDomaine(String domaine);
-    List<Formation> findByDureeHeuresLessThanEqual(Integer dureeMax);
-    List<Formation> findByDureeHeuresGreaterThanEqual(Integer dureeMin);
 
+    // 🔍 formations actives
     List<Formation> findByActifTrue();
-    List<Formation> findByActifFalse();
 
-    // ===== RECHERCHES PAR DATE =====
-    List<Formation> findByDateCreationAfter(LocalDateTime date);
-    List<Formation> findByDateCreationBefore(LocalDateTime date);
-    List<Formation> findByDateCreationBetween(LocalDateTime debut, LocalDateTime fin);
 
-    @Query("SELECT f FROM Formation f ORDER BY f.dateCreation DESC")
-    List<Formation> findFormationsRecentes();
 
-    // ===== RECHERCHES AVANCÉES =====
-    @Query("SELECT f FROM Formation f WHERE LOWER(f.titre) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(f.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
-    List<Formation> searchFormations(@Param("keyword") String keyword);
 
-    @Query("SELECT DISTINCT f.domaine FROM Formation f")
-    List<String> findAllDomaines();
+    @Query("""
+    SELECT f FROM Formation f
+    WHERE f.id NOT IN (
+        SELECT ef.formation.id
+        FROM EmployeFormation ef
+        WHERE ef.employe.id = :employeId
+    )
+""")
+List<Formation> findFormationsNonSuiviesParEmploye(@Param("employeId") Long employeId);
 
-    // ===== STATISTIQUES =====
-    @Query("SELECT f.domaine, COUNT(f) FROM Formation f GROUP BY f.domaine")
-    List<Object[]> countByDomaine();
+    // 🔍 recherche par titre
+    List<Formation> findByTitreContainingIgnoreCase(String titre);
 
-    @Query("SELECT AVG(f.dureeHeures) FROM Formation f")
-    Double dureeMoyenneFormations();
+@Query("""
+SELECT f FROM Formation f
+WHERE f.domaine IN :domaines
+AND f.id NOT IN (
+    SELECT ef.formation.id FROM EmployeFormation ef
+    WHERE ef.employe.id = :employeId
+)
+""")
+List<Formation> findFormationsRecommandees(
+        @Param("domaines") List<String> domaines,
+        @Param("employeId") Long employeId
+);
 
-    @Query("SELECT COUNT(f) FROM Formation f")
-    long countTotalFormations();
+@Query("""
+SELECT ef FROM EmployeFormation ef
+JOIN FETCH ef.formation
+WHERE ef.employe.id = :employeId
+""")
+List<EmployeFormation> findByEmployeId(@Param("employeId") Long employeId);
 
-    // ===== RECHERCHES SUR LES PARTICIPANTS =====
-    @Query("SELECT f, COUNT(p) FROM Formation f LEFT JOIN f.participants p GROUP BY f ORDER BY COUNT(p) DESC")
-    List<Object[]> findFormationsLesPlusSuivies();
 
-    @Query("SELECT f FROM Formation f WHERE SIZE(f.participants) = 0")
-    List<Formation> findFormationsNonSuivies();
+@Query("""
+SELECT ef FROM EmployeFormation ef
+JOIN FETCH ef.formation
+WHERE ef.employe.id = :employeId
+""")
+List<EmployeFormation> findByEmployeIdWithFormation(Long employeId);
 
-    @Query("SELECT f FROM Formation f WHERE SIZE(f.participants) > (SELECT AVG(SIZE(f2.participants)) FROM Formation f2)")
-    List<Formation> findFormationsPopulaires();
 
-    @Query("SELECT f FROM Formation f WHERE SIZE(f.participants) < (SELECT AVG(SIZE(f2.participants)) FROM Formation f2)")
-    List<Formation> findFormationsPeuSuivies();
 
-    // ===== RECHERCHES PAR PARTICIPANT =====
-    @Query("SELECT f FROM Formation f JOIN f.participants p WHERE p.id = :employeId")
-    List<Formation> findFormationsByEmployeId(@Param("employeId") Long employeId);
-
-    @Query("SELECT f FROM Formation f WHERE NOT EXISTS (SELECT p FROM f.participants p WHERE p.id = :employeId)")
-    List<Formation> findFormationsNonSuiviesParEmploye(@Param("employeId") Long employeId);
-
-    // ===== TABLEAU DE BORD =====
-    @Query("SELECT new map(" +
-            "COUNT(f) as totalFormations, " +
-            "SUM(CASE WHEN f.actif = true THEN 1 ELSE 0 END) as formationsActives, " +
-            "AVG(f.dureeHeures) as dureeMoyenne, " +
-            "AVG(SIZE(f.participants)) as participantsMoyens, " +
-            "SUM(SIZE(f.participants)) as totalParticipants) " +
-            "FROM Formation f")
-    List<Object[]> getStatsTableauBord();
+@Query("""
+SELECT f FROM Formation f
+WHERE f.id NOT IN (
+    SELECT ef.formation.id FROM EmployeFormation ef
+    WHERE ef.employe.id = :employeId
+)
+""")
+List<Formation> findFormationsNonSuivies(@Param("employeId") Long employeId);
 }

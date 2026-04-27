@@ -1,5 +1,6 @@
 package com.codeWithProject.ecom.service;
 
+import com.codeWithProject.ecom.entity.EmployeCompetence;
 import com.codeWithProject.ecom.service.dto.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +18,19 @@ public interface EmployeService {
     Page<EmployeDTO> findAll(Pageable pageable);
 
     long count();
+
+
+private String convertToLevel(int niveau) {
+    return switch (niveau) {
+        case 1 -> "DEBUTANT";
+        case 2 -> "INTERMEDIAIRE";
+        case 3 -> "AVANCE";
+        case 4, 5 -> "EXPERT";
+        default -> "DEBUTANT";
+    };
+}
+
+void addCompetence(Long userId, Long compId, int niveau);
 
     Optional<EmployeDTO> findById(Long id);
 
@@ -102,11 +116,14 @@ public interface EmployeService {
      */
     void changePasswordByEmail(String email, ChangePasswordRequest request);
 
+
+    public List<EmployeCompetence> getCompetencesEntity(Long userId) ;
     /**
      * Change l'email d'un employé
      */
     EmployeDTO changeEmailByEmail(String email, String newEmail);
 
+Long getEmployeIdByEmail(String email);
     // ===== NOUVELLE MÉTHODE : MISE À JOUR DU MANAGER =====
 
     /**
@@ -116,4 +133,5 @@ public interface EmployeService {
      * @return L'employé mis à jour
      */
     EmployeDTO updateManager(Long employeId, Long managerId);
+    public void updateCompetences(Long employeId, List<CompetenceDTO> dtos);
 }

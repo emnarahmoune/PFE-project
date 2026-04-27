@@ -43,8 +43,10 @@ public class AuthController {
         }
 
         String email = jwt.getClaimAsString("email");
-        if (email == null) email = jwt.getClaimAsString("preferred_username");
-        if (email == null) email = jwt.getSubject();
+        if (email == null || email.isEmpty()) {
+            throw new RuntimeException("❌ Email introuvable dans le token");
+        }
+        email = email.trim().toLowerCase();
         log.info("Email extrait du token: {}", email);
 
         // 1. Extraire les rôles Keycloak

@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -108,6 +109,9 @@ public class Employe {
     @Column(name = "role", length = 50)
     private String role;
 
+
+
+
     // ===== CONSTANTES POUR LES TYPES =====
     public static final String TYPE_EMPLOYE = "EMPLOYE";
     public static final String TYPE_MANAGER = "MANAGER";
@@ -129,17 +133,6 @@ public class Employe {
     @ToString.Exclude
     @Builder.Default
     private List<EmployeCompetence> competences = new ArrayList<>();
-
-    @ManyToMany
-    @JoinTable(
-            name = "employe_formation",
-            joinColumns = @JoinColumn(name = "employe_id"),
-            inverseJoinColumns = @JoinColumn(name = "formation_id")
-    )
-    @ToString.Exclude
-    @Builder.Default
-    private List<Formation> formations = new ArrayList<>();
-
     @OneToMany(mappedBy = "employe", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @JsonIgnore
@@ -418,4 +411,16 @@ public class Employe {
             this.prenom = p.substring(0, 1).toUpperCase() + p.substring(1).toLowerCase();
         }
     }
+
+@ManyToMany
+@JoinTable(
+    name = "employe_competence",
+    joinColumns = @JoinColumn(name = "employe_id"),
+    inverseJoinColumns = @JoinColumn(name = "competence_id")
+)
+private List<Competence> competence;
+
+
+
+
 }

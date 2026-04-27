@@ -43,6 +43,7 @@ public class Competence {
     @Column(name = "categorie", length = 50)
     private String categorie;
 
+
     /* ── Relations ───────────────────────────────────────── */
 
     @OneToMany(mappedBy = "competence", cascade = CascadeType.ALL, orphanRemoval = true)

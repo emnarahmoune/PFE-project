@@ -4,12 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Entite Formation - Catalogue des formations.
- */
+
 @Entity
 @Table(name = "formations")
 @Data
@@ -41,23 +38,18 @@ public class Formation {
     @Column(name = "date_creation")
     private LocalDateTime dateCreation;
 
-    @ManyToMany(mappedBy = "formations")
-    @ToString.Exclude
-    @Builder.Default
-    private List<Employe> participants = new ArrayList<>();
-
-    @Transient
-    public int getNombreParticipants() {
-        return this.participants != null ? this.participants.size() : 0;
-    }
+ 
 
     @PrePersist
-    protected void onCreate() {
-        if (this.dateCreation == null) {
-            this.dateCreation = LocalDateTime.now();
-        }
+    public void prePersist() {
+        this.dateCreation = LocalDateTime.now();
+
         if (this.actif == null) {
             this.actif = true;
         }
     }
+
+
+    
+     
 }

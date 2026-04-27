@@ -1,6 +1,10 @@
 package com.codeWithProject.ecom.service.impl;
 
+import com.codeWithProject.ecom.entity.Competence;
 import com.codeWithProject.ecom.entity.Employe;
+import com.codeWithProject.ecom.entity.EmployeCompetence;
+import com.codeWithProject.ecom.entity.EmployeFormation;
+import com.codeWithProject.ecom.entity.Formation;
 import com.codeWithProject.ecom.entity.Manager;
 import com.codeWithProject.ecom.repository.*;
 import com.codeWithProject.ecom.service.EmployeService;
@@ -16,8 +20,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.codeWithProject.ecom.entity.EmployeCompetence;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,6 +43,7 @@ public class EmployeServiceImpl implements EmployeService {
     private final FormationRepository formationRepository;
     private final EmployeMapper mapper;
     private final PasswordEncoder passwordEncoder;
+    private final CompetenceRepository competenceRepository;
 
     // ===== MÉTHODES EXISTANTES (inchangées mais sans Utilisateur) =====
 
@@ -171,6 +178,8 @@ public class EmployeServiceImpl implements EmployeService {
             return Employe.TYPE_EMPLOYE;
         }
     }
+
+ 
 
     // ===== UPDATE =====
 
@@ -344,23 +353,7 @@ public class EmployeServiceImpl implements EmployeService {
                 .total(total).pris((int) pris).restant(restant).enAttente((int) enAttente).build();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<CompetenceEmployeDTO> getCompetencesByEmail(String email) {
-        Employe employe = employeRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
-        return employeCompetenceRepository.findByEmployeId(employe.getId()).stream()
-                .map(ec -> CompetenceEmployeDTO.builder()
-                        .id(ec.getCompetence().getId())
-                        .nom(ec.getCompetence().getNom())
-                        .categorie(ec.getCompetence().getCategorie())
-                        .niveau(ec.getNiveau())
-                        .certifie(ec.getCertifie())
-                        .dateAcquisition(ec.getDateAcquisition())
-                        .dateExpiration(ec.getDateExpirationCertification())
-                        .build())
-                .collect(Collectors.toList());
-    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -442,4 +435,107 @@ public class EmployeServiceImpl implements EmployeService {
         }
         return mapper.toDto(employeRepository.save(employe));
     }
+
+
+private String convertToLevel(int niveau) {
+    return switch (niveau) {
+        case 1 -> "DEBUTANT";
+        case 2 -> "INTERMEDIAIRE";
+        case 3 -> "AVANCE";
+        case 4, 5 -> "EXPERT";
+        default -> "DEBUTANT";
+    };
+}
+@Override
+public void addCompetence(Long userId, Long compId, int niveau) {
+
+    boolean exists = employeCompetenceRepository
+        .existsByEmployeIdAndCompetenceId(userId, compId);
+
+    if (exists) {
+        throw new RuntimeException("Compétence déjà ajoutée");
+    }
+
+    Employe emp = employeRepository.findById(userId).orElseThrow();
+    Competence comp = competenceRepository.findById(compId).orElseThrow();
+
+    EmployeCompetence ec = new EmployeCompetence();
+    ec.setEmploye(emp);
+    ec.setCompetence(comp);
+    ec.setNiveau(convertToLevel(niveau));
+
+    employeCompetenceRepository.save(ec);
+}
+@Override
+public List<CompetenceEmployeDTO> getCompetencesByEmail(String email) {
+
+    Optional<Employe> emp = employeRepository.findByEmail(email);
+
+    if (emp.isEmpty()) {
+        return new ArrayList<>();
+    }
+
+    List<EmployeCompetence> list =
+        employeCompetenceRepository.findByEmployeId(emp.get().getId());
+
+    if (list == null) {
+        return new ArrayList<>();
+    }
+
+    return list.stream().map(c -> {
+        CompetenceEmployeDTO dto = new CompetenceEmployeDTO();
+        dto.setNom(c.getCompetence().getNom());
+        dto.setNiveau(c.getNiveau());
+        return dto;
+    }).toList();
+}
+
+
+
+@Override
+public void updateCompetences(Long employeId, List<CompetenceDTO> dtos) {
+
+    for (CompetenceDTO dto : dtos) {
+
+        EmployeCompetence ec =
+            employeCompetenceRepository.findByEmployeAndCompetence(
+                employeId,
+                dto.getCompetenceId()
+            );
+
+        if (ec != null) {
+            ec.setNiveau(convertToLevel(dto.getNiveau()));
+            employeCompetenceRepository.save(ec);
+        }
+    }
+}
+
+
+@Override
+public Long getEmployeIdByEmail(String email) {
+
+    if (email == null) return null;
+
+    email = email.trim().toLowerCase();
+
+    return employeRepository.findByEmail(email)
+            .map(e -> e.getId())
+            .orElse(null);
+}
+
+@Override
+public void updateCompetence(Long userId, Long compId, int niveau) {
+
+    EmployeCompetence ec =
+        employeCompetenceRepository.findByEmployeAndCompetence(userId, compId);
+
+    if (ec != null) {
+        ec.setNiveau(convertToLevel(niveau));
+        employeCompetenceRepository.save(ec);
+    }
+}
+@Override
+public List<EmployeCompetence> getCompetencesEntity(Long id) {
+    return employeCompetenceRepository.findByEmployeId(id);
+}
 }

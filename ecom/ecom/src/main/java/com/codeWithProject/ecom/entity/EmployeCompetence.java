@@ -5,6 +5,8 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 /**
  * Entité EmployeCompetence - Table d'association entre Employe et Competence
  */
@@ -64,6 +66,9 @@ public class EmployeCompetence {
 
     @Column(name = "date_validation")
     private LocalDate dateValidation;
+
+
+
 
     // ===== RELATIONS =====
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

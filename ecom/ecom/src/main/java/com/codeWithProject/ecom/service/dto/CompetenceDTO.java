@@ -18,5 +18,11 @@ public class CompetenceDTO {
     private String nom;
     private String description;
     private String categorie;
+
+
+
+    public String getNom() { return nom; }
+    public void setNom(String nom) { this.nom = nom; }
+
     private Long nombreEmployes; // Nombre d'employés avec cette compétence
 }

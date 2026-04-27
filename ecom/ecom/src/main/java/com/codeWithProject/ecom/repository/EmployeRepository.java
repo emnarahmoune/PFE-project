@@ -1,6 +1,8 @@
 package com.codeWithProject.ecom.repository;
 
 import com.codeWithProject.ecom.entity.Employe;
+import com.codeWithProject.ecom.entity.EmployeCompetence;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,14 +20,16 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
     // ===== RECHERCHES PAR IDENTIFIANTS =====
     Optional<Employe> findByMatricule(String matricule);
     boolean existsByMatricule(String matricule);
-    Optional<Employe> findByEmail(String email);
-
+@Query("SELECT e FROM Employe e WHERE LOWER(TRIM(e.email)) = LOWER(TRIM(:email))")
+Optional<Employe> findByEmailIgnoreCase(@Param("email") String email);
     @Query("SELECT e FROM Employe e WHERE e.typeEmploye = 'MANAGER'")
     List<Employe> findAllManagers();
 
     @Query("SELECT e FROM Employe e WHERE e.typeEmploye = 'ADMIN_RH'")
     List<Employe> findAllAdminRH();
 
+
+    
     // ===== RECHERCHES PAR ATTRIBUTS =====
     List<Employe> findByDepartement(String departement);
     List<Employe> findByStatut(String statut);
@@ -130,6 +134,8 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
             "AVG(e.soldeConges) as soldeCongesMoyen) " +
             "FROM Employe e")
     List<Map<String, Object>> getStatsTableauBord();
+
+    Optional<Employe> findByEmail(String email);
 
     // ===== AUTRES =====
     List<Employe> findByManagerEmail(String email);

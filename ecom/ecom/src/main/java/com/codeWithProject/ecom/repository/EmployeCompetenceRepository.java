@@ -8,12 +8,15 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+
 
 @Repository
 public interface EmployeCompetenceRepository extends JpaRepository<EmployeCompetence, Long> {
 
+
+
     // ===== RECHERCHES PAR EMPLOYÉ =====
-    List<EmployeCompetence> findByEmployeId(Long employeId);
 
     @Query("SELECT ec FROM EmployeCompetence ec WHERE ec.employe.id = :employeId ORDER BY ec.dateAcquisition DESC")
     List<EmployeCompetence> findCompetencesEmploye(@Param("employeId") Long employeId);
@@ -72,6 +75,10 @@ public interface EmployeCompetenceRepository extends JpaRepository<EmployeCompet
     @Query("SELECT ec.competence.id, ec.competence.nom, COUNT(ec) FROM EmployeCompetence ec GROUP BY ec.competence.id, ec.competence.nom ORDER BY COUNT(ec) DESC")
     List<Object[]> findCompetencesLesPlusAttribuees();
 
+
+     @Query("SELECT ec FROM EmployeCompetence ec JOIN FETCH ec.competence WHERE ec.employe.id = :id")
+List<EmployeCompetence> findByEmployeId(@Param("id") Long id);
+
     @Query("SELECT AVG(CASE ec.niveau " +
             "WHEN 'DEBUTANT' THEN 1 " +
             "WHEN 'INTERMEDIAIRE' THEN 2 " +
@@ -79,6 +86,8 @@ public interface EmployeCompetenceRepository extends JpaRepository<EmployeCompet
             "WHEN 'EXPERT' THEN 4 ELSE 0 END) FROM EmployeCompetence ec")
     Double niveauMoyenGlobal();
 
+List<EmployeCompetence> findByEmploye_Id(Long employeId);
+Optional<EmployeCompetence> findByEmploye_IdAndCompetence_Id(Long empId, Long compId);
     // ===== RECHERCHES AVANCÉES =====
     @Query("SELECT ec FROM EmployeCompetence ec WHERE ec.employe.id = :employeId AND ec.niveau = 'EXPERT'")
     List<EmployeCompetence> findExpertisesEmploye(@Param("employeId") Long employeId);
