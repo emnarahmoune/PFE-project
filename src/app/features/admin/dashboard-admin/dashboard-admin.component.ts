@@ -8,6 +8,7 @@ import { catchError } from 'rxjs/operators';
 import { DashboardService, DashboardStats, EmployeRecent, Alerte, Competence } from '../../../core/services/dashboard.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Router } from '@angular/router';
+// import { FormationService } from '../../../core/services/formation.service';
 
 @Component({
   selector: 'app-dashboard-admin',
@@ -15,10 +16,11 @@ import { Router } from '@angular/router';
   imports: [CommonModule, RouterModule, SharedChartsModule],   // ← import du module
   templateUrl: './dashboard-admin.component.html',
   styleUrls: ['./dashboard-admin.component.scss']
+  
 })
 export class DashboardAdminComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-
+recommendations: any[] = [];
   currentDate = new Date();
   currentYear = this.currentDate.getFullYear();
   currentMonth = this.currentDate.toLocaleString('fr-FR', { month: 'long' });
@@ -65,7 +67,7 @@ export class DashboardAdminComponent implements OnInit, OnDestroy {
   constructor(
     private dashboardService: DashboardService,
     private authService: AuthService,
-    private router: Router // 👈 utile pour navigate()
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -100,6 +102,22 @@ export class DashboardAdminComponent implements OnInit, OnDestroy {
     }
   }
 
+
+
+//   loadRecommendations(): void {
+//   const userId = this.authService.getCurrentUser()?.id || 1;
+
+//   this.formationService.getRecommendations(userId)
+//     .pipe(takeUntil(this.destroy$))
+//     .subscribe({
+//       next: (data) => {
+//         this.recommendations = data;
+//       },
+//       error: () => {
+//         console.error('Erreur recommandations');
+//       }
+//     });
+// }
   loadDashboardData(): void {
     this.loading = true;
     this.errorMessage = null;

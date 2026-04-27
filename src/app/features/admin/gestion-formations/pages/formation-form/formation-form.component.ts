@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
-import { FormationService } from '../../services/formation.service';
+import { FormationService } from '../../../../../core/services/formation.service';
 import { Formation } from '../../models/formation.model';
 
 @Component({
@@ -35,8 +35,8 @@ import { Formation } from '../../models/formation.model';
   styleUrls: ['./formation-form.component.css']
 })
 export class FormationFormComponent implements OnInit {
-getDomaineLabel(arg0: any) {
-throw new Error('Method not implemented.');
+getDomaineLabel(domaine: string): string {
+  return domaine; // simple solution
 }
   formationForm: FormGroup;
   isEditMode = false;
@@ -49,7 +49,8 @@ throw new Error('Method not implemented.');
     { value: 'SOFT_SKILLS', label: 'Soft Skills', icon: 'people' },
     { value: 'MANAGEMENT', label: 'Management', icon: 'business' },
     { value: 'LANGUES', label: 'Langues', icon: 'language' },
-    { value: 'SECURITE', label: 'Sécurité', icon: 'security' }
+    { value: 'SECURITE', label: 'Sécurité', icon: 'security' },
+
   ];
 
   constructor(
@@ -83,7 +84,7 @@ throw new Error('Method not implemented.');
     
     this.loading = true;
     this.formationService.getById(this.formationId).subscribe({
-      next: (response) => {
+     next: (response: any) =>{
         const formation = response.data as Formation;
         this.formationForm.patchValue({
           titre: formation.titre,
@@ -94,7 +95,7 @@ throw new Error('Method not implemented.');
         });
         this.loading = false;
       },
-      error: (error) => {
+     error: (error: any) =>{
         console.error('Erreur chargement formation:', error);
         this.snackBar.open('Erreur lors du chargement de la formation', 'Fermer', { duration: 3000 });
         this.router.navigate(['/admin/formations']);

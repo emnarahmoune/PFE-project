@@ -1,0 +1,89 @@
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<div class="page">
+
+  <h1 class="title">Mes compétences</h1>
+
+  <!-- FORMULAIRE -->
+  <div class="form-card">
+
+<div class="select-wrapper">
+
+ <select [(ngModel)]="newCompetenceId" class="select">
+
+  <option [ngValue]="null" disabled selected>
+    Ajouter une compétence
+  </option>
+
+  <option *ngFor="let c of competencesDisponibles" [ngValue]="c.id">
+    {{ c.nom }}
+  </option>
+
+</select>
+
+    <select [(ngModel)]="newLevel">
+      <option [value]="1">Débutant</option>
+      <option [value]="2">Intermédiaire</option>
+      <option [value]="3">Avancé</option>
+      <option [value]="4">Expert</option>
+    </select>
+
+    <button class="primary" (click)="addCompetence()">Ajouter</button>
+
+  </div>
+
+  <!-- LISTE -->
+  <div class="grid">
+
+    <div class="card" *ngFor="let c of competences">
+
+      <div class="top">
+
+        <h3>{{ c.nom }}</h3>
+
+        <!-- ✅ FIX DELETE -->
+        <button class="icon-btn" (click)="deleteCompetence(c.id, c.nom)">
+          🗑
+        </button>
+
+      </div>
+
+      <!-- NIVEAU -->
+      <div class="level">
+
+        <span class="badge" [ngClass]="'lvl-' + c.niveau">
+          {{ getLevelLabel(c.niveau || 1) }}
+        </span>
+
+        <input type="range"
+               min="1"
+               max="4"
+               [(ngModel)]="c.niveau" />
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- 🔥 MODAL (EN DEHORS DU GRID) -->
+  <div class="modal" *ngIf="showConfirm">
+
+    <div class="modal-content">
+
+      <h3>Confirmation</h3>
+      <p>Supprimer "{{ selectedName }}" ?</p>
+
+      <div class="actions">
+        <button (click)="confirmDelete()">Oui</button>
+        <button (click)="cancelDelete()">Annuler</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <button class="save" (click)="save()">
+    Enregistrer les modifications
+  </button>
+
+</div>

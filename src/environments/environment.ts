@@ -9,7 +9,7 @@ export const environment = {
     realm: 'portail_rh',
     clientId: 'portail_rh_frontend',
     // ← CHANGÉ: redirection dynamique selon le rôle
-    redirectUri: 'http://localhost:4200',
+    redirectUri: 'http://localhost:4200/',
     postLogoutRedirectUri: 'http://localhost:4200/auth/login',
     sslRequired: 'none',
     publicClient: true,

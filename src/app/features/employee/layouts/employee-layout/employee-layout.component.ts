@@ -48,7 +48,9 @@ export class EmployeeLayoutComponent implements OnInit {
     { path: '/employee/dashboard', icon: 'dashboard', label: 'Dashboard' },
     { path: '/employee/mon-profil', icon: 'person', label: 'Mon profil' },
     { path: '/employee/mes-conges', icon: 'event', label: 'Mes congés' },
-    { path: '/employee/mes-formations', icon: 'school', label: 'Mes formations' }
+    { path: '/employee/mes-formations', icon: 'school', label: 'Mes formations' },
+    { path: '/employee/competences', icon: 'psychology', label: 'Mes compétences' },
+  
   ];
 
   constructor(
@@ -133,6 +135,7 @@ export class EmployeeLayoutComponent implements OnInit {
     if (path.includes('/employee/mon-profil')) return 'Mon profil';
     if (path.includes('/employee/mes-conges')) return 'Mes congés';
     if (path.includes('/employee/mes-formations')) return 'Mes formations';
+    if (path.includes('/employee/competences')) return 'Mes compétences';
     return 'Espace employé';
   }
 }

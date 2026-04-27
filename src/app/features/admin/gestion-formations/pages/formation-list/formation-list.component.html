@@ -18,7 +18,7 @@
       <div class="stat-block">
         <div class="stat-icon purple">📚</div>
         <div class="stat-info">
-          <span class="stat-number">{{ stats.total }}</span>
+          <span class="stat-number">{{ stats.total || 0 }}</span>
           <span class="stat-name">Total formations</span>
           <span class="stat-trend">dont {{ stats.actives }} actives</span>
         </div>
@@ -26,14 +26,14 @@
       <div class="stat-block">
         <div class="stat-icon blue">⏱️</div>
         <div class="stat-info">
-          <span class="stat-number">{{ stats.dureeMoyenne }}h</span>
+          <span class="stat-number">{{ stats.dureeMoyenne || 0 }}h</span>
           <span class="stat-name">Durée moyenne</span>
         </div>
       </div>
       <div class="stat-block">
         <div class="stat-icon green">👥</div>
         <div class="stat-info">
-          <span class="stat-number">{{ stats.totalParticipants }}</span>
+          <span class="stat-number">{{ stats.totalParticipants || 0 }}</span>
           <span class="stat-name">Participants</span>
           <span class="stat-trend">{{ stats.participantsMoyens }} par formation</span>
         </div>
@@ -122,6 +122,8 @@
         <button class="btn-secondary" routerLink="nouveau">Créer une formation</button>
       </div>
     </div>
+
+ 
 
     <!-- Vue tableau (Material) -->
     <div class="table-wrapper" *ngIf="!loading && viewMode === 'table'">

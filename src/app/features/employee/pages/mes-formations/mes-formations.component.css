@@ -1,0 +1,178 @@
+/* 🌿 BACKGROUND */
+body {
+  background: #f8fafc;
+  color: #1e293b;
+  font-family: 'Inter', sans-serif;
+}
+
+/* CONTAINER */
+.container {
+  padding: 25px;
+}
+
+/* TITRES */
+.section-title {
+  color: #1e293b;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+
+.btn-secondary {
+  background: #e2e8f0;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: #1e293b;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+/* état terminé */
+.btn-secondary.done {
+  background: #22c55e;
+  color: white;
+}
+
+/* hover */
+.btn-secondary:hover:not(:disabled) {
+  background: #cbd5f5;
+}
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* ========================= */
+/* 🎴 CARD */
+/* ========================= */
+.card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: 0.3s;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+
+/* 🔥 HEADER NUDE */
+.card-cover {
+  height: 120px;
+  background: linear-gradient(135deg, #f5f5f4, #e7e5e4);
+  padding: 20px;
+}
+
+/* TEXTE HEADER */
+.card-cover .title {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.badge {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+/* BODY */
+.card-body {
+  padding: 15px;
+}
+
+/* ========================= */
+/* 📊 PROGRESSION */
+/* ========================= */
+.progress-container {
+  width: 100%;
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 10px;
+  margin: 10px 0;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+/* ========================= */
+/* 🔘 BOUTONS */
+/* ========================= */
+.btn-primary {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #059669;
+}
+
+/* ========================= */
+/* 🤖 RECOMMANDATIONS */
+/* ========================= */
+
+/* 🔥 BADGE STYLE PRO */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  padding: 6px 12px;
+  border-radius: 999px; /* 🔥 cercle / pill */
+
+  font-size: 12px;
+  font-weight: 500;
+
+  width: fit-content; /* 🔥 évite rectangle étiré */
+}
+
+/* IA */
+.badge-ia {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+/* SKILL */
+.badge-skill {
+  background: #dcfce7;
+  color: #065f46;
+}
+
+/* 🔥 ESPACE ENTRE ELEMENTS */
+.reco-card {
+  padding: 18px;
+}
+
+/* espace texte */
+.reason {
+  margin: 10px 0;
+}
+
+/* 🔥 BOUTON */
+.btn-primary {
+  margin-top: 15px; /* 🔥 espace */
+  padding: 10px 16px;
+  border-radius: 10px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* hover doux */
+.btn-primary:hover {
+  transform: scale(1.05);
+}
+
+/* SCORE */
+.score {
+  color: #f59e0b;
+}

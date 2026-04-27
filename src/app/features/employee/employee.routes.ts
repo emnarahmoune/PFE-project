@@ -9,7 +9,7 @@ import { DemandeCongeComponent } from './pages/mes-conges/demande-conge/demande-
 import { DetailCongeComponent } from './pages/mes-conges/detail-conge/detail-conge.component';
 import { MesFormationsComponent } from './pages/mes-formations/mes-formations.component';
 import { MesNotificationsComponent } from './pages/mes-notifications/mes-notifications.component';
-
+import { CompetencesComponent } from './pages/competences/competences.component';
 export const employeeRoutes: Routes = [
   {
     path: '',
@@ -32,6 +32,10 @@ export const employeeRoutes: Routes = [
       // ✅ NOUVEAU - Mes notifications
       { path: 'notifications', component: MesNotificationsComponent },
 
+
+      { path: 'competences', component: CompetencesComponent },
+
+      
       // Redirection par défaut
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

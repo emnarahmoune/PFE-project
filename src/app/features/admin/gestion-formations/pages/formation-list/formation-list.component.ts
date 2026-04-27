@@ -19,7 +19,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { FormationService } from '../../services/formation.service';
+import { FormationService } from '../../../../../core/services/formation.service';
 import { Formation } from '../../models/formation.model';
 import { ConfirmationDialogComponent } from '../../../../../shared/layouts/components/confirmation-dialog/confirmation-dialog.component';
 
@@ -76,7 +76,16 @@ export class FormationListComponent implements OnInit {
     langues: 0,
     securite: 0
   };
+recommendations: any[] = [];
 
+loadRecommendations() {
+  const userId = JSON.parse(localStorage.getItem('user') || '{}')?.id || 1;
+
+  this.formationService.getRecommendations()
+    .subscribe((data: any[]) => {
+      this.recommendations = data;
+    });
+}
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
@@ -87,10 +96,10 @@ export class FormationListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadFormations();
-    this.loadStats();
-  }
-
+  this.loadFormations();
+  this.loadStats();
+  this.loadRecommendations();
+}
   ngAfterViewInit() {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
@@ -112,10 +121,11 @@ export class FormationListComponent implements OnInit {
   loadFormations(): void {
     this.loading = true;
     this.formationService.getAll().subscribe({
-      next: (response) => {
-        this.dataSource.data = response.data as Formation[];
-        this.loading = false;
-      },
+     next: (response: any) =>{
+  this.dataSource.data = response.data as Formation[];
+  this.loadStats(); // 🔥 refresh stats
+  this.loading = false;
+},
       error: () => {
         this.snackBar.open('Erreur lors du chargement des formations', 'Fermer', { duration: 3000 });
         this.loading = false;
@@ -123,26 +133,30 @@ export class FormationListComponent implements OnInit {
     });
   }
 
-  loadStats(): void {
-    this.formationService.getStats().subscribe({
-      next: (response) => {
-        const stats = response.data as any;
-        this.stats = {
-          total: stats.totalFormations || 0,
-          actives: stats.formationsActives || 0,
-          dureeMoyenne: stats.dureeMoyenne || 0,
-          participantsMoyens: stats.participantsMoyens || 0,
-          totalParticipants: stats.totalParticipants || 0,
-          technique: stats.TECHNIQUE || 0,
-          softSkills: stats.SOFT_SKILLS || 0,
-          management: stats.MANAGEMENT || 0,
-          langues: stats.LANGUES || 0,
-          securite: stats.SECURITE || 0
-        };
-      },
-      error: () => {}
-    });
-  }
+ loadStats(): void {
+  this.formationService.getStats().subscribe({
+    next: (stats: any) => {  
+
+      console.log("STATS BACKEND:", stats);
+
+      this.stats = {
+        total: stats.totalFormations || 0,
+        actives: stats.formationsActives || 0,
+        dureeMoyenne: Math.round(stats.dureeMoyenne || 0),
+        participantsMoyens: stats.participantsMoyens || 0,
+        totalParticipants: stats.totalParticipants || 0,
+        technique: stats.TECHNIQUE || 0,
+        softSkills: stats.SOFT_SKILLS || 0,
+        management: stats.MANAGEMENT || 0,
+        langues: stats.LANGUES || 0,
+        securite: stats.SECURITE || 0
+      };
+    },
+    error: (err) => {
+      console.error("Erreur stats:", err);
+    }
+  });
+}
 
   applyFilter(): void {
     this.dataSource.filter = this.searchText;

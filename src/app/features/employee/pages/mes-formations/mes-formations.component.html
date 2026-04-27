@@ -1,0 +1,172 @@
+<div class="container">
+
+  <!-- ========================= -->
+  <!-- 📚 MES FORMATIONS -->
+  <!-- ========================= -->
+  <h2 class="section-title">📚 Mes formations</h2>
+
+  <div *ngIf="formationsSuivies.length === 0" class="empty">
+    Aucune formation suivie
+  </div>
+
+  <div class="grid" *ngIf="formationsSuivies.length > 0">
+
+    <div *ngFor="let ef of formationsSuivies" class="card">
+
+      <!-- 🔥 COVER -->
+      <div class="card-cover">
+        <div class="overlay"></div>
+
+        <h3 class="title">{{ ef.formation?.titre }}</h3>
+        <span class="badge">{{ ef.formation?.domaine }}</span>
+      </div>
+
+      <!-- 🔥 BODY -->
+      <div class="card-body">
+
+        <p class="progress-text">
+          Progression : {{ ef.progression }}%
+        </p>
+
+        <div class="progress-container">
+          <div 
+            class="progress-bar"
+            [style.width.%]="ef.progression">
+          </div>
+        </div>
+
+        <!-- 🔥 TOGGLE BUTTON -->
+        <button 
+          class="btn-primary"
+          *ngIf="ef.formation?.id"
+          (click)="voirFormation(ef.formation.id)">
+
+          <span *ngIf="selectedFormationId !== ef.formation.id">
+            ▶ Voir contenu
+          </span>
+
+          <span *ngIf="selectedFormationId === ef.formation.id">
+            ✖ Fermer
+          </span>
+
+        </button>
+
+        <!-- ========================= -->
+        <!-- 🎬 VIDEOS -->
+        <!-- ========================= -->
+        <div *ngIf="selectedFormationId === ef.formation?.id" class="video-section">
+
+          <h4>🎬 Contenu</h4>
+
+          <p *ngIf="videos?.length === 0">
+            Aucune vidéo disponible
+          </p>
+
+          <div *ngFor="let v of videos" class="video-card">
+
+            <h5>{{ v.titre }}</h5>
+
+            <iframe
+              *ngIf="v?.urlYoutube && getYoutubeEmbedUrl(v.urlYoutube)"
+              width="100%"
+              height="200"
+              [src]="getYoutubeEmbedUrl(v.urlYoutube)"
+              frameborder="0"
+              allowfullscreen>
+            </iframe>
+
+            <p *ngIf="!v?.urlYoutube">
+              ⚠️ URL vidéo invalide
+            </p>
+
+            <button 
+  class="btn-secondary"
+  (click)="completeVideo(v.id)"
+  [disabled]="completedVideos.includes(v.id)"
+  [class.done]="completedVideos.includes(v.id)">
+
+  <span *ngIf="!completedVideos.includes(v.id)">
+    ✔ Marquer comme terminé
+  </span>
+
+  <span *ngIf="completedVideos.includes(v.id)">
+    ✅ Terminé
+  </span>
+
+</button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <hr>
+
+  <!-- ========================= -->
+  <!-- 🤖 RECOMMANDATIONS IA -->
+  <!-- ========================= -->
+  <h2 class="section-title">🤖 Recommandations IA</h2>
+
+  <div *ngIf="recommandations.length === 0" class="empty">
+    Aucune recommandation IA
+  </div>
+
+  <div class="grid" *ngIf="recommandations.length > 0">
+
+    <div class="card reco-card ia" *ngFor="let f of recommandations">
+
+      <h3>{{ f.titre }}</h3>
+
+      <span class="badge badge-ia">🤖 IA</span>
+
+      <p class="reason">
+        🎯 Basé sur votre poste
+      </p>
+
+      <p *ngIf="f.score" class="score">
+        ⭐ Score : {{ f.score }}
+      </p>
+
+      <button class="btn-primary" (click)="inscrire(f)">
+        🚀 S'inscrire
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- ========================= -->
+  <!-- 🧠 RECOMMANDATIONS SKILL -->
+  <!-- ========================= -->
+  <h2 class="section-title">🧠 Recommandations par compétences</h2>
+
+  <div *ngIf="recommandationsSkill.length === 0" class="empty">
+    Aucune recommandation
+  </div>
+
+  <div class="grid" *ngIf="recommandationsSkill.length > 0">
+
+    <div class="card reco-card skill" *ngFor="let f of recommandationsSkill">
+
+      <h3>{{ f.titre }}</h3>
+
+      <span class="badge badge-skill">⚡ Skill</span>
+
+      <p class="reason">
+        ⚡ Basé sur vos compétences actuelles
+      </p>
+
+      <button class="btn-primary" (click)="inscrire(f)">
+        🚀 S'inscrire
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
