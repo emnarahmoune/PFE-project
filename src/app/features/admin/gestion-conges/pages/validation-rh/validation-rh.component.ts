@@ -1,4 +1,3 @@
-// src/app/features/admin/gestion-conges/pages/validation-rh/validation-rh.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,8 +13,11 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
-import { AdminCongeService, DemandeCongeAdmin } from '../../../../../core/services/admin-conge.service';
-import { NotificationService } from '../../../../../core/services/notification.service';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { AdminCongeService, TacheRh, StatsConges, DemandeRefusManager } from '../../../../../core/services/admin-conge.service';
+import { FullCalendarModule } from '@fullcalendar/angular';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import interactionPlugin from '@fullcalendar/interaction';
 
 @Component({
   selector: 'app-validation-rh',
@@ -25,102 +27,144 @@ import { NotificationService } from '../../../../../core/services/notification.s
     MatCardModule, MatButtonModule, MatIconModule,
     MatTableModule, MatChipsModule, MatSnackBarModule,
     MatProgressSpinnerModule, MatDialogModule,
-    MatTooltipModule, MatTabsModule, MatBadgeModule
+    MatTooltipModule, MatTabsModule, MatBadgeModule,
+    FullCalendarModule,
+    MatFormFieldModule
   ],
   templateUrl: './validation-rh.component.html',
   styleUrls: ['./validation-rh.component.scss']
 })
 export class ValidationRhComponent implements OnInit, OnDestroy {
   
-  demandes: DemandeCongeAdmin[] = [];
-  loading = false;
+  taches: TacheRh[] = [];
+  loadingTaches = false;
+  refusManager: DemandeRefusManager[] = [];
+  loadingRefus = false;
+  
   selectedTabIndex = 0;
   
+  // Modals
   showApproveModal = false;
   showRejectModal = false;
-  selectedDemande: DemandeCongeAdmin | null = null;
+  selectedTache: TacheRh | null = null;
   commentaire = '';
   motifRefus = '';
   isSubmitting = false;
   
-  stats = {
-    total: 0,
-    approuvees: 0,
-    refusees: 0,
-    enAttente: 0
+  stats: StatsConges = {
+    EN_ATTENTE: 0,
+    APPROUVE: 0,
+    REFUSE: 0
   };
   
   private refreshInterval: any;
   private readonly REFRESH_INTERVAL_MS = 15000;
 
-  displayedColumns = ['employe', 'periode', 'jours', 'type', 'statut', 'actions'];
+  // Colonnes du tableau (sans "statut", car non utilisé dans le template)
+  displayedColumns = ['employe', 'periode', 'jours', 'type', 'actions'];
+  displayedColumnsRefus = ['employe', 'manager', 'periode', 'motif', 'dateDecision'];
+
+  // Configuration FullCalendar (corrigée)
+  calendarOptions: any = {
+    initialView: 'dayGridMonth',
+    locale: 'fr',
+    plugins: [dayGridPlugin, interactionPlugin],
+    events: [],
+    height: 'auto',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,dayGridWeek'
+    },
+    buttonText: {
+      today: 'Aujourd\'hui',
+      month: 'Mois',
+      week: 'Semaine'
+    }
+  };
 
   constructor(
     private adminCongeService: AdminCongeService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog,
-    private notificationService: NotificationService
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
-    this.loadDemandes();
+    this.loadTaches();
+    this.loadRefusManager();
     this.loadStats();
     this.startAutoRefresh();
+    this.loadCalendarEvents();
   }
 
   ngOnDestroy(): void {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
+    if (this.refreshInterval) clearInterval(this.refreshInterval);
   }
 
   startAutoRefresh(): void {
     this.refreshInterval = setInterval(() => {
-      this.loadDemandes(false);
+      this.loadTaches(false);
+      this.loadRefusManager();
       this.loadStats();
+      this.loadCalendarEvents();
     }, this.REFRESH_INTERVAL_MS);
   }
 
-  loadDemandes(showLoading = true): void {
-    if (showLoading) this.loading = true;
-    
+  loadTaches(showLoading = true): void {
+    if (showLoading) this.loadingTaches = true;
     this.adminCongeService.getDemandesAValider().subscribe({
       next: (data) => {
-        this.loading = false;
-        this.demandes = data || [];
-        this.stats.enAttente = this.demandes.length;
-        this.stats.total = this.stats.enAttente + this.stats.approuvees + this.stats.refusees;
+        this.taches = data || [];
+        this.stats.EN_ATTENTE = this.taches.length;
+        this.loadingTaches = false;
       },
       error: (error) => {
-        this.loading = false;
-        console.error('Erreur chargement demandes:', error);
+        this.loadingTaches = false;
+        console.error('Erreur chargement tâches:', error);
         this.showToast('Erreur de connexion au serveur', 'error');
+      }
+    });
+  }
+
+  loadRefusManager(): void {
+    this.loadingRefus = true;
+    this.adminCongeService.getRefusManager().subscribe({
+      next: (data) => {
+        this.refusManager = data || [];
+        this.loadingRefus = false;
+      },
+      error: (err) => {
+        console.error('Erreur chargement refus manager:', err);
+        this.loadingRefus = false;
+        this.showToast('Erreur chargement des refus manager', 'error');
       }
     });
   }
 
   loadStats(): void {
     this.adminCongeService.getStats().subscribe({
-      next: (data) => {
-        if (data) {
-          this.stats.enAttente = data['EN_ATTENTE'] || 0;
-          this.stats.approuvees = data['APPROUVE'] || 0;
-          this.stats.refusees = data['REFUSE'] || 0;
-          this.stats.total = this.stats.enAttente + this.stats.approuvees + this.stats.refusees;
-        }
-      },
+      next: (data) => { if (data) this.stats = data; },
       error: (err) => console.error('Erreur chargement stats:', err)
     });
   }
 
-  openApproveModal(demande: DemandeCongeAdmin): void {
-    this.selectedDemande = demande;
+  loadCalendarEvents(): void {
+    // À implémenter : charger les événements depuis le service
+    // L'API doit retourner des objets avec title, start, end, color, etc.
+    // Exemple :
+    // this.adminCongeService.getAllConges().subscribe(events => {
+    //   this.calendarOptions = { ...this.calendarOptions, events };
+    // });
+  }
+
+  openApproveModal(tache: TacheRh): void {
+    this.selectedTache = tache;
     this.commentaire = '';
     this.showApproveModal = true;
   }
 
-  openRejectModal(demande: DemandeCongeAdmin): void {
-    this.selectedDemande = demande;
+  openRejectModal(tache: TacheRh): void {
+    this.selectedTache = tache;
     this.motifRefus = '';
     this.showRejectModal = true;
   }
@@ -128,23 +172,23 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
   closeModals(): void {
     this.showApproveModal = false;
     this.showRejectModal = false;
-    this.selectedDemande = null;
+    this.selectedTache = null;
     this.commentaire = '';
     this.motifRefus = '';
   }
 
   confirmApprove(): void {
-    if (!this.selectedDemande || this.isSubmitting) return;
+    if (!this.selectedTache || this.isSubmitting) return;
     this.isSubmitting = true;
-
-    this.adminCongeService.approuverDemande(this.selectedDemande.id, this.commentaire).subscribe({
+    this.adminCongeService.approuverDemande(this.selectedTache.demandeId, this.commentaire).subscribe({
       next: () => {
         this.isSubmitting = false;
-        this.showToast(`✅ Demande approuvée avec succès`, 'success');
+        this.showToast('✅ Demande approuvée avec succès', 'success');
         this.closeModals();
-        this.loadDemandes();
+        this.loadTaches();
+        this.loadRefusManager();
         this.loadStats();
-        this.notificationService?.showSuccess?.(`Demande de ${this.selectedDemande!.employePrenom} ${this.selectedDemande!.employeNom} approuvée`);
+        this.loadCalendarEvents();
       },
       error: (error) => {
         this.isSubmitting = false;
@@ -155,23 +199,21 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
   }
 
   confirmReject(): void {
-    if (!this.selectedDemande || this.isSubmitting) return;
-    
+    if (!this.selectedTache || this.isSubmitting) return;
     if (!this.motifRefus.trim()) {
       this.showToast('Veuillez saisir un motif de refus', 'error');
       return;
     }
-
     this.isSubmitting = true;
-
-    this.adminCongeService.refuserDemande(this.selectedDemande.id, this.motifRefus).subscribe({
+    this.adminCongeService.refuserDemande(this.selectedTache.demandeId, this.motifRefus).subscribe({
       next: () => {
         this.isSubmitting = false;
-        this.showToast(`❌ Demande refusée avec succès`, 'success');
+        this.showToast('❌ Demande refusée avec succès', 'success');
         this.closeModals();
-        this.loadDemandes();
+        this.loadTaches();
+        this.loadRefusManager();
         this.loadStats();
-        this.notificationService?.showWarning?.(`Demande de ${this.selectedDemande!.employePrenom} ${this.selectedDemande!.employeNom} refusée`);
+        this.loadCalendarEvents();
       },
       error: (error) => {
         this.isSubmitting = false;
@@ -201,18 +243,18 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     }
   }
 
-  getTypeLabel(type: string): string {
+  getTypeLabel(type?: string): string {
     switch (type) {
       case 'ANNUEL': return 'Annuel';
       case 'MALADIE': return 'Maladie';
       case 'SANS_SOLDE': return 'Sans solde';
       case 'MATERNITE': return 'Maternité';
       case 'PATERNITE': return 'Paternité';
-      default: return type;
+      default: return type || 'Non spécifié';
     }
   }
 
-  getTypeColor(type: string): string {
+  getTypeColor(type?: string): string {
     switch (type) {
       case 'ANNUEL': return '#1976d2';
       case 'MALADIE': return '#dc3545';
@@ -223,10 +265,23 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     }
   }
 
-  formatDate(dateStr: string): string {
+  formatDate(dateStr: string | undefined): string {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     return date.toLocaleDateString('fr-FR');
+  }
+
+  getAvatarColor(dept?: string): string {
+    const colors: Record<string, string> = {
+      RH: '#8b5cf6',
+      Technique: '#0891b2',
+      Commercial: '#d97706',
+      Finance: '#059669',
+      Marketing: '#db2777',
+      Direction: '#7c3aed',
+      Logistique: '#4f46e5'
+    };
+    return colors[dept || ''] || '#6366f1';
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {
@@ -238,7 +293,26 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     });
   }
 
-  trackById(index: number, item: DemandeCongeAdmin): number {
-    return item.id;
+  // Détails modal
+  selectedDetails: any = null;
+  showDetailsModal = false;
+
+  openDetails(tache: any) {
+    this.selectedDetails = tache;
+    this.showDetailsModal = true;
+  }
+
+  closeDetails() {
+    this.showDetailsModal = false;
+    this.selectedDetails = null;
+  }
+
+  // TrackBy pour optimisation
+  trackByTaskId(index: number, item: TacheRh): number {
+    return item.demandeId ?? index;
+  }
+
+  trackByRefusId(index: number, item: DemandeRefusManager): number {
+    return item.demandeId ?? index;
   }
 }

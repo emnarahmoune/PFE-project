@@ -31,11 +31,19 @@ export const employeeRoutes: Routes = [
 
       // ✅ NOUVEAU - Mes notifications
       { path: 'notifications', component: MesNotificationsComponent },
+       
 
-
+      // Mes compétences
       { path: 'competences', component: CompetencesComponent },
 
       
+
+{
+  path: 'mes-conges/:id/modifier',
+  loadComponent: () => import('../employee/pages/mes-conges/ModifierCongeComponent/ModifierCongeComponent')
+    .then(m => m.ModifierCongeComponent)
+},
+ 
       // Redirection par défaut
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]

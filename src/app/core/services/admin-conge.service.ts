@@ -1,34 +1,62 @@
 // src/app/core/services/admin-conge.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { AuthService } from './auth.service';
 
-export interface DemandeCongeAdmin {
-  id: number;
-  employeNom: string;
-  employePrenom: string;
-  employeEmail: string;
-  employeId: number;
-  dateDebut: string;
-  dateFin: string;
-  joursOuvres: number;
-  type: string;
-  commentaire?: string;
-  statut: string;
-  dateDemande: string;
-  processInstanceId?: string;
-  taskId?: string;
-  currentTaskId?: string;
-  motifRefus?: string;
-  urgente?: boolean;
+// Interface de la réponse API (wrapper)
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  timestamp: string;
+  statusCode: number;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+export interface TacheRh {
+statut: string;
+nombreJours: any;
+  taskId: string;
+  taskName: string;
+  createTime: string;
+  processInstanceId: string;
+  employeId: string;
+  nbJours: number;
+  demandeId: number;        // ← c'est l'ID de la demande, utilisé pour les actions
+  montantConge?: number;
+  dateDebut?: string;
+  dateFin?: string;
+  type?: string;
+  commentaire?: string;
+  employeNom?: string;
+  employePrenom?: string;
+  employeEmail?: string;
+}
+
+export interface StatsConges {
+  EN_ATTENTE: number;
+  APPROUVE: number;
+  REFUSE: number;
+  [key: string]: number;
+}
+export interface DemandeRefusManager {
+  demandeId: number;
+employeDepartement: string|undefined;
+motif: any;
+  id: number;
+  dateDebut: string;
+  dateFin: string;
+  type: string;
+  statut: string;
+  motifRefus: string;
+  dateDecision: string;
+  employeNom: string;
+  employePrenom: string;
+  managerNom: string;
+}
+
+@Injectable({ providedIn: 'root' })
 export class AdminCongeService {
-  // ✅ URL relative – le proxy se chargera de rediriger vers http://localhost:8082
   private apiUrl = '/api/admin/conges';
 
   constructor(
@@ -44,53 +72,43 @@ export class AdminCongeService {
     });
   }
 
-  getDemandesAValider(): Observable<DemandeCongeAdmin[]> {
-    return this.http.get<DemandeCongeAdmin[]>(
+  // Récupère les tâches RH (désemballe response.data)
+  getDemandesAValider(): Observable<TacheRh[]> {
+    return this.http.get<ApiResponse<TacheRh[]>>(
       `${this.apiUrl}/a-valider`,
       { headers: this.getHeaders() }
-    );
+    ).pipe(map(res => res.data || []));
   }
 
-  getAllDemandes(): Observable<DemandeCongeAdmin[]> {
-    return this.http.get<DemandeCongeAdmin[]>(
-      `${this.apiUrl}/all`,
-      { headers: this.getHeaders() }
-    );
-  }
-
-  getDemandeById(id: number): Observable<DemandeCongeAdmin> {
-    return this.http.get<DemandeCongeAdmin>(
-      `${this.apiUrl}/${id}`,
-      { headers: this.getHeaders() }
-    );
-  }
-
-  approuverDemande(id: number, commentaire?: string): Observable<void> {
-    const url = commentaire 
-      ? `${this.apiUrl}/${id}/valider?commentaire=${encodeURIComponent(commentaire)}`
-      : `${this.apiUrl}/${id}/valider`;
+  // ✅ Approbation : PUT /api/admin/conges/{demandeId}/valider
+  approuverDemande(demandeId: number, commentaire?: string): Observable<void> {
+    const url = commentaire
+      ? `${this.apiUrl}/${demandeId}/valider?commentaire=${encodeURIComponent(commentaire)}`
+      : `${this.apiUrl}/${demandeId}/valider`;
     return this.http.put<void>(url, {}, { headers: this.getHeaders() });
   }
 
-  refuserDemande(id: number, motif: string): Observable<void> {
+  // ✅ Refus : PUT /api/admin/conges/{demandeId}/refuser
+  refuserDemande(demandeId: number, motif: string): Observable<void> {
     return this.http.put<void>(
-      `${this.apiUrl}/${id}/refuser?motif=${encodeURIComponent(motif)}`,
+      `${this.apiUrl}/${demandeId}/refuser?motif=${encodeURIComponent(motif)}`,
       {},
       { headers: this.getHeaders() }
     );
   }
+  
 
-  getStats(): Observable<Record<string, number>> {
-    return this.http.get<Record<string, number>>(
+  // ✅ NOUVEAU : récupérer les demandes refusées par les managers
+  getRefusManager(): Observable<DemandeRefusManager[]> {
+    return this.http
+      .get<ApiResponse<DemandeRefusManager[]>>(`${this.apiUrl}/refus-manager`, { headers: this.getHeaders() })
+      .pipe(map(res => res.data || []));
+  }  
+  // Statistiques
+  getStats(): Observable<StatsConges> {
+    return this.http.get<ApiResponse<StatsConges>>(
       `${this.apiUrl}/stats/statut`,
       { headers: this.getHeaders() }
-    );
-  }
-
-  getOrphanRequests(): Observable<DemandeCongeAdmin[]> {
-    return this.http.get<DemandeCongeAdmin[]>(
-      `${this.apiUrl}/orphan-requests`,
-      { headers: this.getHeaders() }
-    );
+    ).pipe(map(res => res.data || { EN_ATTENTE: 0, APPROUVE: 0, REFUSE: 0 }));
   }
 }

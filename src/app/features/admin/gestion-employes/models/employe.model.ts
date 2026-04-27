@@ -17,6 +17,10 @@ export interface Employe {
   createdAt?: string;
   managerNom?: string; 
   updatedAt?: string;
+  absenteisme?: number;
+  absenteismeDate?: string;
+  scoreTurnover?: number;
+  scoreTurnoverNiveau?: string;
 }
 
 export interface EmployeResponse {

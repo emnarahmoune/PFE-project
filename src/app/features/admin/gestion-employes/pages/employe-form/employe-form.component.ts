@@ -1,3 +1,4 @@
+// src/app/features/admin/pages/employe-form/employe-form.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -8,14 +9,11 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
 import { EmployeService } from '../../services/employe.service';
-import { ManagerService, Manager } from '../../../../../core/services/manager.service';
 import { Employe } from '../../models/employe.model';
 
-/* ─── Validators personnalisés ─────────────── */
 function noWhitespaceValidator(c: AbstractControl): ValidationErrors | null {
   return c.value && c.value !== c.value.trim() ? { whitespace: true } : null;
 }
-
 function phoneValidator(c: AbstractControl): ValidationErrors | null {
   if (!c.value) return null;
   const clean = c.value.replace(/[\s\-().+]/g, '');
@@ -30,30 +28,26 @@ function phoneValidator(c: AbstractControl): ValidationErrors | null {
   styleUrls: ['./employe-form.component.css']
 })
 export class EmployeFormComponent implements OnInit {
-
   employeForm!: FormGroup;
-  isEditMode   = false;
+  isEditMode = false;
   employeId?: number;
-  loading      = false;
-  submitting   = false;
+  loading = false;
+  submitting = false;
 
   departements = ['RH','Technique','Commercial','Finance','Marketing','Direction','Logistique'];
-  postes       = ['Développeur Full Stack','Développeur Backend','Développeur Frontend',
-                  'Chef de projet','Analyste','Commercial','Comptable',
-                  'Responsable RH','Directeur','Manager'];
-
+  postes = ['Développeur Full Stack','Développeur Backend','Développeur Frontend',
+            'Chef de projet','Analyste','Commercial','Comptable','Responsable RH','Directeur','Manager'];
   rolesList = [
     { value: 'user', label: 'Employé' },
     { value: 'manager', label: 'Manager' },
     { value: 'admin_rh', label: 'Admin RH' }
   ];
 
-  managersList: Manager[] = [];
+  managersList: Employe[] = [];
 
   constructor(
     private fb: FormBuilder,
-    private svc: EmployeService,
-    private managerSvc: ManagerService,
+    private employeService: EmployeService,
     private route: ActivatedRoute,
     private router: Router,
     private snack: MatSnackBar
@@ -90,9 +84,9 @@ export class EmployeFormComponent implements OnInit {
   }
 
   loadManagers(): void {
-    this.managerSvc.getAll().subscribe({
-      next: (managers: Manager[]) => {
-        this.managersList = managers;
+    this.employeService.getAllManagers().subscribe({
+      next: (res) => {
+        this.managersList = res.success && Array.isArray(res.data) ? res.data : [];
       },
       error: (err) => {
         console.error('Erreur chargement managers', err);
@@ -103,7 +97,7 @@ export class EmployeFormComponent implements OnInit {
 
   loadEmploye(): void {
     this.loading = true;
-    this.svc.getById(this.employeId!)
+    this.employeService.getById(this.employeId!)
       .pipe(finalize(() => this.loading = false))
       .subscribe({
         next: (res) => {
@@ -146,10 +140,9 @@ export class EmployeFormComponent implements OnInit {
 
     this.submitting = true;
     const payload = this.toPayload();
-
     const obs$ = this.isEditMode
-      ? this.svc.update(this.employeId!, payload)
-      : this.svc.create(payload);
+      ? this.employeService.update(this.employeId!, payload)
+      : this.employeService.create(payload);
 
     obs$.pipe(finalize(() => this.submitting = false))
       .subscribe({
@@ -176,7 +169,7 @@ export class EmployeFormComponent implements OnInit {
 
   private toPayload(): Employe {
     const v = this.employeForm.value;
-    const p: Employe = {
+    return {
       matricule:    v.matricule.trim(),
       nom:          v.nom.trim(),
       prenom:       v.prenom.trim(),
@@ -192,7 +185,6 @@ export class EmployeFormComponent implements OnInit {
       serviceId:    v.serviceId || undefined,
       managerId:    v.managerId || undefined
     };
-    return p;
   }
 
   setStatut(s: string): void {

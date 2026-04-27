@@ -1,5 +1,5 @@
 <div class="glass-conges">
-  <!-- Hero avec effet glassmorphism -->
+  <!-- Hero -->
   <div class="glass-hero">
     <div class="hero-glow"></div>
     <div class="hero-content">
@@ -14,7 +14,7 @@
     </div>
   </div>
 
-  <!-- Cartes KPI (style glass) -->
+  <!-- Cartes KPI -->
   <div class="stats-rainbow">
     <div class="stat-glass" style="--accent: #3B82F6">
       <div class="stat-icon">📅</div>
@@ -46,7 +46,7 @@
     </div>
   </div>
 
-  <!-- Barre de progression fluide -->
+  <!-- Barre de progression -->
   <div class="glass-progress">
     <div class="progress-header">
       <span>📊 Utilisation du solde</span>
@@ -57,9 +57,46 @@
     </div>
   </div>
 
-  <!-- Grille de demandes (cartes au lieu d'un tableau) -->
+  <!-- Barre d'outils de sélection (visible si des demandes existent) -->
+  <div class="selection-toolbar" *ngIf="!loading && conges.length > 0">
+    <div class="selection-controls">
+      <button class="action-pill select-mode-btn" (click)="toggleSelectionMode()">
+        {{ selectionMode ? '❌ Désactiver la sélection' : '✅ Activer la sélection' }}
+      </button>
+
+      <!-- Contrôles qui apparaissent uniquement en mode sélection -->
+      <ng-container *ngIf="selectionMode">
+        <mat-checkbox 
+          [checked]="selectAll" 
+          (change)="toggleSelectAll()"
+          class="select-all-checkbox">
+          Tout sélectionner
+        </mat-checkbox>
+        <span class="selection-count" *ngIf="selectedDemandes.size > 0">
+          {{ selectedDemandes.size }} demande(s) sélectionnée(s)
+        </span>
+        <button class="action-pill delete-selected" (click)="deleteSelectedDemandes()">
+          🗑️ Supprimer la sélection
+        </button>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- Grille des demandes -->
   <div class="requests-grid" *ngIf="!loading && conges.length > 0">
     <div class="request-card" *ngFor="let c of conges; trackBy: trackById">
+      <!-- Case à cocher (affichée uniquement en mode sélection et si la demande est sélectionnable) -->
+      <div class="card-select" *ngIf="selectionMode && isSelectable(c)">
+        <mat-checkbox 
+          [checked]="isSelected(c.id!)" 
+          (change)="toggleSelection(c.id!)"
+          (click)="$event.stopPropagation()">
+        </mat-checkbox>
+      </div>
+      <!-- Badge "Non sélectionnable" pour les demandes en attente quand mode sélection activé -->
+      <div class="card-not-selectable" *ngIf="selectionMode && !isSelectable(c)" title="Demande en attente, non sélectionnable">
+        🔒
+      </div>
       <div class="card-glow"></div>
       <div class="card-header">
         <div class="date-pill">

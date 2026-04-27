@@ -18,20 +18,20 @@ export interface Task {
   commentaire?: string;
   employeNom?: string;
   employePrenom?: string;
+  employeEmail?: string;
+  urgente?: boolean
 }
 
 export interface ApiResponse<T> {
   data: T;
   message: string;
   success: boolean;
-  status?: number;
+  statusCode?: number;
+  timestamp?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class WorkflowService {
-  // ✅ URL relative – le proxy se chargera de la redirection
   private apiUrl = '/api';
 
   constructor(
@@ -43,78 +43,84 @@ export class WorkflowService {
     const token = this.authService.getToken();
     return new HttpHeaders({
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      Authorization: `Bearer ${token}`
     });
   }
 
   // ==================== MANAGER ====================
-
   getManagerTasks(): Observable<Task[]> {
-    return this.http.get<ApiResponse<Task[]>>(
-      `${this.apiUrl}/workflow/manager/tasks`,
-      { headers: this.getHeaders() }
-    ).pipe(
-      map(response => {
-        if (Array.isArray(response)) {
-          return response as unknown as Task[];
+    return this.http.get<any>(`${this.apiUrl}/manager/conges`, { headers: this.getHeaders() })
+      .pipe(map(response => {
+        console.log('📦 Réponse brute de /api/manager/conges :', response);
+        let tasks: Task[] = [];
+        // Cas 1: réponse avec wrapper { data: [...] }
+        if (response && response.data && Array.isArray(response.data)) {
+          tasks = response.data;
         }
-        return response?.data ?? [];
-      })
-    );
+        // Cas 2: réponse directe sous forme de tableau
+        else if (Array.isArray(response)) {
+          tasks = response;
+        }
+        // Cas 3: réponse paginée { content: [...] }
+        else if (response && response.content && Array.isArray(response.content)) {
+          tasks = response.content;
+        }
+        console.log('✅ Tâches extraites :', tasks);
+        return tasks;
+      }));
   }
 
   approveTask(taskId: string, commentaire: string): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(
-      `${this.apiUrl}/workflow/manager/decide`,
-      { taskId, approve: true, comment: commentaire },
+      `${this.apiUrl}/manager/approuver-demande`,
+      { taskId, commentaire },
       { headers: this.getHeaders() }
     );
   }
 
   rejectTask(taskId: string, motif: string): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(
-      `${this.apiUrl}/workflow/manager/decide`,
-      { taskId, approve: false, comment: motif },
+      `${this.apiUrl}/manager/refuser-demande`,
+      { taskId, motif },
       { headers: this.getHeaders() }
     );
   }
 
-  // ==================== RH ====================
-
+  // ==================== ADMIN RH ====================
   getRHTasks(): Observable<Task[]> {
-    return this.http.get<ApiResponse<Task[]>>(
-      `${this.apiUrl}/workflow/rh/tasks`,
-      { headers: this.getHeaders() }
-    ).pipe(
-      map(response => {
-        if (Array.isArray(response)) {
-          return response as unknown as Task[];
+    return this.http.get<any>(`${this.apiUrl}/admin/conges/a-valider`, { headers: this.getHeaders() })
+      .pipe(map(response => {
+        console.log('📦 Réponse brute de /api/admin/conges/a-valider :', response);
+        let tasks: Task[] = [];
+        if (response && response.data && Array.isArray(response.data)) {
+          tasks = response.data;
+        } else if (Array.isArray(response)) {
+          tasks = response;
+        } else if (response && response.content && Array.isArray(response.content)) {
+          tasks = response.content;
         }
-        return response?.data ?? [];
-      })
-    );
+        return tasks;
+      }));
   }
 
-  approveRHTask(taskId: string, commentaire: string): Observable<ApiResponse<string>> {
-    return this.http.post<ApiResponse<string>>(
-      `${this.apiUrl}/workflow/rh/decide`,
-      { taskId, approve: true, comment: commentaire },
+  approveRHTask(demandeId: number, commentaire?: string): Observable<void> {
+    const url = commentaire
+      ? `${this.apiUrl}/admin/conges/${demandeId}/valider?commentaire=${encodeURIComponent(commentaire)}`
+      : `${this.apiUrl}/admin/conges/${demandeId}/valider`;
+    return this.http.put<void>(url, {}, { headers: this.getHeaders() });
+  }
+
+  rejectRHTask(demandeId: number, motif: string): Observable<void> {
+    return this.http.put<void>(
+      `${this.apiUrl}/admin/conges/${demandeId}/refuser?motif=${encodeURIComponent(motif)}`,
+      {},
       { headers: this.getHeaders() }
     );
   }
 
-  rejectRHTask(taskId: string, motif: string): Observable<ApiResponse<string>> {
-    return this.http.post<ApiResponse<string>>(
-      `${this.apiUrl}/workflow/rh/decide`,
-      { taskId, approve: false, comment: motif },
-      { headers: this.getHeaders() }
-    );
-  }
-
-  // ==================== ADMIN ====================
-
+  // ==================== AUTRES ====================
   getOrphanRequests(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/workflow/orphan-requests`, { headers: this.getHeaders() });
+    return this.http.get(`${this.apiUrl}/admin/conges/orphan-requests`, { headers: this.getHeaders() });
   }
 
   getProcessStatus(processInstanceId: string): Observable<any> {

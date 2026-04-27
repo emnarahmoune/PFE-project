@@ -81,6 +81,17 @@
               placeholder="Informations complémentaires..."></textarea>
             <mat-icon matSuffix>chat</mat-icon>
           </mat-form-field>
+     <!-- ✅ NOUVEAU : Demande urgente -->
+          <div class="urgent-checkbox">
+            <mat-checkbox formControlName="urgente" color="warn">
+              <mat-icon>warning</mat-icon>
+              Demande urgente (à traiter en priorité)
+            </mat-checkbox>
+            <small class="urgent-hint">
+              Les demandes urgentes seront traitées même si le solde est insuffisant (sous réserve d’acceptation manager).
+            </small>
+          </div>
+
 
           <mat-divider></mat-divider>
 

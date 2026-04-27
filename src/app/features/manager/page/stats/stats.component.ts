@@ -5,8 +5,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { WorkflowService } from '../../../core/services/workflow.service';
-import { AuthService } from '../../../core/services/auth.service';
+import { WorkflowService } from '../../../../core/services/workflow.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-manager-stats',

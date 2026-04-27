@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { ManagerService } from '../../../core/services/manager.service';
+import { ManagerService, ManagerStats } from '../../../../core/services/manager.service';
+import { DemandeConge } from '../../../employee/models/conge.model';
 
 @Component({
   selector: 'app-dashboard-manager',
@@ -11,9 +12,9 @@ import { ManagerService } from '../../../core/services/manager.service';
 })
 export class DashboardManagerComponent implements OnInit {
 
-  stats: any = {};
   equipe: any[] = [];
-  conges: any[] = []; // ✅ Déjà bien initialisé
+   stats: ManagerStats = {} as ManagerStats; 
+  conges: DemandeConge[] = [];
 
   currentMonth: string = '';
   currentYear: number = 0;
@@ -50,15 +51,20 @@ export class DashboardManagerComponent implements OnInit {
     this.errorMessage = '';
 
     this.managerService.getStats().subscribe({
-      next: (data) => {
-        this.stats = data;
-        this.updateStatCards();
-        this.updateRecentEmployees();
-        this.updateAlerts();
-        this.updateTopCompetences();
+      next: (response: { success: boolean; data: ManagerStats }) => {
+        if (response.success) {
+          this.stats = response.data;
+          this.updateStatCards();
+          this.updateRecentEmployees();
+          this.updateAlerts();
+          this.updateTopCompetences();
+        } else {
+          this.errorMessage = 'Erreur lors du chargement des statistiques';
+          this.setDefaultData();
+        }
         this.loading = false;
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Erreur stats:', err);
         this.errorMessage = 'Erreur lors du chargement des statistiques';
         this.loading = false;
@@ -67,27 +73,34 @@ export class DashboardManagerComponent implements OnInit {
     });
 
     this.managerService.getEquipe().subscribe({
-      next: (data) => {
-        this.equipe = Array.isArray(data) ? data : [];
+      next: (response: { success: boolean; data: any[] }) => {
+        if (response.success) {
+          this.equipe = response.data || [];
+        } else {
+          this.equipe = [];
+        }
         this.updateRecentEmployees();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Erreur équipe:', err);
         this.equipe = [];
       }
     });
 
     this.managerService.getConges().subscribe({
-      next: (data) => {
-        // ✅ S'assurer que data est un tableau
-        this.conges = Array.isArray(data) ? data : [];
-        console.log('Congés chargés:', this.conges); // Debug
-        this.updateStatCards(); // Mettre à jour les cartes après chargement des congés
+      next: (response: { success: boolean; data: DemandeConge[] }) => {
+        if (response.success) {
+          this.conges = response.data || [];
+        } else {
+          this.conges = [];
+        }
+        console.log('Congés chargés:', this.conges);
+        this.updateStatCards();
         this.updateAlerts();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Erreur congés:', err);
-        this.conges = []; // Initialiser à tableau vide en cas d'erreur
+        this.conges = [];
       }
     });
 
@@ -100,6 +113,10 @@ export class DashboardManagerComponent implements OnInit {
 
   setDefaultData() {
     this.stats = {
+      employes: 45,
+      congesEnAttente: 0,
+      absenteisme: 0,
+      turnover: 0,
       totalEmployes: 45,
       employesActifs: 42,
       masseSalariale: 125000,
@@ -129,19 +146,8 @@ export class DashboardManagerComponent implements OnInit {
   }
 
   updateStatCards() {
-    // ✅ S'assurer que conges est un tableau avant d'utiliser filter
     const congesList = Array.isArray(this.conges) ? this.conges : [];
     
-    // ✅ Corriger le statut selon ce que retourne votre backend
-    // Les statuts possibles: 'EN_ATTENTE', 'APPROUVE', 'REFUSE', 'ANNULE'
-    const congesEnCours = congesList.filter(c => {
-      // Adapter selon les statuts de votre backend
-      return c.statut === 'EN_ATTENTE' || c.statut === 'APPROUVE' && this.isCongeEnCours(c);
-    }).length;
-    
-    // Alternative: compter les congés approuvés seulement
-    const congesApprouves = congesList.filter(c => c.statut === 'APPROUVE').length;
-
     this.statCards = [
       {
         title: 'Total employés',
@@ -174,8 +180,7 @@ export class DashboardManagerComponent implements OnInit {
     ];
   }
 
-  // ✅ Méthode utilitaire pour vérifier si un congé est en cours
-  private isCongeEnCours(conge: any): boolean {
+  private isCongeEnCours(conge: DemandeConge): boolean {
     if (!conge.dateDebut || !conge.dateFin) return false;
     const today = new Date();
     const dateDebut = new Date(conge.dateDebut);
@@ -194,43 +199,17 @@ export class DashboardManagerComponent implements OnInit {
         .slice(0, 5);
     } else {
       this.recentEmployees = [
-        {
-          prenom: 'Marie',
-          nom: 'Lambert',
-          email: 'marie.lambert@entreprise.com',
-          poste: 'Développeur Frontend',
-          departement: 'IT',
-          dateEmbauche: '2024-01-15',
-          statut: 'Actif'
-        },
-        {
-          prenom: 'Thomas',
-          nom: 'Bernard',
-          email: 'thomas.bernard@entreprise.com',
-          poste: 'Chef de projet',
-          departement: 'Marketing',
-          dateEmbauche: '2024-02-01',
-          statut: 'Actif'
-        },
-        {
-          prenom: 'Sophie',
-          nom: 'Martin',
-          email: 'sophie.martin@entreprise.com',
-          poste: 'Responsable RH',
-          departement: 'RH',
-          dateEmbauche: '2024-02-20',
-          statut: 'Actif'
-        }
+        { prenom: 'Marie', nom: 'Lambert', email: 'marie.lambert@entreprise.com', poste: 'Développeur Frontend', departement: 'IT', dateEmbauche: '2024-01-15', statut: 'Actif' },
+        { prenom: 'Thomas', nom: 'Bernard', email: 'thomas.bernard@entreprise.com', poste: 'Chef de projet', departement: 'Marketing', dateEmbauche: '2024-02-01', statut: 'Actif' },
+        { prenom: 'Sophie', nom: 'Martin', email: 'sophie.martin@entreprise.com', poste: 'Responsable RH', departement: 'RH', dateEmbauche: '2024-02-20', statut: 'Actif' }
       ];
     }
   }
 
   updateAlerts() {
     this.alerts = [];
-    
     const congesList = Array.isArray(this.conges) ? this.conges : [];
     
-    // ✅ Adapter les statuts selon votre backend
     const congesEnAttente = congesList.filter(c => c.statut === 'EN_ATTENTE');
     if (congesEnAttente.length > 0) {
       this.alerts.push({

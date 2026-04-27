@@ -1,11 +1,12 @@
-// conge.model.ts
+// src/app/features/employee/models/conge.model.ts
+
 export interface DemandeConge {
   id?: number;
-  employeId?: number;  // ✅ Rendre optionnel (le backend le récupère du JWT)
+  employeId?: number;
   dateDebut: string;
   dateFin: string;
   type: string;
-  statut?: string;  // ✅ Rendre optionnel (le backend le définit)
+  statut?: string;
   dateDemande?: string;
   dateDecision?: string;
   commentaire?: string;
@@ -26,10 +27,18 @@ export interface DemandeConge {
   processInstanceId?: string;
 }
 
+// ✅ Interface pour le solde de congés (retournée par /mon-solde-conges)
+export interface SoldeConges {
+  total: number;      // solde total (initial)
+  pris: number;       // jours déjà pris (somme des jours approuvés)
+  restant: number;    // solde restant
+  enAttente: number;  // nombre de demandes en attente (utile pour l'affichage)
+}
+
 export interface CongeResponse {
   success: boolean;
   message?: string;
-  data?: DemandeConge | DemandeConge[] | any;
+  data?: DemandeConge | DemandeConge[] | SoldeConges | any;
   error?: string;
   timestamp?: string;
   statusCode?: number;

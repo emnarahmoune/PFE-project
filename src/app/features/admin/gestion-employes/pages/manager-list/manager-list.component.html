@@ -1,0 +1,200 @@
+<div class="hr-app">
+  <!-- HEADER MODERNE -->
+  <header class="top-header">
+    <div class="title">
+      <h1>🧠 Intelligence RH</h1>
+      <p>Analyse dynamique des équipes et managers</p>
+    </div>
+    <div class="actions">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input
+          type="text"
+          placeholder="Rechercher un manager..."
+          [(ngModel)]="searchTerm"
+          (input)="applyFilters()"
+        />
+      </div>
+      <button class="btn-refresh" (click)="refresh()">
+        <span>⟳</span> Actualiser
+      </button>
+    </div>
+  </header>
+
+  <!-- KPI ROW (NOUVEAU : Managers, Employés, Équipes, Équipe dominante) -->
+  <div class="kpi-row">
+  <!-- Si les équipes ne sont pas encore chargées (première passe), on affiche des squelettes -->
+  <ng-container *ngIf="!teamsLoaded; else kpiLoaded">
+    <div class="kpi-card skeleton"><div class="kpi-icon"></div><div class="kpi-value"></div><div class="kpi-label"></div><div class="kpi-sub"></div></div>
+    <div class="kpi-card skeleton"><div class="kpi-icon"></div><div class="kpi-value"></div><div class="kpi-label"></div><div class="kpi-sub"></div></div>
+    <div class="kpi-card skeleton"><div class="kpi-icon"></div><div class="kpi-value"></div><div class="kpi-label"></div><div class="kpi-sub"></div></div>
+    <div class="kpi-card skeleton"><div class="kpi-icon"></div><div class="kpi-value"></div><div class="kpi-label"></div><div class="kpi-sub"></div></div>
+  </ng-container>
+  <ng-template #kpiLoaded>
+    <div class="kpi-card">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-value">{{ totalManagers }}</div>
+      <div class="kpi-label">Managers</div>
+      <div class="kpi-sub">Actifs dans l'organisation</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">🧑‍💻</div>
+      <div class="kpi-value">{{ totalEmployees }}</div>
+      <div class="kpi-label">Employés</div>
+      <div class="kpi-sub">Collaborateurs actifs</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">📁</div>
+      <div class="kpi-value">{{ totalTeams }}</div>
+      <div class="kpi-label">Équipes</div>
+      <div class="kpi-sub">Équipes constituées</div>
+    </div>
+    <div class="kpi-card highlight">
+      <div class="kpi-icon">🏆</div>
+      <div class="kpi-value">{{ biggestTeam?.manager?.prenom || '-' }}</div>
+      <div class="kpi-label">Équipe dominante</div>
+      <div class="kpi-sub">{{ biggestTeam?.equipe?.length || 0 }} membres</div>
+    </div>
+  </ng-template>
+</div>
+
+  <!-- LAYOUT PRINCIPAL -->
+  <div class="layout">
+    <!-- PANEL GAUCHE : MANAGERS -->
+    <div class="panel-left">
+      <div class="filters-header">
+        <div class="filters">
+          <button
+            *ngFor="let dept of ['ALL', 'RH', 'Technique', 'Finance']"
+            (click)="selectedDept = dept; applyFilters()"
+            [class.active]="selectedDept === dept"
+          >
+            {{ dept === 'ALL' ? 'Tous' : dept }}
+          </button>
+        </div>
+        <div class="sort-selector">
+          <span>Trier par :</span>
+          <select [(ngModel)]="sortMode" (change)="applyFilters()">
+            <option value="nameAsc">📛 A → Z (nom)</option>
+            <option value="nameDesc">📛 Z → A (nom)</option>
+            <option value="teamDesc">👥 Plus grande équipe</option>
+            <option value="teamAsc">👥 Plus petite équipe</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- SKELETON LOADING (managers) -->
+      <div *ngIf="loading" class="skeleton-list">
+        <div *ngFor="let _ of [1,2,3,4]" class="skeleton-row"></div>
+      </div>
+
+      <!-- LISTE MANAGERS -->
+      <div class="manager-list" *ngIf="!loading">
+        <div
+          class="manager-row"
+          *ngFor="let mgr of filteredManagers; trackBy: trackByManager"
+          (click)="toggleEquipe(mgr)"
+          [class.active]="mgr.expanded"
+        >
+          <div class="avatar" [style.background]="getAvatarColor(mgr.manager.departement ?? '')">
+            {{ (mgr.manager.prenom?.charAt(0) ?? '') + (mgr.manager.nom?.charAt(0) ?? '') }}
+          </div>
+          <div class="meta">
+            <div class="name">{{ mgr.manager.prenom }} {{ mgr.manager.nom }}</div>
+            <div class="sub">
+              {{ mgr.manager.departement }}
+              <span class="team-badge">{{ mgr.equipe.length }} membres</span>
+            </div>
+          </div>
+          <div class="arrow">›</div>
+        </div>
+        <div *ngIf="filteredManagers.length === 0" class="empty-state">
+          Aucun manager trouvé
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL DROIT : DÉTAIL ÉQUIPE -->
+    <div class="panel-right">
+      <ng-container *ngFor="let mgr of filteredManagers; trackBy: trackByManager">
+        <div class="detail" *ngIf="mgr.expanded">
+          <!-- Spinner de chargement -->
+          <div *ngIf="mgr.loading" class="team-loading">
+            <div class="spinner"></div>
+            <span>Chargement de l'équipe...</span>
+          </div>
+
+          <!-- Contenu affiché quand l'équipe est chargée -->
+          <ng-container *ngIf="!mgr.loading">
+            <!-- EN-TÊTE MANAGER -->
+            <div class="detail-header">
+              <div class="avatar-big" [style.background]="getAvatarColor(mgr.manager.departement ?? '')">
+                {{ (mgr.manager.prenom?.charAt(0) ?? '') + (mgr.manager.nom?.charAt(0) ?? '') }}
+              </div>
+              <div class="header-info">
+                <div class="title-group">
+                  <h2>{{ mgr.manager.prenom }} {{ mgr.manager.nom }}</h2>
+                  <div class="performance-badge" [class]="getPerformanceClass(getRiskScore(mgr))">
+                    🎯 {{ getPerformanceLabel(getRiskScore(mgr)) }}
+                  </div>
+                </div>
+                <p>{{ mgr.manager.poste }} • {{ mgr.manager.departement }}</p>
+                <div class="risk-badge" [style.background]="getRiskColor(getRiskScore(mgr))" [attr.data-tooltip]="'Risque de turnover basé sur la taille de l\'équipe'">
+                  <span>⚠️ Risque {{ getRiskLabel(getRiskScore(mgr)) }}</span>
+                  <strong>{{ getRiskScore(mgr) }}%</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- ANALYTIQUE ÉQUIPE : BARRE DE CHARGE + TURNOVER -->
+            <div class="team-analytics">
+              <div class="analytics-row">
+                <div class="analytics-item">
+                  <div class="analytics-header">
+                    <span class="bar-label">📊 Charge équipe</span>
+                    <span class="bar-value">{{ mgr.equipe.length }} / 12</span>
+                  </div>
+                  <div class="bar">
+                    <div class="fill" [style.width.%]="getTeamIntensity(mgr)"></div>
+                  </div>
+                </div>
+                <div class="analytics-item">
+                  <div class="analytics-header">
+                    <span class="bar-label">🔄 Turn-over estimé</span>
+                    <span class="bar-value">{{ getTurnOverRate(mgr) }}%</span>
+                  </div>
+                  <div class="bar">
+                    <div class="fill turnover-fill" [style.width.%]="getTurnOverRate(mgr)"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- GRILLE MEMBRES DE L'ÉQUIPE -->
+            <div class="team-grid">
+              <div class="member-card" *ngFor="let emp of mgr.equipe; trackBy: trackByEmploye">
+                <div class="avatar-sm" [style.background]="getAvatarColor(emp.departement ?? '')">
+                  {{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}
+                </div>
+                <div class="info">
+                  <div class="name">{{ emp.prenom }} {{ emp.nom }}</div>
+                  <div class="role">{{ emp.poste }}</div>
+                  <div class="status-dot" [title]="emp.statut === 'ACTIF' ? 'Actif' : 'Inactif'"></div>
+                </div>
+                <button class="btn-conges" (click)="voirHistoriqueConges(emp)">
+                  📅 Congés
+                </button>
+              </div>
+              <div *ngIf="mgr.equipe.length === 0" class="empty-team-message">
+                Aucun membre dans cette équipe
+              </div>
+            </div>
+          </ng-container>
+        </div>
+      </ng-container>
+      <div *ngIf="hasNoExpandedManager" class="empty-detail">
+        <span>👈</span> Sélectionnez un manager pour voir son équipe
+      </div>
+    </div>
+  </div>
+</div>
