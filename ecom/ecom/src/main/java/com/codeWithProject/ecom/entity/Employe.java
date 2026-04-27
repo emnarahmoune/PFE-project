@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -117,17 +118,18 @@ public class Employe {
     public static final String TYPE_MANAGER = "MANAGER";
     public static final String TYPE_ADMIN_RH = "ADMIN_RH";
 
+=======
     // ===== RELATIONS =====
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")
     @ToString.Exclude
-    @JsonIgnore
-    private Manager manager;
+    @JsonIgnoreProperties({"employesGeres", "demandesCongeAValider", "manager"})
+    private Employe manager;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id")
     @ToString.Exclude
-    private Service service;
+    private com.codeWithProject.ecom.entity.Service service;
 
     @OneToMany(mappedBy = "employe", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
@@ -139,9 +141,14 @@ public class Employe {
     @Builder.Default
     private List<DemandeConge> demandesConge = new ArrayList<>();
 
-    // ===== MÉTHODES POUR LE ROLE =====
+    // ===== CONSTANTES =====
+    public static final String TYPE_EMPLOYE = "EMPLOYE";
+    public static final String TYPE_MANAGER = "MANAGER";
+    public static final String TYPE_ADMIN_RH = "ADMIN_RH";
+
+    // ===== MÉTHODES MÉTIER =====
     public boolean hasRole(String roleName) {
-        return role != null && role.equals(roleName);
+        return role != null && role.equalsIgnoreCase(roleName);
     }
 
     public boolean isManager() {
@@ -156,16 +163,12 @@ public class Employe {
         return "user".equals(role);
     }
 
-    // ===== MÉTHODES MÉTIER =====
     public boolean seConnecter(String email, String password) {
         if (!this.actif) {
             throw new IllegalStateException("Compte employé désactivé. Contactez l'administrateur.");
         }
         if (this.compteVerrouille) {
-            throw new IllegalStateException(
-                    String.format("Compte verrouillé depuis le %s. Contactez l'administrateur.",
-                            this.dateVerrouillage)
-            );
+            throw new IllegalStateException("Compte verrouillé. Contactez l'administrateur.");
         }
         if (!this.email.equalsIgnoreCase(email)) {
             enregistrerEchecConnexion();
@@ -188,10 +191,6 @@ public class Employe {
         }
     }
 
-    public void seDeconnecter() {
-        // Géré par Spring Security
-    }
-
     public void verrouiller() {
         this.compteVerrouille = true;
         this.dateVerrouillage = LocalDateTime.now();
@@ -205,9 +204,7 @@ public class Employe {
 
     public void activer() {
         this.actif = true;
-        if (Boolean.TRUE.equals(this.compteVerrouille)) {
-            deverrouiller();
-        }
+        if (Boolean.TRUE.equals(this.compteVerrouille)) deverrouiller();
     }
 
     public void desactiver() {
@@ -215,25 +212,9 @@ public class Employe {
     }
 
     public void mettreAJourInformations(String nom, String prenom, String telephone) {
-        if (nom != null && !nom.trim().isEmpty()) {
-            this.nom = nom.trim();
-        }
-        if (prenom != null && !prenom.trim().isEmpty()) {
-            this.prenom = prenom.trim();
-        }
-        if (telephone != null) {
-            this.telephone = telephone.trim();
-        }
-    }
-
-    public void changerEmail(String nouvelEmail) {
-        if (nouvelEmail == null || nouvelEmail.trim().isEmpty()) {
-            throw new IllegalArgumentException("L'email ne peut pas être vide");
-        }
-        if (!nouvelEmail.contains("@") || !nouvelEmail.contains(".")) {
-            throw new IllegalArgumentException("Format d'email invalide");
-        }
-        this.email = nouvelEmail.trim().toLowerCase();
+        if (nom != null && !nom.trim().isEmpty()) this.nom = nom.trim();
+        if (prenom != null && !prenom.trim().isEmpty()) this.prenom = prenom.trim();
+        if (telephone != null) this.telephone = telephone.trim();
     }
 
     public void ajouterConges(int jours) {
@@ -242,110 +223,19 @@ public class Employe {
 
     public void deduireConges(int jours) {
         int soldeActuel = getSoldeConges();
-        if (soldeActuel < jours) {
-            throw new IllegalStateException(
-                    String.format("Solde de congés insuffisant. Disponible: %d, Demandé: %d",
-                            soldeActuel, jours)
-            );
-        }
+        if (soldeActuel < jours) throw new IllegalStateException("Solde insuffisant");
         this.soldeConges = soldeActuel - jours;
     }
 
-    public void mettreAJourProfil(String poste, Double salaire, String departement) {
-        if (poste != null) this.poste = poste;
-        if (salaire != null) this.salaire = salaire;
-        if (departement != null) this.departement = departement;
-    }
-
     public void soumettreDemandeConge(DemandeConge demande) {
-        if (this.demandesConge == null) {
-            this.demandesConge = new ArrayList<>();
-        }
+        if (this.demandesConge == null) this.demandesConge = new ArrayList<>();
         this.demandesConge.add(demande);
         demande.setEmploye(this);
-    }
-
-    public void annulerDemandeConge(DemandeConge demande) {
-        demande.setStatut("ANNULE");
-    }
-
-    public List<DemandeConge> consulterDemandesConge(String statut) {
-        if (this.demandesConge == null) {
-            return new ArrayList<>();
-        }
-        return this.demandesConge.stream()
-                .filter(d -> d.getStatut().equals(statut))
-                .toList();
     }
 
     @Transient
     public String getNomComplet() {
         return this.prenom + " " + this.nom;
-    }
-
-    public String consulterProfil() {
-        StringBuilder profil = new StringBuilder();
-        profil.append("=== PROFIL EMPLOYÉ ===\n");
-        profil.append("Matricule: ").append(this.matricule).append("\n");
-        profil.append("Nom complet: ").append(getNomComplet()).append("\n");
-        profil.append("Email: ").append(this.email).append("\n");
-        profil.append("Rôle: ").append(this.role != null ? this.role : "Non défini").append("\n");
-        profil.append("Poste: ").append(this.poste).append("\n");
-        profil.append("Département: ").append(this.departement).append("\n");
-        profil.append("Téléphone: ").append(this.telephone != null ? this.telephone : "Non renseigné").append("\n");
-        profil.append("Statut: ").append(getStatutCompte()).append("\n");
-        profil.append("Date d'embauche: ").append(this.dateEmbauche).append("\n");
-        profil.append("Ancienneté: ").append(getAnciennete()).append(" ans\n");
-        profil.append("Solde congés: ").append(getSoldeConges()).append(" jours\n");
-        profil.append("Nombre de connexions: ").append(this.nombreConnexions != null ? this.nombreConnexions : 0).append("\n");
-        if (this.derniereConnexion != null) {
-            profil.append("Dernière connexion: ").append(this.derniereConnexion).append("\n");
-        }
-        return profil.toString();
-    }
-
-    @Transient
-    public String getStatutCompte() {
-        if (Boolean.TRUE.equals(this.compteVerrouille)) {
-            return "🔒 Verrouillé";
-        }
-        if (!Boolean.TRUE.equals(this.actif)) {
-            return "❌ Inactif";
-        }
-        return "✅ Actif";
-    }
-
-    @Transient
-    public boolean peutSeConnecter() {
-        return Boolean.TRUE.equals(this.actif) && !Boolean.TRUE.equals(this.compteVerrouille);
-    }
-
-    @Transient
-    public long getJoursDepuisDerniereConnexion() {
-        if (this.derniereConnexion == null) {
-            return -1;
-        }
-        return ChronoUnit.DAYS.between(
-                this.derniereConnexion.toLocalDate(),
-                LocalDate.now()
-        );
-    }
-
-    @Transient
-    public boolean isCompteInactifLongtemps() {
-        long jours = getJoursDepuisDerniereConnexion();
-        return jours > 90;
-    }
-
-    @Transient
-    public long getAnciennete() {
-        if (this.dateEmbauche == null) return 0;
-        return ChronoUnit.YEARS.between(this.dateEmbauche, LocalDate.now());
-    }
-
-    @Transient
-    public Double getSalaireAnnuel() {
-        return this.salaire != null ? this.salaire * 12 : 0.0;
     }
 
     @Transient
@@ -356,56 +246,16 @@ public class Employe {
     @PrePersist
     @PreUpdate
     protected void onPrePersistOrUpdate() {
-        if (this.nom == null || this.nom.trim().isEmpty()) {
-            throw new IllegalStateException("Le nom est obligatoire");
-        }
-        if (this.prenom == null || this.prenom.trim().isEmpty()) {
-            throw new IllegalStateException("Le prénom est obligatoire");
-        }
-        if (this.email == null || this.email.trim().isEmpty()) {
-            throw new IllegalStateException("L'email est obligatoire");
-        }
-        if (this.matricule == null || this.matricule.trim().isEmpty()) {
-            throw new IllegalStateException("Le matricule est obligatoire");
-        }
-        if (this.password == null || this.password.isEmpty()) {
-            throw new IllegalStateException("Le mot de passe est obligatoire");
-        }
-        if (!this.email.contains("@")) {
-            throw new IllegalStateException("Format d'email invalide");
-        }
-
-        if (this.dateCreation == null) {
-            this.dateCreation = LocalDate.now();
-        }
-        if (this.actif == null) {
-            this.actif = true;
-        }
-        if (this.nombreConnexions == null) {
-            this.nombreConnexions = 0;
-        }
-        if (this.tentativesEchec == null) {
-            this.tentativesEchec = 0;
-        }
-        if (this.compteVerrouille == null) {
-            this.compteVerrouille = false;
-        }
-        if (this.statut == null) {
-            this.statut = "ACTIF";
-        }
-        if (this.soldeConges == null) {
-            this.soldeConges = 25;
-        }
-
-        if (this.email != null) {
-            this.email = this.email.trim().toLowerCase();
-        }
-        if (this.matricule != null) {
-            this.matricule = this.matricule.trim().toUpperCase();
-        }
-        if (this.nom != null) {
-            this.nom = this.nom.trim().toUpperCase();
-        }
+        if (this.dateCreation == null) this.dateCreation = LocalDate.now();
+        if (this.actif == null) this.actif = true;
+        if (this.nombreConnexions == null) this.nombreConnexions = 0;
+        if (this.tentativesEchec == null) this.tentativesEchec = 0;
+        if (this.compteVerrouille == null) this.compteVerrouille = false;
+        if (this.statut == null) this.statut = "ACTIF";
+        if (this.soldeConges == null) this.soldeConges = 25;
+        if (this.email != null) this.email = this.email.trim().toLowerCase();
+        if (this.matricule != null) this.matricule = this.matricule.trim().toUpperCase();
+        if (this.nom != null) this.nom = this.nom.trim().toUpperCase();
         if (this.prenom != null) {
             String p = this.prenom.trim();
             this.prenom = p.substring(0, 1).toUpperCase() + p.substring(1).toLowerCase();
@@ -423,4 +273,27 @@ private List<Competence> competence;
 
 
 
+
+    @Transient
+    public long getAnciennete() {
+        if (dateEmbauche == null) return 0;
+        return ChronoUnit.YEARS.between(dateEmbauche, LocalDate.now());
+    }
+
+    @Transient
+    public Double getSalaireAnnuel() {
+        return salaire != null ? salaire * 12 : 0.0;
+    }
+
+    @Transient
+    public String getStatutCompte() {
+        if (Boolean.TRUE.equals(compteVerrouille)) return "🔒 Verrouillé";
+        if (!Boolean.TRUE.equals(actif)) return "❌ Inactif";
+        return "✅ Actif";
+    }
+
+    @Transient
+    public boolean peutSeConnecter() {
+        return Boolean.TRUE.equals(actif) && !Boolean.TRUE.equals(compteVerrouille);
+    }
 }

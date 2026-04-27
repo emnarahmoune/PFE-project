@@ -67,6 +67,34 @@ public class DemandeCongeController {
         }
     }
 
+    @PutMapping("/{id}")
+    @Operation(summary = "Modifie une demande de congé existante (seulement si en attente)")
+    public ResponseEntity<ApiResponse<DemandeCongeDTO>> modifierDemande(
+            @Parameter(description = "ID de la demande") @PathVariable Long id,
+            @Valid @RequestBody DemandeCongeDTO dto,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        log.info("PUT /api/conges/{} - Modification d'une demande", id);
+
+        if (jwt == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
+        }
+
+        String email = jwt.getClaimAsString("email");
+        if (email == null) email = jwt.getClaimAsString("preferred_username");
+        if (email == null) email = jwt.getSubject();
+
+        try {
+            DemandeCongeDTO updated = demandeCongeService.modifierForAuthenticatedUser(id, dto, email);
+            return ResponseEntity.ok(ApiResponse.success(updated, "Demande modifiée avec succès"));
+        } catch (Exception e) {
+            log.error("Erreur lors de la modification: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage(), HttpStatus.BAD_REQUEST));
+        }
+    }
+
     @GetMapping("/mes-conges")
     @Operation(summary = "Récupère mes demandes de congé")
     public ResponseEntity<ApiResponse<List<DemandeCongeDTO>>> getMesDemandes(
@@ -146,7 +174,6 @@ public class DemandeCongeController {
         }
     }
 
-    // Endpoint alternatif pour la compatibilité avec le frontend qui utilise /api/conges/annuler/{id}
     @PutMapping("/annuler/{id}")
     @Operation(summary = "Annule une demande de congé (endpoint alternatif)")
     public ResponseEntity<ApiResponse<DemandeCongeDTO>> annulerDemandeAlternatif(
@@ -230,7 +257,6 @@ public class DemandeCongeController {
 
     // ==================== ENDPOINTS GÉNÉRAUX ====================
 
-    // ⚠️ Ce mapping doit être APRÈS tous les mappings avec chemin fixe (comme /notifications, /mes-conges, etc.)
     @GetMapping("/{id}")
     @Operation(summary = "Récupère une demande par son ID")
     public ResponseEntity<ApiResponse<DemandeCongeDTO>> getDemandeById(@PathVariable Long id) {
@@ -270,25 +296,36 @@ public class DemandeCongeController {
         return ResponseEntity.ok(ApiResponse.success(conflit, "Vérification de conflit effectuée"));
     }
 
-    // ==================== ENDPOINTS URGENTS ====================
-
     @GetMapping("/urgentes")
     @Operation(summary = "Récupère les demandes urgentes en attente")
-    @PreAuthorize("hasAnyRole('ADMIN_RH', 'ADMIN', 'manager')")   // Ajout du rôle ADMIN
+    @PreAuthorize("hasAnyRole('ADMIN_RH', 'ADMIN', 'manager')")
     public ResponseEntity<ApiResponse<List<DemandeCongeDTO>>> getDemandesUrgentes() {
         log.info("GET /api/conges/urgentes");
         List<DemandeCongeDTO> urgentes = demandeCongeService.findUrgentesEnAttente();
         return ResponseEntity.ok(ApiResponse.success(urgentes, "Demandes urgentes récupérées"));
     }
 
-    // ==================== ENDPOINTS STATISTIQUES ====================
-
     @GetMapping("/stats/statut")
     @Operation(summary = "Statistiques des demandes par statut")
-    @PreAuthorize("hasAnyRole('ADMIN_RH', 'ADMIN', 'manager')")   // Ajout du rôle ADMIN
+    @PreAuthorize("hasAnyRole('ADMIN_RH', 'ADMIN', 'manager')")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getStatsByStatut() {
         log.info("GET /api/conges/stats/statut");
         Map<String, Long> stats = demandeCongeService.countByStatut();
         return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques par statut récupérées"));
+    }
+
+    // ===== NOUVEAU : Récupérer les congés d'un employé (pour manager ou admin RH) =====
+    @GetMapping("/employe/{employeId}")
+    @Operation(summary = "Récupère les congés d'un employé (réservé au manager de cet employé ou admin RH)")
+    @PreAuthorize("hasRole('manager') or hasRole('ADMIN_RH')")
+    public ResponseEntity<ApiResponse<List<DemandeCongeDTO>>> getCongesByEmployeForManager(
+            @PathVariable Long employeId,
+            @AuthenticationPrincipal Jwt jwt) {
+        log.info("GET /api/conges/employe/{}", employeId);
+        String email = jwt.getClaimAsString("email");
+        if (email == null) email = jwt.getClaimAsString("preferred_username");
+        if (email == null) email = jwt.getSubject();
+        List<DemandeCongeDTO> conges = demandeCongeService.getCongesByEmployeIdForManager(employeId, email);
+        return ResponseEntity.ok(ApiResponse.success(conges, "Historique des congés récupéré"));
     }
 }

@@ -22,72 +22,55 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
     boolean existsByMatricule(String matricule);
 @Query("SELECT e FROM Employe e WHERE LOWER(TRIM(e.email)) = LOWER(TRIM(:email))")
 Optional<Employe> findByEmailIgnoreCase(@Param("email") String email);
+
+    Optional<Employe> findByEmail(String email);
+
+    // ===== RECHERCHES PAR TYPE =====
     @Query("SELECT e FROM Employe e WHERE e.typeEmploye = 'MANAGER'")
     List<Employe> findAllManagers();
+
+    List<Employe> findByTypeEmploye(String typeEmploye);
 
     @Query("SELECT e FROM Employe e WHERE e.typeEmploye = 'ADMIN_RH'")
     List<Employe> findAllAdminRH();
 
 
     
+
+    // ===== RECHERCHES PAR MANAGER =====
+    List<Employe> findByManagerId(Long managerId);
+    List<Employe> findByManagerEmail(String email);
+    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL AND e.typeEmploye = 'EMPLOYE'")
+    List<Employe> findEmployesSansManager();
+
     // ===== RECHERCHES PAR ATTRIBUTS =====
     List<Employe> findByDepartement(String departement);
     List<Employe> findByStatut(String statut);
     List<Employe> findByPoste(String poste);
     List<Employe> findByActif(Boolean actif);
 
-    @Query("SELECT e FROM Employe e WHERE LOWER(e.poste) LIKE LOWER(CONCAT('%', :poste, '%'))")
-    List<Employe> findByPosteContaining(@Param("poste") String poste);
+    // ✅ AJOUT : Récupère tous les employés actifs (pour findActifs())
+    default List<Employe> findAllActifs() {
+        return findByActif(true);
+    }
+
+    // ✅ AJOUT : Récupère les employés d'un service
+    List<Employe> findByServiceId(Long serviceId);
 
     // ===== RECHERCHES PAR SALAIRE =====
     List<Employe> findBySalaireGreaterThan(Double salaireMin);
     List<Employe> findBySalaireLessThan(Double salaireMax);
     List<Employe> findBySalaireBetween(Double salaireMin, Double salaireMax);
 
-    @Query("SELECT e FROM Employe e ORDER BY e.salaire DESC")
-    List<Employe> findAllOrderBySalaireDesc();
-
-    @Query("SELECT e FROM Employe e ORDER BY e.salaire ASC")
-    List<Employe> findAllOrderBySalaireAsc();
-
     // ===== RECHERCHES PAR DATE =====
     List<Employe> findByDateEmbaucheAfter(LocalDate date);
     List<Employe> findByDateEmbaucheBefore(LocalDate date);
-    List<Employe> findByDateEmbaucheBetween(LocalDate debut, LocalDate fin);
-
     @Query("SELECT e FROM Employe e ORDER BY e.dateEmbauche DESC")
     List<Employe> findEmployesRecents();
-
-    @Query("SELECT e FROM Employe e ORDER BY e.dateEmbauche ASC")
-    List<Employe> findEmployesAnciens();
 
     // ===== RECHERCHES PAR CONGÉS =====
     List<Employe> findBySoldeCongesLessThan(Integer seuil);
     List<Employe> findBySoldeCongesGreaterThan(Integer seuil);
-    List<Employe> findBySoldeConges(Integer solde);
-
-    @Query("SELECT e FROM Employe e WHERE e.soldeConges < 5")
-    List<Employe> findEmployesSoldeCongesFaible();
-
-    // ===== RECHERCHES PAR RELATIONS =====
-    List<Employe> findByManagerId(Long managerId);
-    List<Employe> findByServiceId(Long serviceId);
-
-    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL AND e.typeEmploye = 'EMPLOYE'")
-    List<Employe> findEmployesSansManager();
-
-    @Query("SELECT e FROM Employe e WHERE e.service IS NULL")
-    List<Employe> findEmployesSansService();
-
-    // ===== RECHERCHES AVANCÉES =====
-    @Query("SELECT e FROM Employe e WHERE e.statut = 'ACTIF'")
-    List<Employe> findAllActifs();
-
-    @Query("SELECT e FROM Employe e WHERE e.statut = 'INACTIF'")
-    List<Employe> findAllInactifs();
-
-    @Query("SELECT e FROM Employe e WHERE e.statut = 'CONGE'")
-    List<Employe> findAllEnConge();
 
     // ===== STATISTIQUES =====
     @Query("SELECT e.departement, COUNT(e) FROM Employe e GROUP BY e.departement")
@@ -142,6 +125,7 @@ Optional<Employe> findByEmailIgnoreCase(@Param("email") String email);
 
     @Query("SELECT e FROM Employe e WHERE e.manager IS NULL AND e.typeEmploye = 'EMPLOYE'")
     List<Employe> findByManagerIsNull();
+
 
     @Query("SELECT e FROM Employe e WHERE e.manager.id = :managerId AND e.statut = 'ACTIF'")
     List<Employe> findActifsByManagerId(@Param("managerId") Long managerId);

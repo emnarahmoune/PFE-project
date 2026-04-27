@@ -26,7 +26,6 @@ public class DemandeCongeMapper {
         dto.setResume(entity.getResume());
         dto.setProcessInstanceId(entity.getProcessInstanceId());
 
-        // Employé (directement via Employe, plus d'Utilisateur intermédiaire)
         if (entity.getEmploye() != null) {
             dto.setEmployeId(entity.getEmploye().getId());
             dto.setEmployeMatricule(entity.getEmploye().getMatricule());
@@ -34,15 +33,17 @@ public class DemandeCongeMapper {
             dto.setEmployePrenom(entity.getEmploye().getPrenom());
         }
 
-        // Manager
         if (entity.getManager() != null) {
             dto.setManagerId(entity.getManager().getId());
             dto.setManagerNom(entity.getManager().getNomComplet());
             dto.setManagerEmail(entity.getManager().getEmail());
         }
 
-        // Champs workflow (à remplir par le service si besoin)
-        // dto.setAdminEmail(...); dto.setManagerApprouve(...); etc.
+        // ✅ Mapping admin RH
+        if (entity.getAdminRh() != null) {
+            dto.setAdminRhId(entity.getAdminRh().getId());
+            dto.setAdminRhNom(entity.getAdminRh().getNom() + " " + entity.getAdminRh().getPrenom());
+        }
 
         return dto;
     }
@@ -64,5 +65,6 @@ public class DemandeCongeMapper {
                 .urgente(dto.getUrgente() != null ? dto.getUrgente() : false)
                 .processInstanceId(dto.getProcessInstanceId())
                 .build();
+        // Les relations (employe, manager, adminRh) doivent être définies séparément
     }
 }

@@ -33,7 +33,8 @@ public class IndicateurRHDTO {
     private Long systemeBIId;
     private String systemeBIVersion;
 
-    // Métadonnées pour l'affichage
+
+    private Long employeId;    // Métadonnées pour l'affichage
     private String niveauAlerte;
     private String description;
     private Boolean dansLaNorme;

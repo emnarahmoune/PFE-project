@@ -105,6 +105,36 @@ public class ManagerWorkflowController {
         return ResponseEntity.ok(ApiResponse.success(alertes, "Alertes récupérées"));
     }
 
+    // ========== MÉTHODES AJOUTÉES POUR LES DÉCISIONS MANAGER ==========
+
+    @PostMapping("/approuver-demande")
+    @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
+    public ResponseEntity<ApiResponse<String>> approuverDemande(
+            @RequestBody Map<String, Object> decision,
+            @AuthenticationPrincipal Jwt jwt) {
+        String email = extractEmail(jwt);
+        String taskId = (String) decision.get("taskId");
+        String commentaire = (String) decision.get("commentaire");
+        log.info("Manager {} approuve la tâche {}", email, taskId);
+        workflowService.processManagerDecision(taskId, true, commentaire, email);
+        return ResponseEntity.ok(ApiResponse.success("Demande approuvée avec succès"));
+    }
+
+    @PostMapping("/refuser-demande")
+    @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
+    public ResponseEntity<ApiResponse<String>> refuserDemande(
+            @RequestBody Map<String, Object> decision,
+            @AuthenticationPrincipal Jwt jwt) {
+        String email = extractEmail(jwt);
+        String taskId = (String) decision.get("taskId");
+        String motif = (String) decision.get("motif");
+        log.info("Manager {} refuse la tâche {} avec motif: {}", email, taskId, motif);
+        workflowService.processManagerDecision(taskId, false, motif, email);
+        return ResponseEntity.ok(ApiResponse.success("Demande refusée avec succès"));
+    }
+
+    // ================================================================
+
     private String extractEmail(Jwt jwt) {
         if (jwt == null) return null;
         String email = jwt.getClaimAsString("email");

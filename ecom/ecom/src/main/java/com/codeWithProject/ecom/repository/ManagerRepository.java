@@ -13,11 +13,12 @@ import java.util.Optional;
 @Repository
 public interface ManagerRepository extends JpaRepository<Manager, Long> {
 
+
     // ===== RECHERCHES PAR IDENTIFIANTS =====
     Optional<Manager> findByMatricule(String matricule);
     Optional<Manager> findByEmail(String email);
 
-    // ✅ Méthodes pour compatibilité avec l'ancien code (l'ID du manager est l'ID employé)
+    // Méthodes pour compatibilité
     default Optional<Manager> findByEmployeId(Long employeId) {
         return findById(employeId);
     }
@@ -38,8 +39,6 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
     List<Manager> findByDateNominationAfter(LocalDate date);
     List<Manager> findByDateNominationBefore(LocalDate date);
     List<Manager> findByDateNominationBetween(LocalDate debut, LocalDate fin);
-
-    @Query("SELECT m FROM Manager m ORDER BY m.dateNomination DESC")
     List<Manager> findAllByOrderByDateNominationDesc();
 
     // ===== RECHERCHES PAR STATUT =====

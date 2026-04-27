@@ -20,28 +20,35 @@ public class NotifierRefusDelegate implements JavaDelegate {
 
     @Override
     @Transactional
-    public void execute(DelegateExecution execution) throws Exception {
+    public void execute(DelegateExecution execution) {
         log.info("=== NOTIFICATION REFUS ===");
 
-        // Récupérer la demande via processInstanceId
-        String processInstanceId = execution.getProcessInstanceId();
-        // ✅ Correction: findByProcessInstanceId retourne Optional
-        DemandeConge demande = demandeRepository.findByProcessInstanceId(processInstanceId)
-                .orElse(null);
+        // Récupérer l'ID de la demande depuis les variables du workflow
+        Long demandeId = execution.getVariable("demandeId") != null ?
+                Long.valueOf(execution.getVariable("demandeId").toString()) : null;
 
+        if (demandeId == null) {
+            log.warn("Aucune variable 'demandeId' trouvée dans le workflow");
+            return;
+        }
+
+        DemandeConge demande = demandeRepository.findById(demandeId).orElse(null);
         if (demande == null) {
-            log.warn("Demande non trouvée pour processInstanceId: {}", processInstanceId);
+            log.warn("Demande non trouvée pour demandeId: {}", demandeId);
             return;
         }
 
-        // Vérifier si déjà refusée (par VerifierSoldeDelegate)
+        // Éviter la double notification si déjà refusée (par VerifierSoldeDelegate)
         if ("REFUSE".equals(demande.getStatut())) {
-            log.info("Demande {} déjà refusée, notification déjà envoyée par VerifierSoldeDelegate", demande.getId());
+            log.info("Demande {} déjà refusée, notification déjà envoyée", demande.getId());
             return;
         }
 
-        // Récupérer le motif de refus (priorité au manager puis RH)
-        String motif = (String) execution.getVariable("commentaireManager");
+        // Récupérer le motif : priorité à motifRefus, puis commentaireManager, puis commentaireRH
+        String motif = (String) execution.getVariable("motifRefus");
+        if (motif == null || motif.trim().isEmpty()) {
+            motif = (String) execution.getVariable("commentaireManager");
+        }
         if (motif == null || motif.trim().isEmpty()) {
             motif = (String) execution.getVariable("commentaireRH");
         }
@@ -49,15 +56,14 @@ public class NotifierRefusDelegate implements JavaDelegate {
             motif = "Refus sans motif";
         }
 
-        // Mettre à jour la demande en base
+        // Mettre à jour la demande
         demande.refuserAvecMotif(motif);
         demandeRepository.save(demande);
 
         // Créer une notification
         String message = String.format("❌ Votre demande du %s au %s a été refusée. Motif : %s",
                 demande.getDateDebut(), demande.getDateFin(), motif);
-        notificationService.createNotification(
-                demande.getEmploye().getId(), message, "ERROR", demande.getId());
+        notificationService.createNotification(demande.getEmploye().getId(), message, "ERROR", demande.getId());
 
         log.info("✅ Demande {} refusée avec motif: {}", demande.getId(), motif);
     }

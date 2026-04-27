@@ -19,6 +19,8 @@ public class DemandeCongeDTO {
     private LocalDate dateDebut;
     private LocalDate dateFin;
     private String type;
+    private Long adminRhId;
+    private String adminRhNom;
     private String statut;
     private LocalDate dateDemande;
     private LocalDate dateDecision;

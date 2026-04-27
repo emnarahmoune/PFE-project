@@ -45,4 +45,5 @@ public interface DemandeCongeService {
     SoldeCongesDTO getSoldeCongesByEmail(String email);
     DemandeCongeDTO modifierForAuthenticatedUser(Long id, DemandeCongeDTO dto, String email);
     DemandeCongeDTO annulerForAuthenticatedUser(Long id, String email);
+    List<DemandeCongeDTO> getCongesByEmployeIdForManager(Long employeId, String managerEmail);
 }

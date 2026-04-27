@@ -18,5 +18,9 @@ public interface AdminCongeService {
 
     Map<String, Long> getStatsByStatut();
 
+
+    // ✅ Méthode manquante ajoutée
     List<DemandeCongeAdminDTO> getOrphanRequests();
+
+    List<DemandeCongeAdminDTO> getDemandesRefuseesParManager();
 }

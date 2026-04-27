@@ -69,6 +69,18 @@ public class IndicateurRHController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/calculer/absenteisme/employe/{employeId}")
+    @Operation(summary = "Calcule l'absentéisme d'un employé sur l'année en cours")
+    public ResponseEntity<ApiResponse<IndicateurRHDTO>> calculerAbsenteismeEmploye(
+            @PathVariable Long employeId,
+            @RequestParam(defaultValue = "ANNUEL") String periode) {
+        log.info("POST /api/indicateurs/calculer/absenteisme/employe/{}", employeId);
+        LocalDate now = LocalDate.now();
+        LocalDate debut = LocalDate.of(now.getYear(), 1, 1);
+        LocalDate fin = LocalDate.of(now.getYear(), 12, 31);
+        IndicateurRHDTO indicateur = indicateurRHService.calculerAbsenteisme(debut, fin, periode, null, employeId);
+        return ResponseEntity.ok(ApiResponse.success(indicateur, "Absentéisme employé calculé"));
+    }
     @GetMapping("/type/{type}")
     @Operation(summary = "Récupère les indicateurs par type")
     public ResponseEntity<ApiResponse<List<IndicateurRHDTO>>> getIndicateursByType(

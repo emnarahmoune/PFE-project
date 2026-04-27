@@ -50,7 +50,7 @@ public class NotificationService {
         notificationRepository.markAllAsReadByEmploye(employeId);
     }
 
-    // Méthodes utilitaires supplémentaires
+    // Méthodes utilitaires
     @Transactional
     public void createRefusNotification(Long employeId, String message, Long demandeId) {
         createNotification(employeId, message, "ERROR", demandeId);
