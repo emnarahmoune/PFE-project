@@ -1,0 +1,151 @@
+.container {
+  padding: 40px;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #eef2ff, #f8fafc);
+}
+
+/* HERO */
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+
+  h1 {
+    font-size: 30px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  p {
+    margin: 0;
+    color: #64748b;
+  }
+}
+
+/* BACK */
+.back-btn {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  cursor: pointer;
+
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  transition: 0.3s;
+}
+
+.back-btn:hover {
+  transform: scale(1.1);
+}
+
+/* CARD */
+.card {
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(10px);
+
+  border-radius: 20px;
+  padding: 25px;
+
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+}
+/* TOP */
+.card-top {
+  margin-bottom: 20px;
+
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #1e293b;
+  }
+}
+
+/* TABLE */
+.table-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ROW */
+.row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 2fr 2fr;
+  align-items: center;
+
+  padding: 16px;
+  border-radius: 14px;
+
+  background: white;
+  margin-top: 10px;
+
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+
+  transition: 0.3s;
+}
+
+.row:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+}
+
+.row:hover {
+  background: rgba(99,102,241,0.08);
+}
+
+/* HEADER ROW */
+.header-row {
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #5b5bf7, #7c3aed);
+  border-radius: 12px;
+}
+
+/* USER */
+.user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* AVATAR */
+.avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: bold;
+
+  box-shadow: 0 6px 15px rgba(79,70,229,0.4);
+}
+
+/* EMAIL */
+.email {
+  color: #334155;
+}
+
+/* BADGE */
+.badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+
+  background: rgba(99,102,241,0.1);
+  color: #4f46e5;
+
+  font-size: 12px;
+  font-weight: 500;
+
+  display: inline-block;
+}
+/* DEPT */
+.dept {
+  color: #475569;
+}

@@ -4,11 +4,11 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, RouterOutlet, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { KeycloakInitService } from '../../../core/services/keycloak-init.service';
-
+import { MatIconModule } from '@angular/material/icon';
 @Component({
   selector: 'app-admin-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, RouterOutlet],
+  imports: [CommonModule, RouterModule, RouterOutlet,MatIconModule],
   templateUrl: './admin-layout.component.html',
   styleUrls: ['./admin-layout.component.scss']
 })
@@ -21,16 +21,16 @@ export class AdminLayoutComponent implements OnInit {
   userEmail = '';
   darkMode = false;
 
-  menuItems = [
-    { path: '/admin/dashboard', icon: '◪', label: 'Dashboard' },
-    { path: '/admin/employes', icon: '◌', label: 'Employés' },
-    { path: '/admin/competences', icon: '◈', label: 'Compétences' },
-    { path: '/admin/formations', icon: '◔', label: 'Formations' },
-    { path: '/admin/conges', icon: '◍', label: 'Congés' },
-    { path: '/admin/indicateurs', icon: '◕', label: 'Indicateurs' },
-    { path: '/admin/scores', icon: '◬', label: 'Scores risque' },
-    { path: '/admin/managers', icon: '◧', label: 'Managers & équipes' }
-  ];
+menuItems = [
+  { path: '/admin/dashboard', icon: 'dashboard', label: 'Tableau de bord' },
+  { path: '/admin/employes', icon: 'groups', label: 'Employés' },
+  { path: '/admin/competences', icon: 'psychology', label: 'Compétences' },
+  { path: '/admin/formations', icon: 'school', label: 'Formations' },
+  { path: '/admin/conges', icon: 'event', label: 'Congés' },
+  { path: '/admin/indicateurs', icon: 'analytics', label: 'Indicateurs RH' },
+  { path: '/admin/scores', icon: 'warning', label: 'Scores risque' },
+  { path: '/admin/managers', icon: 'supervisor_account', label: 'Managers & équipes' }
+];
 
   // 🔓 Rendre public pour l'utiliser dans le template
   constructor(

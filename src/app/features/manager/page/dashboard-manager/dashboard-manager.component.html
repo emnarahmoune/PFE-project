@@ -1,66 +1,92 @@
-<!-- ── Bas : compétences + graphiques ────────────── -->
-<div>
-  <p class="section-label">Compétences & analyses</p>
-  <div class="bottom-grid">
+<div class="dashboard-container">
 
-    <!-- Top compétences -->
-    <div class="panel">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">Top compétences</div>
-          <div class="panel-sub">Les plus répandues</div>
-        </div>
-        <a class="panel-link" routerLink="/admin/competences">Gérer →</a>
-      </div>
-      <div class="comp-list" *ngIf="topCompetences.length > 0">
-        <div class="comp-item" *ngFor="let c of topCompetences">
-          <div class="comp-head">
-            <span class="comp-name">{{ c.nom }}</span>
-            <span class="comp-cnt">{{ c.count }}</span>
-          </div>
-          <div class="comp-bar">
-            <div class="comp-bar-fill" [style.width.%]="c.pourcentage"></div>
-          </div>
-        </div>
-      </div>
-      <div class="empty" *ngIf="topCompetences.length === 0">
-        Aucune donnée
-      </div>
-    </div>
-
-    <!-- Graphique turnover - version simplifiée -->
-    <div class="panel">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">Turnover</div>
-          <div class="panel-sub">6 derniers mois</div>
-        </div>
-      </div>
-      <div class="chart-wrap" style="padding: 40px; text-align: center; background: #f7f9fc; border-radius: 8px;">
-        <div style="font-size: 48px; margin-bottom: 10px;">📊</div>
-        <p style="color: #666;">Graphique à venir</p>
-        <small style="color: #999;">Données de turnover des 6 derniers mois</small>
-      </div>
-    </div>
-
-    <!-- Répartition employés - version simplifiée -->
-    <div class="panel">
-      <div class="panel-head">
-        <div>
-          <div class="panel-title">Répartition</div>
-          <div class="panel-sub">Par statut</div>
-        </div>
-      </div>
-      <div class="chart-wrap" style="padding: 40px; text-align: center; background: #f7f9fc; border-radius: 8px;">
-        <div style="font-size: 48px; margin-bottom: 10px;">👥</div>
-        <p style="color: #666;">Données de répartition</p>
-        <div style="margin-top: 15px; text-align: left; display: inline-block;">
-          <div *ngFor="let item of ['CDI: 65%', 'CDD: 15%', 'Stage: 12%', 'Alternance: 8%']" style="margin: 5px 0;">
-            {{ item }}
-          </div>
-        </div>
-      </div>
-    </div>
-
+  <div class="welcome-card">
+    <h1>Bienvenue, {{ getManagerDisplayName() }} !</h1>
+    <p>Vous êtes connecté à l'espace manager du Portail RH.</p>
   </div>
+
+  <div class="cards">
+    <div class="card" *ngFor="let card of statCards">
+      <h3>{{ card.emojiIcon }} {{ card.title }}</h3>
+      <strong>{{ card.value }}</strong>
+      <p *ngIf="card.change">{{ card.change }}</p>
+    </div>
+  </div>
+
+  <div>
+    <p class="section-label">Compétences & analyses</p>
+
+    <div class="bottom-grid">
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Top compétences</div>
+            <div class="panel-sub">Les plus répandues</div>
+          </div>
+
+          <a class="panel-link" routerLink="/manager/equipe">
+            Voir équipe →
+          </a>
+        </div>
+
+        <div class="comp-list" *ngIf="topCompetences.length > 0">
+          <div class="comp-item" *ngFor="let c of topCompetences">
+            <div class="comp-head">
+              <span class="comp-name">{{ c.nom }}</span>
+              <span class="comp-cnt">{{ c.count }}</span>
+            </div>
+
+            <div class="comp-bar">
+              <div class="comp-bar-fill" [style.width.%]="c.pourcentage"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="empty" *ngIf="topCompetences.length === 0">
+          Aucune donnée
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Congés</div>
+            <div class="panel-sub">Demandes à traiter</div>
+          </div>
+
+          <a class="panel-link" routerLink="/manager/conges">
+            Gérer →
+          </a>
+        </div>
+
+        <div class="chart-wrap">
+          <div class="chart-icon">🏖️</div>
+          <p>Demandes de congé</p>
+          <small>{{ conges.length }} demande(s) chargée(s)</small>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Équipe</div>
+            <div class="panel-sub">Suivi des collaborateurs</div>
+          </div>
+
+          <a class="panel-link" routerLink="/manager/equipe">
+            Voir →
+          </a>
+        </div>
+
+        <div class="chart-wrap">
+          <div class="chart-icon">👥</div>
+          <p>Équipe manager</p>
+          <small>{{ equipe.length }} employé(s)</small>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>

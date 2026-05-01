@@ -1,0 +1,61 @@
+<div class="dashboard-container">
+
+  <div class="welcome-card">
+    <h1>Bienvenue, {{ username }} !</h1>
+    <p>Vous êtes connecté à l'espace employé du Portail RH.</p>
+  </div>
+
+  <div class="info-card">
+    <h3>Vos informations</h3>
+    <ul>
+      <li><strong>Nom:</strong> {{ fullName }}</li>
+      <li><strong>Email:</strong> {{ email }}</li>
+      <li><strong>Rôle:</strong> Employé</li>
+    </ul>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card" routerLink="/employee/mes-conges" style="cursor:pointer">
+      <h3>📅 Mes congés</h3>
+      <p>Consultez et gérez vos demandes de congé</p>
+    </div>
+
+    <div class="stat-card" routerLink="/employee/mes-formations" style="cursor:pointer">
+      <h3>🎓 Mes formations</h3>
+      <p>Découvrez les formations disponibles</p>
+    </div>
+
+    <div class="stat-card" routerLink="/employee/mon-profil" style="cursor:pointer">
+      <h3>👤 Mon profil</h3>
+      <p>Mettez à jour vos informations personnelles</p>
+    </div>
+
+    <div class="stat-card" routerLink="/employee/competences" style="cursor:pointer">
+      <h3>🧠 Mes compétences</h3>
+      <p>Modifier mes compétences pour IA</p>
+    </div>
+  </div>
+
+  <h2 style="margin-top:30px;">🎓 Recommandations intelligentes</h2>
+
+  <div class="cards" *ngIf="recommendations.length > 0; else noReco">
+
+    <div class="card" *ngFor="let r of recommendations">
+      <h3>{{ r.titre }}</h3>
+
+      <p>Score IA: {{ r.score | number:'1.2-2' }}</p>
+
+      <div class="bar">
+        <div class="fill" [style.width.%]="r.score * 100"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <ng-template #noReco>
+    <div class="info-card">
+      <p>Aucune recommandation disponible</p>
+    </div>
+  </ng-template>
+
+</div>

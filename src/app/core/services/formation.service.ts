@@ -10,7 +10,7 @@ import { Formation, FormationResponse } from '../../features/admin/gestion-forma
 export class FormationService {
 
   private endpoint = 'formations';
-  private baseUrl = 'http://localhost:8082/api';
+  private baseUrl = '/api/formations'; // 🔥 simplifié (proxy Angular)
 
   constructor(
     private api: ApiService,
@@ -29,8 +29,9 @@ export class FormationService {
     return this.api.get<FormationResponse>(`${this.endpoint}/paged`, { page, size });
   }
 
-  getById(id: number): Observable<FormationResponse> {
-    return this.api.getById<FormationResponse>(this.endpoint, id);
+  // 🔥 CORRIGÉ → DETAILS COMPLETS
+  getById(id: number): Observable<any> {
+    return this.http.get(`${this.baseUrl}/${id}/details`);
   }
 
   create(formation: Formation): Observable<FormationResponse> {
@@ -38,11 +39,24 @@ export class FormationService {
   }
 
   update(id: number, formation: Formation): Observable<FormationResponse> {
-    return this.api.put<FormationResponse>(this.endpoint, id, formation);
+    return this.api.put<FormationResponse>(`${this.endpoint}/id`, id, formation);
   }
 
-  delete(id: number): Observable<FormationResponse> {
-    return this.api.delete<FormationResponse>(this.endpoint, id);
+  // 🔥 CORRIGÉ (URL BACKEND)
+  delete(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/id/${id}`);
+  }
+
+  // =========================
+  // PARTICIPANTS
+  // =========================
+
+  getParticipants(id: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/${id}/participants`);
+  }
+
+  retirerParticipant(formationId: number, employeId: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/${formationId}/participants/${employeId}`);
   }
 
   // =========================
@@ -50,55 +64,50 @@ export class FormationService {
   // =========================
 
   getMyFormations(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/employe-formations/mes-formations`);
+    return this.http.get<any[]>(`/api/employe-formations/mes-formations`);
   }
 
-  // =========================
-  // INSCRIPTION
-  // =========================
-
- inscrireFormation(formationId: number) {
-  return this.http.post(`${this.baseUrl}/employe-formations/inscrire`, {
-  formationId: formationId
-});
-}
+  inscrireFormation(formationId: number) {
+    return this.http.post(`/api/employe-formations/inscrire`, {
+      formationId
+    });
+  }
 
   // =========================
   // RECOMMANDATIONS
   // =========================
 
- getRecommendations(): Observable<any[]> {
-  return this.http.get<any[]>(`${this.baseUrl}/formations/recommandations`);
-}
+  getRecommendations(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/recommandations`);
+  }
 
+  getRecommendationsSkill(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/recommandations-skill`);
+  }
 
   // =========================
   // VIDEOS
   // =========================
 
   getVideos(formationId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/employe-formations/${formationId}/videos`);
+    return this.http.get<any[]>(`/api/employe-formations/${formationId}/videos`);
   }
-
-  // =========================
-  // PROGRESSION
-  // =========================
 
   completeVideo(videoId: number) {
-    return this.http.post(`${this.baseUrl}/employe-formations/complete-video/${videoId}`, {});
+    return this.http.post(`/api/employe-formations/complete-video/${videoId}`, {});
   }
 
-
   getCompletedVideos(formationId: number) {
-  return this.http.get<number[]>(
-    `/api/employe-formations/${formationId}/completed-videos`
-  );
-}
+    return this.http.get<number[]>(`/api/employe-formations/${formationId}/completed-videos`);
+  }
 
-getRecommendationsSkill(): Observable<any[]> {
-  return this.http.get<any[]>(`${this.baseUrl}/formations/recommandations-skill`);
-}
+  // =========================
+  // UPLOAD
+  // =========================
 
+  uploadPdf(formData: FormData) {
+    return this.http.post(`${this.baseUrl}/upload-pdf`, formData);
+  }
 
   // =========================
   // SEARCH
@@ -108,35 +117,25 @@ getRecommendationsSkill(): Observable<any[]> {
     return this.api.get<FormationResponse>(`${this.endpoint}/search`, { keyword });
   }
 
-  // =========================
+ // =========================
   // ACTIVER / DESACTIVER
   // =========================
+ activer(id: number) {
+  return this.http.put(`/api/formations/${id}/activer`, {});
+}
 
-  activer(id: number): Observable<FormationResponse> {
-    return this.api.put<FormationResponse>(this.endpoint, id, { actif: true });
-  }
+desactiver(id: number) {
+  return this.http.put(`/api/formations/${id}/desactiver`, {});
+}
+ 
 
-  desactiver(id: number): Observable<FormationResponse> {
-    return this.api.put<FormationResponse>(this.endpoint, id, { actif: false });
-  }
-
-  // =========================
-  // PARTICIPANTS
-  // =========================
-
-  getParticipants(formationId: number): Observable<FormationResponse> {
-    return this.api.get<FormationResponse>(`${this.endpoint}/${formationId}/participants`);
-  }
-
-  retirerParticipant(formationId: number, employeId: number): Observable<FormationResponse> {
-    return this.api.delete<FormationResponse>(`${this.endpoint}/${formationId}/participants`, employeId);
-  }
+ 
 
   // =========================
   // STATS
   // =========================
 
   getStats(): Observable<any> {
-    return this.api.get<any>(`${this.endpoint}/stats/tableau-bord`);
+    return this.http.get(`${this.baseUrl}/stats`);
   }
 }

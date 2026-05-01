@@ -1,20 +1,25 @@
 import { Component, OnInit, Pipe, PipeTransform } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
-import { CompetenceService } from '../../services/competence.service';
+import { MatButtonModule } from '@angular/material/button';
+
+import { CompetenceService } from '../../../../../core/services/competence.service';
 import { Competence } from '../../models/competence.model';
 import { ConfirmationDialogComponent } from '../../../../../shared/layouts/components/confirmation-dialog/confirmation-dialog.component';
 
-// Pipe pour remplacer les underscores par des espaces
 @Pipe({ name: 'replace', standalone: true })
 export class ReplacePipe implements PipeTransform {
   transform(value: string | null | undefined, from: string, to: string): string {
-    if (!value) return '';
+    if (!value) {
+      return '';
+    }
+
     return value.split(from).join(to);
   }
 }
@@ -28,26 +33,28 @@ export class ReplacePipe implements PipeTransform {
     FormsModule,
     MatSnackBarModule,
     MatDialogModule,
-    MatMenuModule,   // ✅ AJOUTÉ
-    MatIconModule,   // ✅ AJOUTÉ
+    MatMenuModule,
+    MatIconModule,
+    MatButtonModule,
     ReplacePipe
   ],
   templateUrl: './competence-list.component.html',
   styleUrls: ['./competence-list.component.scss']
 })
 export class CompetenceListComponent implements OnInit {
+
   allData: Competence[] = [];
   loading = false;
+
   searchText = '';
   selectedCategorie = 'TOUTES';
-  currentPage = 0;
-  readonly pageSize = 9; // Pour une grille 3x3
 
-  // Tri
+  currentPage = 0;
+  readonly pageSize = 9;
+
   sortField: keyof Competence | '' = '';
   sortDirection: 'asc' | 'desc' = 'asc';
 
-  // Statistiques
   stats = {
     total: 0,
     technique: 0,
@@ -56,7 +63,6 @@ export class CompetenceListComponent implements OnInit {
     management: 0
   };
 
-  // Catégories avec icônes et couleurs
   categories = [
     { value: 'TOUTES', label: 'Toutes', icon: '📌', color: '#6B7280' },
     { value: 'TECHNIQUE', label: 'Technique', icon: '⚙️', color: '#3B82F6' },
@@ -68,7 +74,8 @@ export class CompetenceListComponent implements OnInit {
   constructor(
     private svc: CompetenceService,
     private snack: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -76,17 +83,20 @@ export class CompetenceListComponent implements OnInit {
     this.loadStats();
   }
 
-  // ── Chargement des données ──────────────────────────────────
   loadCompetences(): void {
     this.loading = true;
+
     this.svc.getAll().subscribe({
-      next: (res) => {
-        this.allData = Array.isArray(res.data) ? (res.data as Competence[]) : [];
+      next: (res: any) => {
+        this.allData = Array.isArray(res.data) ? res.data as Competence[] : [];
+        this.calculateStats();
         this.currentPage = 0;
         this.loading = false;
       },
       error: () => {
-        this.snack.open('Erreur lors du chargement des compétences', '×', { duration: 3000 });
+        this.snack.open('Erreur lors du chargement des compétences', '×', {
+          duration: 3000
+        });
         this.loading = false;
       }
     });
@@ -94,8 +104,9 @@ export class CompetenceListComponent implements OnInit {
 
   loadStats(): void {
     this.svc.getStats().subscribe({
-      next: (res) => {
+      next: (res: any) => {
         const s = res.data as any;
+
         this.stats = {
           total: s.total || 0,
           technique: s.TECHNIQUE || s.technique || 0,
@@ -104,39 +115,87 @@ export class CompetenceListComponent implements OnInit {
           management: s.MANAGEMENT || s.management || 0
         };
       },
-      error: () => {}
+      error: () => {
+        this.calculateStats();
+      }
     });
   }
 
-  // ── Filtrage et tri ─────────────────────────────────────────
+  calculateStats(): void {
+    this.stats.total = this.allData.length;
+
+    this.stats.technique = this.allData.filter(c =>
+      this.normalizeCategorie(c.categorie) === 'TECHNIQUE'
+    ).length;
+
+    this.stats.softSkill = this.allData.filter(c =>
+      this.normalizeCategorie(c.categorie) === 'SOFT_SKILL'
+    ).length;
+
+    this.stats.linguistique = this.allData.filter(c =>
+      this.normalizeCategorie(c.categorie) === 'LINGUISTIQUE'
+    ).length;
+
+    this.stats.management = this.allData.filter(c =>
+      this.normalizeCategorie(c.categorie) === 'MANAGEMENT'
+    ).length;
+  }
+
+  normalizeCategorie(value: string | null | undefined): string {
+    return (value || '')
+      .toUpperCase()
+      .replace(/\s+/g, '_')
+      .trim();
+  }
+
+  get autresDomaines(): number {
+    return Math.max(
+      this.stats.total -
+      this.stats.technique -
+      this.stats.softSkill,
+      0
+    );
+  }
+
   getFilteredData(): Competence[] {
     const search = this.searchText.trim().toLowerCase();
+
     let data = this.allData.filter(c => {
-      const matchSearch = !search ||
-        (c.nom?.toLowerCase().includes(search) || false) ||
-        (c.description?.toLowerCase().includes(search) || false);
-      const matchCat = this.selectedCategorie === 'TOUTES' || c.categorie === this.selectedCategorie;
+      const matchSearch =
+        !search ||
+        c.nom?.toLowerCase().includes(search) ||
+        c.description?.toLowerCase().includes(search);
+
+      const matchCat =
+        this.selectedCategorie === 'TOUTES' ||
+        this.normalizeCategorie(c.categorie) === this.normalizeCategorie(this.selectedCategorie);
+
       return matchSearch && matchCat;
     });
 
     if (this.sortField) {
       const field = this.sortField;
       const dir = this.sortDirection === 'asc' ? 1 : -1;
+
       data = [...data].sort((a, b) => {
         const av = a[field] ?? '';
         const bv = b[field] ?? '';
+
         if (typeof av === 'number' && typeof bv === 'number') {
           return (av - bv) * dir;
         }
+
         return String(av).localeCompare(String(bv)) * dir;
       });
     }
+
     return data;
   }
 
   getPagedData(): Competence[] {
     const filtered = this.getFilteredData();
     const start = this.currentPage * this.pageSize;
+
     return filtered.slice(start, start + this.pageSize);
   }
 
@@ -146,6 +205,7 @@ export class CompetenceListComponent implements OnInit {
 
   applyFilter(): void {
     this.currentPage = 0;
+    this.allData = [...this.allData];
   }
 
   setCategorie(cat: string): void {
@@ -168,26 +228,36 @@ export class CompetenceListComponent implements OnInit {
       this.sortField = field;
       this.sortDirection = 'asc';
     }
+
     this.currentPage = 0;
   }
 
   getSortIcon(field: string): string {
-    if (this.sortField !== field) return '';
+    if (this.sortField !== field) {
+      return '';
+    }
+
     return this.sortDirection === 'asc' ? '↑' : '↓';
   }
 
   getNiveauMoyenPourcentage(niveau?: number): number {
-    if (!niveau) return 0;
+    if (!niveau) {
+      return 0;
+    }
+
     return Math.round((niveau / 4) * 100);
   }
 
-  // ── Pagination ──────────────────────────────────────────────
   previousPage(): void {
-    if (this.currentPage > 0) this.currentPage--;
+    if (this.currentPage > 0) {
+      this.currentPage--;
+    }
   }
 
   nextPage(): void {
-    if (this.currentPage + 1 < this.getTotalPages()) this.currentPage++;
+    if (this.currentPage + 1 < this.getTotalPages()) {
+      this.currentPage++;
+    }
   }
 
   goToPage(page: number): void {
@@ -202,30 +272,37 @@ export class CompetenceListComponent implements OnInit {
     const pages: number[] = [];
 
     if (total <= 7) {
-      for (let i = 0; i < total; i++) pages.push(i);
-    } else {
-      if (current <= 3) {
-        for (let i = 0; i <= 4; i++) pages.push(i);
-        pages.push(-1);
-        pages.push(total - 1);
-      } else if (current >= total - 4) {
-        pages.push(0);
-        pages.push(-1);
-        for (let i = total - 5; i < total; i++) pages.push(i);
-      } else {
-        pages.push(0);
-        pages.push(-1);
-        for (let i = current - 1; i <= current + 1; i++) pages.push(i);
-        pages.push(-1);
-        pages.push(total - 1);
+      for (let i = 0; i < total; i++) {
+        pages.push(i);
       }
+    } else if (current <= 3) {
+      for (let i = 0; i <= 4; i++) {
+        pages.push(i);
+      }
+      pages.push(-1, total - 1);
+    } else if (current >= total - 4) {
+      pages.push(0, -1);
+      for (let i = total - 5; i < total; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(0, -1);
+      for (let i = current - 1; i <= current + 1; i++) {
+        pages.push(i);
+      }
+      pages.push(-1, total - 1);
     }
+
     return pages;
   }
 
-  // ── Suppression ─────────────────────────────────────────────
+  viewDetails(id: number): void {
+    this.router.navigate(['/admin/competences', id]);
+  }
+
   deleteCompetence(id: number, nom: string): void {
     (document.activeElement as HTMLElement)?.blur();
+
     const dialogRef = this.dialog.open(ConfirmationDialogComponent, {
       width: '440px',
       data: {
@@ -235,36 +312,62 @@ export class CompetenceListComponent implements OnInit {
         cancelText: 'Annuler'
       }
     });
+
     dialogRef.afterClosed().subscribe(confirmed => {
-      if (!confirmed) return;
+      if (!confirmed) {
+        return;
+      }
+
       this.svc.delete(id).subscribe({
         next: () => {
           this.allData = this.allData.filter(c => c.id !== id);
+          this.calculateStats();
           this.loadStats();
-          this.snack.open('Compétence supprimée', '×', { duration: 3000 });
+
+          this.snack.open('Compétence supprimée', '×', {
+            duration: 3000
+          });
         },
-        error: (err) => {
-          this.snack.open(err?.error?.message || 'Erreur de suppression', '×', { duration: 4000 });
+        error: (err: any) => {
+          this.snack.open(err?.error?.message || 'Erreur de suppression', '×', {
+            duration: 4000
+          });
         }
       });
     });
   }
 
-  // ── Rafraîchissement ────────────────────────────────────────
   refresh(): void {
     this.loadCompetences();
     this.loadStats();
-    this.snack.open('Données actualisées', '×', { duration: 2000 });
+
+    this.snack.open('Données actualisées', '×', {
+      duration: 2000
+    });
   }
 
-  // ── Utilitaires pour le template ────────────────────────────
-  getCategoryColor(categorie: string): string {
-    const found = this.categories.find(c => c.value === categorie);
+  getCategoryColor(categorie: string | null | undefined): string {
+    const normalized = this.normalizeCategorie(categorie);
+    const found = this.categories.find(c => c.value === normalized);
+
     return found ? found.color : '#6B7280';
   }
 
-  getCategoryIcon(categorie: string): string {
-    const found = this.categories.find(c => c.value === categorie);
+  getCategoryIcon(categorie: string | null | undefined): string {
+    const normalized = this.normalizeCategorie(categorie);
+    const found = this.categories.find(c => c.value === normalized);
+
     return found ? found.icon : '📌';
+  }
+
+  getCategoryLabel(categorie: string | null | undefined): string {
+    const normalized = this.normalizeCategorie(categorie);
+    const found = this.categories.find(c => c.value === normalized);
+
+    if (found) {
+      return found.label;
+    }
+
+    return normalized.replace(/_/g, ' ');
   }
 }

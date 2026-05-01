@@ -6,6 +6,6 @@ import { CompetenceDetailComponent } from './pages/competence-detail/competence-
 export const competencesRoutes: Routes = [
   { path: '', component: CompetenceListComponent },
   { path: 'nouveau', component: CompetenceFormComponent },
-  { path: ':id', component: CompetenceDetailComponent },
+  { path: ':id', component: CompetenceDetailComponent }, // 👁️ DETAILS
   { path: ':id/edit', component: CompetenceFormComponent }
 ];

@@ -10,7 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { EmployeService } from '../../services/employe.service';
+import { EmployeService } from '../../../../../core/services/employe.service';
 import { Employe } from '../../models/employe.model';
 import { ConfirmationDialogComponent } from '../../../../../shared/layouts/components/confirmation-dialog/confirmation-dialog.component';
 import { AuthService } from '../../../../../core/services/auth.service';
@@ -84,10 +84,10 @@ export class EmployeListComponent implements OnInit {
 
   loadManagers(): void {
     this.employeService.getAllManagers().subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.managersList = res.success && Array.isArray(res.data) ? res.data : [];
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Erreur chargement managers', err);
         this.managersList = [];
       }
@@ -99,7 +99,7 @@ export class EmployeListComponent implements OnInit {
     this.employeService.getAll()
       .pipe(finalize(() => this.loading = false))
       .subscribe({
-        next: (res) => {
+        next: (res: any) => {
           if (res.success) {
             this.dataSource.data = Array.isArray(res.data) ? res.data : [];
             this.currentPage = 0;
@@ -107,7 +107,7 @@ export class EmployeListComponent implements OnInit {
             this.toast(res.message || 'Erreur de chargement', 'error');
           }
         },
-        error: () => this.toast('Erreur de connexion au serveur', 'error')
+        error: (err: any) => this.toast('Erreur de connexion au serveur', 'error')
       });
   }
 
@@ -131,7 +131,7 @@ export class EmployeListComponent implements OnInit {
 
     this.loading = true;
     this.employeService.assignManager(this.selectedEmploye.id!, this.selectedManagerId).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.loading = false;
         if (res.success) {
           this.toast(`Manager assigné à ${this.selectedEmploye!.prenom} ${this.selectedEmploye!.nom}`, 'success');
@@ -141,7 +141,7 @@ export class EmployeListComponent implements OnInit {
           this.toast(res.message || "Erreur lors de l'assignation", 'error');
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         this.loading = false;
         this.toast(err.error?.message || "Erreur lors de l'assignation", 'error');
       }
@@ -220,7 +220,7 @@ export class EmployeListComponent implements OnInit {
       if (!confirmed) return;
       this.loading = true;
       this.employeService.delete(id).subscribe({
-        next: (res) => {
+        next: (res: any) =>{
           if (res.success) {
             const updatedData = this.dataSource.data.filter(e => e.id !== id);
             this.dataSource.data = updatedData;
@@ -231,7 +231,7 @@ export class EmployeListComponent implements OnInit {
           }
           this.loading = false;
         },
-        error: (err) => {
+         error: (err: any) =>{
           this.loading = false;
           const serverMsg = err?.error?.message || err?.error?.error || `Erreur serveur (${err?.status ?? 'inconnu'})`;
           this.toast(serverMsg, 'error');

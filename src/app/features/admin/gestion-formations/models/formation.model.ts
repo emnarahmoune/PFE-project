@@ -2,14 +2,35 @@ export interface Formation {
   id?: number;
   titre: string;
   description: string;
-  domaine: 'TECHNIQUE' | 'SOFT_SKILLS' | 'MANAGEMENT' | 'LANGUES' | 'SECURITE';
+  domaine: 'TECHNIQUE' | 'SOFT_SKILLS' | 'MANAGEMENT' | 'LANGUES' | 'SECURITE' | 'INFORMATIQUE';
   dureeHeures: number;
   actif?: boolean;
   dateCreation?: Date;
-  nombreParticipants?: number;
+
+  urlVideo?: string;
+  pdfPath?: string;
   participants?: EmployeFormation[];
+  nombreParticipants?: number;
+totalEmployes?: number;
+
+  videos?: FormationVideo[];
+  supports?: FormationSupport[];
 }
 
+
+export interface FormationVideo {
+  id?: number;
+  titre: string;
+  urlYoutube: string;
+  ordre?: number;
+}
+
+export interface FormationSupport {
+  id?: number;
+  titre: string;
+  fichierUrl: string;
+  ordre?: number;
+}
 export interface EmployeFormation {
   id: number;
   nom: string;

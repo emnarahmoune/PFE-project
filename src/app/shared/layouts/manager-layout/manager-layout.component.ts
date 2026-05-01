@@ -10,7 +10,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../../../core/services/auth.service';
 import { KeycloakInitService } from '../../../core/services/keycloak-init.service';
-
+import { Router } from '@angular/router';
 @Component({
   selector: 'app-manager-layout',
   standalone: true,
@@ -42,7 +42,8 @@ export class ManagerLayoutComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
-    private keycloakService: KeycloakInitService
+    private keycloakService: KeycloakInitService,
+    public router: Router
   ) {}
 
   ngOnInit() {}
@@ -54,6 +55,10 @@ export class ManagerLayoutComponent implements OnInit {
   logout() {
     this.keycloakService.logout();
   }
+
+  isRouteActive(path: string): boolean {
+  return this.router.url.startsWith(path);
+}
 
   getUserName(): string {
     const user = this.authService.getCurrentUser();
@@ -71,12 +76,14 @@ export class ManagerLayoutComponent implements OnInit {
     return 'MG';
   }
 
-  getCurrentPageTitle(): string {
-    const path = window.location.pathname;
-    if (path.includes('/src/app/features/manager/dashboard-manager')) return 'Dashboard Manager';
-    if (path.includes('/src/app/features/manager/equipe')) return 'Mon équipe';
-    if (path.includes('/src/app/features/manager/conges')) return 'Demandes de congé';
-    if (path.includes('/src/app/features/manager/stats')) return 'Statistiques';
-    return 'Espace Manager';
-  }
+getCurrentPageTitle(): string {
+  const path = this.router.url;
+
+  if (path.includes('/manager/dashboard')) return 'Tableau de bord';
+  if (path.includes('/manager/equipe')) return 'Mon équipe';
+  if (path.includes('/manager/conges')) return 'Demandes de congé';
+  if (path.includes('/manager/stats')) return 'Statistiques';
+
+  return 'Espace Manager';
+}
 }

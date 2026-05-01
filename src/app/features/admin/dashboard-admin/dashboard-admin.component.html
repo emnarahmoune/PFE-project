@@ -1,29 +1,10 @@
 <div class="dashboard-pro">
-  <!-- Header avec utilisateur (intégré dans le hero) -->
-  <div class="hero-gradient">
-    <div class="hero-container">
-      <div class="hero-left">
-        <h1>Tableau de bord</h1>
-        <p>{{ currentDate | date:'EEEE d MMMM yyyy' }}</p>
-      </div>
-      <div class="hero-right">
-        <div class="user-badge">
-          <div class="user-avatar">
-            {{ (userPrenom.charAt(0) || 'U') + (userNom.charAt(0) || '') }}
-          </div>
-          <div class="user-info">
-            <span class="user-name">{{ userPrenom }} {{ userNom }}</span>
-            <span class="user-role">{{ userRole | titlecase }}</span>
-          </div>
-        </div>
-        <button class="refresh-btn" (click)="rafraichir()" [disabled]="refreshing">
-          <span>⟳</span> {{ refreshing ? '...' : 'Actualiser' }}
-        </button>
-      </div>
-    </div>
-  </div>
 
   <div class="dashboard-content">
+    <div class="welcome-card">
+  <h1>Bienvenue, {{ getAdminDisplayName() }} !</h1>
+  <p>Vous êtes connecté à l'espace administrateur du Portail RH.</p>
+</div>
     <!-- Loader -->
     <div class="loader-overlay" *ngIf="loading">
       <div class="loader-spinner"></div>

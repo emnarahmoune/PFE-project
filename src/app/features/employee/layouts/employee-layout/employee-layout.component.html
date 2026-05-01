@@ -1,138 +1,153 @@
-<mat-sidenav-container class="layout-container" [class.sidebar-collapsed]="!isSidebarOpen">
+<div class="layout">
 
-  <!-- SIDEBAR -->
-  <mat-sidenav
-    [opened]="isSidebarOpen"
-    mode="side"
-    class="sidebar"
-    [class.collapsed]="!isSidebarOpen">
+  <!-- Sidebar -->
+  <aside class="sidebar" [class.collapsed]="!isSidebarOpen" [class.open]="isSidebarOpen">
 
     <div class="sidebar-header">
-      <div class="logo-container">
-        <div class="logo-mark">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8">
-            <circle cx="8" cy="5" r="3"/>
-            <path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
-          </svg>
-        </div>
-        <span *ngIf="isSidebarOpen" class="app-title">HR<span>Space</span></span>
+      <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text" *ngIf="isSidebarOpen">PeopleOS</span>
       </div>
-      <button class="collapse-btn" mat-icon-button (click)="toggleSidebar()">
-        <mat-icon>{{ isSidebarOpen ? 'chevron_left' : 'chevron_right' }}</mat-icon>
+
+      <button class="collapse-btn" type="button" (click)="toggleSidebar()">
+        <span class="collapse-icon">{{ isSidebarOpen ? '◀' : '▶' }}</span>
       </button>
     </div>
 
-    <div class="nav-section-label" *ngIf="isSidebarOpen">Menu principal</div>
+    <nav class="sidebar-nav">
+      <a
+        *ngFor="let item of menuItems"
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        class="nav-item"
+        [class.active]="router.url.startsWith(item.path)"
+      >
+        <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
+        <span class="nav-label" *ngIf="isSidebarOpen">{{ item.label }}</span>
+      </a>
+    </nav>
 
-    <mat-nav-list class="nav-menu">
-      <div *ngFor="let item of menuItems" class="nav-item">
-        <a
-          mat-list-item
-          [routerLink]="item.path"
-          routerLinkActive="active"
-          #rla="routerLinkActive"
-          [class.active]="rla.isActive">
-          <mat-icon>{{ item.icon }}</mat-icon>
-          <span class="nav-label" *ngIf="isSidebarOpen">{{ item.label }}</span>
-          <span class="tooltip" *ngIf="!isSidebarOpen">{{ item.label }}</span>
-        </a>
-      </div>
-    </mat-nav-list>
+    <div class="sidebar-footer">
 
-    <div class="sidebar-footer" *ngIf="isSidebarOpen">
-      <mat-divider></mat-divider>
-      <div class="user-info-footer">
-        <div class="avatar-small">{{ getUserInitials() }}</div>
+      <div class="user-info" *ngIf="isSidebarOpen">
+        <div class="user-avatar">{{ getUserInitials() }}</div>
+
         <div class="user-details">
           <span class="user-name">{{ getUserName() }}</span>
           <span class="user-role">{{ userRole }}</span>
         </div>
       </div>
-      <div class="version-info">
-        <span>v1.0.0</span>
-        <span>© {{ currentYear }}</span>
-      </div>
-    </div>
 
-  </mat-sidenav>
-
-  <!-- MAIN CONTENT -->
-  <mat-sidenav-content class="main-content">
-
-    <!-- HEADER / TOPBAR -->
-    <mat-toolbar class="topbar">
-
-      <button mat-icon-button class="menu-toggle" (click)="toggleSidebar()">
-        <mat-icon>menu</mat-icon>
+      <button class="logout-btn" type="button" (click)="logout()">
+        <span class="logout-icon">🚪</span>
+        <span *ngIf="isSidebarOpen">Déconnexion</span>
       </button>
 
-      <div class="topbar-title">
-        <span class="current-page">{{ getCurrentPageTitle() }}</span>
+      <div class="version" *ngIf="isSidebarOpen">
+        © {{ currentYear }} PeopleOS v2.0
       </div>
 
-      <span class="spacer"></span>
-
-<!-- NOTIFICATIONS AVEC MENU DÉROULANT -->
-<button mat-icon-button class="topbar-icon" [matMenuTriggerFor]="notifMenu" matTooltip="Notifications">
-  <mat-icon>notifications_none</mat-icon>
-  <span class="notif-badge" *ngIf="notificationCount > 0">{{ notificationCount }}</span>
-</button>
-
-<mat-menu #notifMenu="matMenu" class="notif-menu" xPosition="before">
-  <div class="notif-header">
-    <span>Notifications</span>
-    <button mat-button (click)="markAllNotificationsRead()" *ngIf="notificationCount > 0" class="mark-all-btn">
-      Tout marquer lu
-    </button>
-  </div>
-  <div *ngFor="let notif of recentNotifications" class="notif-item" [class.unread]="!notif.lu">
-    <div class="notif-message">{{ notif.message }}</div>
-    <div class="notif-date">{{ notif.dateCreation | date:'dd/MM/yyyy HH:mm' }}</div>
-    <div class="notif-actions" *ngIf="!notif.lu">
-      <button mat-icon-button (click)="markNotificationRead(notif.id)" class="read-btn" title="Marquer comme lue">✔</button>
     </div>
-  </div>
-  <div class="notif-footer" *ngIf="recentNotifications.length === 0">
-    Aucune notification
-  </div>
-  <div class="notif-footer" *ngIf="recentNotifications.length > 0">
-    <a (click)="goToNotifications()">Voir toutes</a>
-  </div>
-</mat-menu>
 
-      <!-- User menu -->
-      <button mat-button class="user-btn" [matMenuTriggerFor]="userMenu">
-        <div class="user-avatar">{{ getUserInitials() }}</div>
-        <span class="user-name">{{ getUserName() }}</span>
-        <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
-      </button>
+  </aside>
 
-      <mat-menu #userMenu="matMenu" class="user-menu-panel">
-        <div class="user-info-header">
-          <div class="avatar-large">{{ getUserInitials() }}</div>
-          <div>
-            <div class="user-fullname">{{ getUserName() }}</div>
-            <div class="user-email">{{ userEmail }}</div>
+  <!-- Main content -->
+  <main class="main">
+
+    <header class="topbar">
+
+      <div class="topbar-left">
+        <button class="menu-toggle" type="button" (click)="toggleSidebar()">
+          <span class="menu-icon">☰</span>
+        </button>
+
+        <h1 class="page-title">{{ getCurrentPageTitle() }}</h1>
+      </div>
+
+      <div class="topbar-right">
+
+        <!-- Notifications -->
+        <button class="notification-btn" type="button" [matMenuTriggerFor]="notifMenu">
+          🔔
+          <span class="notif-badge" *ngIf="notificationCount > 0">
+            {{ notificationCount }}
+          </span>
+        </button>
+
+        <mat-menu #notifMenu="matMenu" class="notif-menu">
+          <div class="notif-header">
+            <span>Notifications</span>
+
+            <button
+              mat-button
+              type="button"
+              class="mark-all-btn"
+              *ngIf="notificationCount > 0"
+              (click)="markAllNotificationsRead()"
+            >
+              Tout marquer lu
+            </button>
           </div>
+
+          <div
+            *ngFor="let notif of recentNotifications"
+            class="notif-item"
+            [class.unread]="!notif.lu"
+          >
+            <div class="notif-message">{{ notif.message }}</div>
+            <div class="notif-date">{{ notif.dateCreation | date:'dd/MM/yyyy HH:mm' }}</div>
+
+            <div class="notif-actions" *ngIf="!notif.lu">
+              <button
+                mat-icon-button
+                type="button"
+                class="read-btn"
+                (click)="markNotificationRead(notif.id)"
+              >
+                ✔
+              </button>
+            </div>
+          </div>
+
+          <div class="notif-footer" *ngIf="recentNotifications.length === 0">
+            Aucune notification
+          </div>
+
+          <div class="notif-footer" *ngIf="recentNotifications.length > 0">
+            <a (click)="goToNotifications()">Voir toutes</a>
+          </div>
+        </mat-menu>
+
+        <!-- User menu -->
+        <div class="user-menu">
+          <div class="user-avatar small">{{ getUserInitials() }}</div>
+          <span class="user-name">{{ getUserName() }}</span>
+
+          <button class="dropdown-btn" type="button" [matMenuTriggerFor]="userMenu">
+            ▾
+          </button>
         </div>
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="goToProfile()">
-          <mat-icon>person_outline</mat-icon>
-          <span>Mon profil</span>
-        </button>
-        <button mat-menu-item (click)="logout()">
-          <mat-icon>logout</mat-icon>
-          <span>Déconnexion</span>
-        </button>
-      </mat-menu>
 
-    </mat-toolbar>
+        <mat-menu #userMenu="matMenu">
+          <button mat-menu-item type="button" (click)="goToProfile()">
+            <mat-icon>person_outline</mat-icon>
+            <span>Mon profil</span>
+          </button>
 
-    <!-- PAGE CONTENT -->
-    <div class="content-area">
+          <button mat-menu-item type="button" (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Déconnexion</span>
+          </button>
+        </mat-menu>
+
+      </div>
+
+    </header>
+
+    <div class="content">
       <router-outlet></router-outlet>
     </div>
 
-  </mat-sidenav-content>
+  </main>
 
-</mat-sidenav-container>
+</div>

@@ -21,7 +21,22 @@ export interface Employe {
   absenteismeDate?: string;
   scoreTurnover?: number;
   scoreTurnoverNiveau?: string;
+  competences?: Competence[];
+  formations?: Formation[];
 }
+
+export interface Competence {
+  nom: string;
+  niveau: string;
+}
+
+export interface Formation {
+  id: number;
+  titre: string;
+  progression: number;
+}
+
+
 
 export interface EmployeResponse {
   success: boolean;

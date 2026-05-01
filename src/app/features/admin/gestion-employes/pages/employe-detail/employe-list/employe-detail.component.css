@@ -34,6 +34,22 @@
   --sh: 0 1px 3px rgba(16,30,54,.06), 0 1px 2px rgba(16,30,54,.04);
 }
 
+
+
+.progress-bar {
+  height: 6px;
+  background: #eee;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5b5be6, #7a7aff);
+  transition: width 0.3s ease;
+}
+
 /* ✅ CORRECTION PRINCIPALE : width 100%, pas de max-width ni margin auto */
 .page-shell {
   width: 100%;

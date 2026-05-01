@@ -7,6 +7,7 @@ import { EmployeProfilResponse, UpdateProfilRequest } from '../models/employe-pr
   providedIn: 'root'
 })
 export class EmployeProfilService {
+
   private endpoint = 'employes';
 
   constructor(private api: ApiService) {}
@@ -15,24 +16,16 @@ export class EmployeProfilService {
     return this.api.get<EmployeProfilResponse>(`${this.endpoint}/mon-profil`);
   }
 
-  getMonSoldeConges(): Observable<EmployeProfilResponse> {
-    return this.api.get<EmployeProfilResponse>(`${this.endpoint}/mon-solde-conges`);
-  }
+  updateMonProfil(data: any): Observable<any> {
+  return this.api.putCustom('employes/mon-profil', data);
+}
 
   updateInformationsPersonnelles(data: UpdateProfilRequest): Observable<EmployeProfilResponse> {
-    // Utilisation de put au lieu de patch si patch n'existe pas
-    return this.api.put<EmployeProfilResponse>(this.endpoint, 0, data);
+    return this.updateMonProfil(data);
   }
 
-  changePassword(oldPassword: string, newPassword: string): Observable<EmployeProfilResponse> {
-    return this.api.post<EmployeProfilResponse>(`${this.endpoint}/change-password`, {
-      oldPassword,
-      newPassword
-    });
-  }
-
-  changeEmail(newEmail: string): Observable<EmployeProfilResponse> {
-    return this.api.put<EmployeProfilResponse>(this.endpoint, 0, { email: newEmail });
+  getMonSoldeConges(): Observable<EmployeProfilResponse> {
+    return this.api.get<EmployeProfilResponse>(`${this.endpoint}/mon-solde-conges`);
   }
 
   getHistoriqueConges(): Observable<EmployeProfilResponse> {
@@ -45,5 +38,16 @@ export class EmployeProfilService {
 
   getMesFormations(): Observable<EmployeProfilResponse> {
     return this.api.get<EmployeProfilResponse>(`${this.endpoint}/mes-formations`);
+  }
+
+  changePassword(oldPassword: string, newPassword: string): Observable<EmployeProfilResponse> {
+    return this.api.post<EmployeProfilResponse>(`${this.endpoint}/change-password`, {
+      oldPassword,
+      newPassword
+    });
+  }
+
+  changeEmail(newEmail: string): Observable<EmployeProfilResponse> {
+    return this.api.patch(`${this.endpoint}/change-email?newEmail=${encodeURIComponent(newEmail)}`, {});
   }
 }

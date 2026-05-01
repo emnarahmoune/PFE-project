@@ -8,7 +8,7 @@ import {
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { finalize } from 'rxjs';
-import { EmployeService } from '../../services/employe.service';
+import { EmployeService } from '../../../../../core/services/employe.service';
 import { Employe } from '../../models/employe.model';
 
 function noWhitespaceValidator(c: AbstractControl): ValidationErrors | null {
@@ -47,10 +47,10 @@ export class EmployeFormComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private employeService: EmployeService,
     private route: ActivatedRoute,
     private router: Router,
-    private snack: MatSnackBar
+    private snack: MatSnackBar,
+    private employeService: EmployeService
   ) {}
 
   ngOnInit(): void {
@@ -85,10 +85,10 @@ export class EmployeFormComponent implements OnInit {
 
   loadManagers(): void {
     this.employeService.getAllManagers().subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.managersList = res.success && Array.isArray(res.data) ? res.data : [];
       },
-      error: (err) => {
+     error:(err:any)=> {
         console.error('Erreur chargement managers', err);
         this.managersList = [];
       }
@@ -100,7 +100,8 @@ export class EmployeFormComponent implements OnInit {
     this.employeService.getById(this.employeId!)
       .pipe(finalize(() => this.loading = false))
       .subscribe({
-        next: (res) => {
+
+        next: (res: any) => {
           if (res.success && res.data) {
             const e: Employe = res.data as Employe;
             this.employeForm.patchValue({
@@ -146,7 +147,7 @@ export class EmployeFormComponent implements OnInit {
 
     obs$.pipe(finalize(() => this.submitting = false))
       .subscribe({
-        next: (res) => {
+        next: (res: any) => {
           if (res.success) {
             this.toast(
               this.isEditMode ? 'Employé modifié avec succès' : 'Employé créé avec succès',
@@ -159,7 +160,7 @@ export class EmployeFormComponent implements OnInit {
             this.toast(res.message || 'Une erreur est survenue', 'error');
           }
         },
-        error: (err) => {
+        error:(err:any)=> {
           const msg = err?.error?.message || err?.error?.errors?.join(', ')
                    || (this.isEditMode ? 'Erreur modification' : 'Erreur création');
           this.toast(msg, 'error');

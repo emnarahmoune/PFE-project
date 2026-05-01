@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ManagerService, Manager } from '../../../../core/services/manager.service';
-import { EmployeService } from '../../../admin/gestion-employes/services/employe.service';
+import { EmployeService } from '../../../../core/services/employe.service';
 import { Employe } from '../../../admin/gestion-employes/models/employe.model';
 
 @Component({
@@ -45,7 +45,7 @@ export class EmployeDetailComponent implements OnInit {
 
   loadEmploye(id: number): void {
     this.employeService.getById(id).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.loading = false;
         if (res.success) this.employe = res.data as Employe;
         else this.error = true;
@@ -69,7 +69,7 @@ export class EmployeDetailComponent implements OnInit {
       score: this.managerService.getDernierScoreTurnover(employeId),
       abs: this.managerService.getDernierAbsenteisme(employeId)
     }).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         // Score
         this.scoreTurnover = res.score?.data?.score ?? null;
         this.scoreTurnoverNiveau = res.score?.data?.niveauRisque ?? null;
@@ -88,15 +88,15 @@ export class EmployeDetailComponent implements OnInit {
           this.absenteisme = null;
         }
       },
-      error: (err) => console.error(err)
+      error: (err: any) => console.error(err)
     });
   }
 
   updateManager(newManagerId: number): void {
     if (!this.employe) return;
     this.employeService.updateManager(this.employe.id!, newManagerId).subscribe({
-      next: (res) => { if (res.success) this.employe = res.data; },
-      error: (err) => console.error(err)
+      next: (res: any) => { if (res.success) this.employe = res.data; },
+      error: (err: any) => console.error(err)
     });
   }
 

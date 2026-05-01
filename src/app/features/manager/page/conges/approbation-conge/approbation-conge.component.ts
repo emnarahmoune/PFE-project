@@ -18,7 +18,7 @@ import { DemandeConge, SoldeConges } from '../../../../employee/models/conge.mod
 })
 export class ApprobationCongeComponent implements OnInit {
   
-  tasks: Task[] = [];
+  
   loading = false;
   isSubmitting = false;
   
@@ -28,6 +28,7 @@ export class ApprobationCongeComponent implements OnInit {
   commentaire = '';
   motifRefus = '';
   errorMessage = '';
+  tasks: any[] = [];
   
   // Détails employé
   showDetailsModal = false;
@@ -52,6 +53,10 @@ export class ApprobationCongeComponent implements OnInit {
     this.loadTasks();
   }
 
+
+getUrgentTasksCount(): number {
+  return this.tasks?.filter((task: any) => task.urgente).length || 0;
+}
   loadTasks(): void {
     this.loading = true;
     this.errorMessage = '';

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { EmployeService } from '../../services/employe.service';
+import { EmployeService } from '../../../../../core/services/employe.service';
 import { Employe } from '../../models/employe.model';
 import { HistoriqueCongesModalComponent } from '../historique-conges-modal/historique-conges-modal.component';
 

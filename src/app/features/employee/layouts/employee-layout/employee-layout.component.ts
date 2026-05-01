@@ -13,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../../../../core/services/auth.service';
 import { NotificationService, AppNotification } from '../../../../core/services/notification.service';
 import { Subscription } from 'rxjs';
+import { KeycloakInitService } from '../../../../core/services/keycloak-init.service';
 
 @Component({
   selector: 'app-employee-layout',
@@ -60,8 +61,9 @@ export class EmployeeLayoutComponent implements OnInit, OnDestroy {
 
   constructor(
     private authService: AuthService,
-    private router: Router,
-    private notificationService: NotificationService
+    public router: Router,
+    private notificationService: NotificationService,
+    private keycloakInit: KeycloakInitService,
   ) {}
 
   ngOnInit(): void {
@@ -83,15 +85,19 @@ export class EmployeeLayoutComponent implements OnInit, OnDestroy {
     this.notificationsSub?.unsubscribe();
   }
 
-  loadUserInfo(): void {
-    const user = this.authService.getCurrentUser();
-    if (user) {
-      this.userNom = user.nom || '';
-      this.userPrenom = user.prenom || '';
-      this.userEmail = user.email || '';
-      this.userRole = user.role || user.typeUtilisateur || 'EMPLOYE';
-    }
+loadUserInfo(): void {
+  const user = this.keycloakInit.getUser();
+
+  if (user) {
+    this.userNom = user.nom || '';
+    this.userPrenom = user.prenom || '';
+    this.userEmail = user.email || '';
+    this.userRole = user.role || user.typeUtilisateur || 'EMPLOYE';
+  } else {
+    this.userNom = '';
+    this.userPrenom = '';
   }
+}
 
   markNotificationRead(id: number): void {
     this.notificationService.markAsRead(id);
@@ -110,8 +116,7 @@ export class EmployeeLayoutComponent implements OnInit, OnDestroy {
   }
 
   getUserName(): string {
-    return this.userPrenom && this.userNom ? `${this.userPrenom} ${this.userNom}` : 'Utilisateur';
-  }
+    return `${this.userPrenom} ${this.userNom}`.trim() || this.userEmail || 'Utilisateur';  }
 
   getUserInitials(): string {
     return this.userPrenom && this.userNom ? `${this.userPrenom.charAt(0)}${this.userNom.charAt(0)}`.toUpperCase() : 'U';

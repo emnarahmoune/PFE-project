@@ -1,130 +1,237 @@
-<div class="formation-form-container">
+<div class="formation-container">
+
+  <!-- HEADER -->
   <div class="header">
-    <button mat-icon-button routerLink="/admin/formations" class="back-button">
+    <button mat-icon-button routerLink="/admin/formations" class="back-btn" type="button">
       <mat-icon>arrow_back</mat-icon>
     </button>
-    <h1>{{ isEditMode ? 'Modifier la formation' : 'Créer une formation' }}</h1>
+
+    <div class="title">
+      <h2>{{ isEditMode ? 'Modifier la formation' : 'Créer une formation' }}</h2>
+      <p class="subtitle">
+        {{ isEditMode ? 'Mettez à jour les informations de la formation' : 'Ajoutez une nouvelle formation' }}
+      </p>
+    </div>
   </div>
 
-  <div *ngIf="loading" class="loading-container">
-    <mat-spinner diameter="40"></mat-spinner>
+  <!-- LOADING -->
+  <div class="loading-box" *ngIf="loading">
+    <mat-spinner diameter="42"></mat-spinner>
+    <p>Chargement de la formation...</p>
   </div>
 
-  <form [formGroup]="formationForm" (ngSubmit)="onSubmit()" *ngIf="!loading">
-    <mat-card>
-      <mat-card-header>
-        <mat-card-title>
-          <mat-icon>menu_book</mat-icon>
-          Informations générales
-        </mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="form-grid">
-          <!-- Titre -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Titre de la formation</mat-label>
-            <input matInput formControlName="titre" placeholder="Ex: Angular Avancé">
-            <mat-icon matSuffix>title</mat-icon>
-            <mat-error *ngIf="formationForm.get('titre')?.touched">
-              {{ titreErrors }}
-            </mat-error>
-          </mat-form-field>
+  <!-- CARD -->
+  <mat-card class="form-card" *ngIf="!loading">
 
-          <!-- Domaine -->
-          <mat-form-field appearance="outline">
-            <mat-label>Domaine</mat-label>
-            <mat-select formControlName="domaine">
-              <mat-option *ngFor="let domaine of domaines" [value]="domaine.value">
-                <div class="domaine-option">
-                  <mat-icon>{{ domaine.icon }}</mat-icon>
-                  <span>{{ domaine.label }}</span>
-                </div>
-              </mat-option>
-            </mat-select>
-            <mat-error *ngIf="formationForm.get('domaine')?.touched">
-              {{ domaineErrors }}
-            </mat-error>
-          </mat-form-field>
+    <form [formGroup]="formationForm" (ngSubmit)="onSubmit()">
 
-          <!-- Durée -->
-          <mat-form-field appearance="outline">
-            <mat-label>Durée (en heures)</mat-label>
-            <input matInput type="number" formControlName="dureeHeures" placeholder="40">
-            <mat-icon matSuffix>schedule</mat-icon>
-            <mat-error *ngIf="formationForm.get('dureeHeures')?.touched">
-              {{ dureeErrors }}
-            </mat-error>
-          </mat-form-field>
-
-          <!-- Description -->
-          <mat-form-field appearance="outline" class="full-width description-field">
-            <mat-label>Description</mat-label>
-            <textarea matInput formControlName="description" rows="6" 
-              placeholder="Décrivez le contenu de la formation..."></textarea>
-            <mat-icon matSuffix>description</mat-icon>
-            <mat-error *ngIf="formationForm.get('description')?.touched">
-              {{ descriptionErrors }}
-            </mat-error>
-            <mat-hint align="end">
-              {{ formationForm.get('description')?.value?.length || 0 }} / 2000 caractères
-            </mat-hint>
-          </mat-form-field>
-
-          <!-- Statut (uniquement en modification) -->
-          <div class="status-field" *ngIf="isEditMode">
-            <mat-divider></mat-divider>
-            <div class="status-toggle">
-              <span class="status-label">Statut de la formation</span>
-              <mat-slide-toggle formControlName="actif" color="primary">
-                {{ formationForm.get('actif')?.value ? 'Active' : 'Inactive' }}
-              </mat-slide-toggle>
-            </div>
-            <div class="status-help" *ngIf="!formationForm.get('actif')?.value">
-              <mat-icon>info</mat-icon>
-              <span>Les formations inactives ne sont pas visibles pour les employés</span>
-            </div>
-          </div>
+      <!-- INFOS GÉNÉRALES -->
+      <div class="section-title">
+        <mat-icon>school</mat-icon>
+        <div>
+          <h3>Informations générales</h3>
+          <p>Renseignez les informations principales de la formation</p>
         </div>
-      </mat-card-content>
+      </div>
 
-      <mat-card-actions align="end">
-        <button mat-button type="button" (click)="cancel()" [disabled]="submitting">
-          <mat-icon>close</mat-icon>
+      <div class="grid">
+
+        <!-- Titre -->
+        <mat-form-field appearance="outline" class="field">
+          <mat-label>Titre</mat-label>
+          <input matInput formControlName="titre">
+          <mat-icon matSuffix>title</mat-icon>
+        </mat-form-field>
+
+        <!-- Domaine -->
+        <mat-form-field appearance="outline" class="field">
+          <mat-label>Domaine</mat-label>
+
+          <mat-select formControlName="domaine">
+
+            <mat-select-trigger *ngIf="formationForm?.get('domaine')?.value">
+              <div class="select-display">
+                <mat-icon>{{ getSelectedIcon() }}</mat-icon>
+                <span>{{ getSelectedLabel() }}</span>
+              </div>
+            </mat-select-trigger>
+
+            <mat-option *ngFor="let d of domaines" [value]="d.value">
+              <div class="option">
+                <mat-icon>{{ d.icon }}</mat-icon>
+                <span>{{ d.label }}</span>
+              </div>
+            </mat-option>
+
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Durée -->
+        <mat-form-field appearance="outline" class="field">
+          <mat-label>Durée (heures)</mat-label>
+          <input matInput type="number" formControlName="dureeHeures">
+          <mat-icon matSuffix>schedule</mat-icon>
+        </mat-form-field>
+
+      </div>
+
+      <!-- DESCRIPTION -->
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Description</mat-label>
+        <textarea matInput formControlName="description" rows="4"></textarea>
+      </mat-form-field>
+
+      <mat-divider></mat-divider>
+
+      <!-- VIDÉOS -->
+      <div class="resources-section" formArrayName="videos">
+
+        <div class="section-header">
+          <div>
+            <h3>Vidéos de formation</h3>
+            <p>Ajoutez une ou plusieurs vidéos YouTube</p>
+          </div>
+
+          <button mat-stroked-button type="button" (click)="addVideo()">
+            <mat-icon>play_circle</mat-icon>
+            Ajouter vidéo
+          </button>
+        </div>
+
+        <div class="empty-resources" *ngIf="videos.length === 0">
+          <mat-icon>movie</mat-icon>
+          <p>Aucune vidéo ajoutée</p>
+          <button mat-button type="button" (click)="addVideo()">
+            Ajouter la première vidéo
+          </button>
+        </div>
+
+        <div
+          class="resource-card"
+          *ngFor="let video of videos.controls; let i = index"
+          [formGroupName]="i"
+        >
+
+          <div class="resource-title">
+            <div>
+              <mat-icon>play_circle</mat-icon>
+              <strong>Vidéo {{ i + 1 }}</strong>
+            </div>
+
+            <button mat-icon-button type="button" color="warn" (click)="removeVideo(i)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Titre de la vidéo</mat-label>
+            <input matInput formControlName="titre">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>URL YouTube</mat-label>
+            <input matInput formControlName="urlYoutube">
+            <mat-icon matSuffix>link</mat-icon>
+          </mat-form-field>
+
+        </div>
+
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- SUPPORTS PDF -->
+      <div class="resources-section" formArrayName="supports">
+
+        <div class="section-header">
+          <div>
+            <h3>Supports PDF</h3>
+            <p>Ajoutez un ou plusieurs supports de formation</p>
+          </div>
+
+          <button mat-stroked-button type="button" (click)="addSupport()">
+            <mat-icon>picture_as_pdf</mat-icon>
+            Ajouter support
+          </button>
+        </div>
+
+        <div class="empty-resources" *ngIf="supports.length === 0">
+          <mat-icon>picture_as_pdf</mat-icon>
+          <p>Aucun support PDF ajouté</p>
+          <button mat-button type="button" (click)="addSupport()">
+            Ajouter le premier support
+          </button>
+        </div>
+
+        <div
+          class="resource-card"
+          *ngFor="let support of supports.controls; let i = index"
+          [formGroupName]="i"
+        >
+
+          <div class="resource-title">
+            <div>
+              <mat-icon>picture_as_pdf</mat-icon>
+              <strong>Support {{ i + 1 }}</strong>
+            </div>
+
+            <button mat-icon-button type="button" color="warn" (click)="removeSupport(i)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Titre du support</mat-label>
+            <input matInput formControlName="titre">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Chemin / URL PDF</mat-label>
+            <input matInput formControlName="fichierUrl">
+            <mat-icon matSuffix>link</mat-icon>
+          </mat-form-field>
+
+          <div class="upload-box">
+            <div class="upload-content">
+              <mat-icon>upload_file</mat-icon>
+              <div>
+                <strong>Importer le PDF</strong>
+                <p>Sélectionnez un fichier PDF pour ce support</p>
+              </div>
+            </div>
+
+            <input type="file" accept="application/pdf" (change)="uploadSupportPdf($event, i)">
+
+            <p *ngIf="support.get('fichierUrl')?.value" class="success">
+              ✔ PDF chargé : {{ support.get('fichierUrl')?.value }}
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="actions">
+
+        <button mat-stroked-button type="button" (click)="cancel()" class="btn-cancel">
           Annuler
         </button>
-        <button mat-raised-button color="primary" type="submit" [disabled]="submitting || formationForm.invalid">
-          <mat-spinner diameter="20" *ngIf="submitting"></mat-spinner>
-          <span *ngIf="!submitting">{{ isEditMode ? 'Modifier' : 'Créer' }}</span>
-        </button>
-      </mat-card-actions>
-    </mat-card>
-  </form>
 
-  <!-- Aperçu de la description (optionnel) -->
-  <mat-card class="preview-card" *ngIf="formationForm.get('description')?.value">
-    <mat-card-header>
-      <mat-card-title>
-        <mat-icon>preview</mat-icon>
-        Aperçu
-      </mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="preview-header">
-        <h3>{{ formationForm.get('titre')?.value || 'Titre de la formation' }}</h3>
-        <div class="preview-meta">
-          <span class="preview-domaine">
-            <mat-icon>category</mat-icon>
-            {{ getDomaineLabel(formationForm.get('domaine')?.value) }}
-          </span>
-          <span class="preview-duree">
-            <mat-icon>schedule</mat-icon>
-            {{ formationForm.get('dureeHeures')?.value || 0 }} heures
-          </span>
-        </div>
+        <button
+          mat-raised-button
+          type="submit"
+          class="btn-primary"
+          [disabled]="submitting"
+        >
+          <mat-icon>{{ submitting ? 'hourglass_empty' : 'save' }}</mat-icon>
+          {{ submitting ? 'Enregistrement...' : (isEditMode ? 'Modifier' : 'Créer') }}
+        </button>
+
       </div>
-      <div class="preview-description">
-        <p>{{ formationForm.get('description')?.value }}</p>
-      </div>
-    </mat-card-content>
+
+    </form>
+
   </mat-card>
+
 </div>

@@ -6,11 +6,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
-import { EmployeService } from '../../../services/employe.service';
+import { EmployeService } from '../../../../../../core/services/employe.service';
 import { Employe } from '../../../models/employe.model';
 import { ManagerService, Manager } from '../../../../../../core/services/manager.service';
 import { ConfirmationDialogComponent } from '../../../../../../shared/layouts/components/confirmation-dialog/confirmation-dialog.component';
-
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { Location } from '@angular/common';
 interface ApiResponse {
   success: boolean;
   message?: string;
@@ -25,7 +26,8 @@ interface ApiResponse {
     RouterModule,
     MatSnackBarModule,
     MatDialogModule,
-    ReactiveFormsModule
+    ReactiveFormsModule,
+    MatProgressBarModule
   ],
   templateUrl: './employe-detail.component.html',
   styleUrls: ['./employe-detail.component.css']
@@ -48,6 +50,24 @@ export class EmployeDetailComponent implements OnInit {
     { id: 'evaluations', icon: '⭐', label: 'Évaluations' }
   ];
 
+
+toggleStatut() {
+
+  if (!this.employe?.id) return;
+
+  const newStatut =
+    this.employe.statut === 'ACTIF' ? 'INACTIF' : 'ACTIF';
+
+  this.employeService.changeStatut(this.employe.id, newStatut)
+    .subscribe({
+      next: () => {
+        if (!this.employe) return;
+
+        this.employe.statut = newStatut; // ✅ corrigé
+      },
+      error: (err: any) => console.error(err)
+    });
+}
   readonly avatarColors: Record<string, string> = {
     'RH':          '#8b5cf6',
     'Technique':   '#0891b2',
@@ -62,11 +82,12 @@ ancienneteColor: any;
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private svc: EmployeService,
     private snack: MatSnackBar,
     private dialog: MatDialog,
     private managerSvc: ManagerService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private employeService: EmployeService,
+    private location: Location
   ) {}
 
   ngOnInit(): void {
@@ -113,10 +134,10 @@ ancienneteColor: any;
   // ---------------------------------------------------------------------------
   loadEmploye(id: number): void {
     this.loading = true;
-    this.svc.getById(id)
+    this.employeService.getById(id)
       .pipe(finalize(() => this.loading = false))
       .subscribe({
-        next: (res: ApiResponse) => {
+        next: (res: any) =>{
           if (res.success && res.data) {
             this.employe = res.data as Employe;
             this.managerForm.patchValue({ managerId: this.employe.managerId });
@@ -141,10 +162,10 @@ ancienneteColor: any;
     this.updatingManager = true;
     const newManagerId = this.managerForm.get('managerId')?.value;
 
-    this.svc.updateManager(this.employe.id, newManagerId)
+    this.employeService.updateManager(this.employe.id, newManagerId)
       .pipe(finalize(() => this.updatingManager = false))
       .subscribe({
-        next: (res: ApiResponse) => {
+        next: (res: any) => {
           if (res.success) {
             this.toast('Manager mis à jour avec succès', 'success');
             this.editManagerMode = false;
@@ -192,8 +213,8 @@ ancienneteColor: any;
 
     ref.afterClosed().subscribe((confirmed: boolean) => {
       if (!confirmed) return;
-      this.svc.delete(this.employe!.id!).subscribe({
-        next: (res: ApiResponse) => {
+      this.employeService.delete(this.employe!.id!).subscribe({
+        next: (res: any) => {
           if (res.success) {
             this.toast('Employé désactivé avec succès', 'success');
             this.router.navigate(['/admin/employes']);
@@ -217,13 +238,6 @@ ancienneteColor: any;
   // ---------------------------------------------------------------------------
   editEmploye(): void {
     this.router.navigate(['/admin/employes', this.employe?.id, 'edit']);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Retour à la liste
-  // ---------------------------------------------------------------------------
-  goBack(): void {
-    this.router.navigate(['/admin/employes']);
   }
 
   // ---------------------------------------------------------------------------
@@ -331,4 +345,13 @@ ancienneteColor: any;
       verticalPosition: 'top'
     });
   }
+
+  
+  // ---------------------------------------------------------------------------
+  // Retour à la liste
+  // ---------------------------------------------------------------------------
+
+  goBack(): void {
+  this.location.back();
+}
 }

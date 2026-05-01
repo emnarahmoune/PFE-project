@@ -1,178 +1,349 @@
-/* 🌿 BACKGROUND */
-body {
-  background: #f8fafc;
-  color: #1e293b;
-  font-family: 'Inter', sans-serif;
+/* =========================================================
+   MES FORMATIONS - STYLE PROFESSIONNEL
+========================================================= */
+
+:host {
+  display: block;
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #0f172a;
+  background:
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.13), transparent 30%),
+    linear-gradient(135deg, #f8fafc 0%, #ecfdf5 42%, #f9fafb 100%);
 }
 
-/* CONTAINER */
+/* PAGE */
 .container {
-  padding: 25px;
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 34px;
 }
 
-/* TITRES */
+/* =========================================================
+   TITRES / SECTIONS
+========================================================= */
+
 .section-title {
-  color: #1e293b;
-  margin-bottom: 20px;
-  font-weight: 600;
+  margin: 0 0 22px;
+  color: #0f172a;
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -0.04em;
 }
 
-
-.btn-secondary {
-  background: #e2e8f0;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 8px;
-  color: #1e293b;
-  cursor: pointer;
-  margin-top: 10px;
+.section-title::after {
+  content: "";
+  display: block;
+  width: 72px;
+  height: 4px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #4f46e5);
 }
 
-/* état terminé */
-.btn-secondary.done {
-  background: #22c55e;
-  color: white;
-}
+/* =========================================================
+   GRID
+========================================================= */
 
-/* hover */
-.btn-secondary:hover:not(:disabled) {
-  background: #cbd5f5;
-}
-/* GRID */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 22px;
+  margin-bottom: 34px;
 }
 
-/* ========================= */
-/* 🎴 CARD */
-/* ========================= */
+/* =========================================================
+   CARD
+========================================================= */
+
 .card {
-  background: white;
-  border-radius: 16px;
+  position: relative;
   overflow: hidden;
-  transition: 0.3s;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+
+  display: flex;
+  flex-direction: column;
+
+  min-height: 290px;
+  border-radius: 24px;
+
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+
+  box-shadow:
+    0 22px 60px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+
+  transition: all 0.2s ease;
 }
 
 .card:hover {
   transform: translateY(-4px);
+  border-color: #a7f3d0;
+  box-shadow:
+    0 30px 78px rgba(15, 23, 42, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
 
-/* 🔥 HEADER NUDE */
+/* HEADER CARD */
 .card-cover {
-  height: 120px;
-  background: linear-gradient(135deg, #f5f5f4, #e7e5e4);
-  padding: 20px;
+  position: relative;
+  min-height: 128px;
+  padding: 22px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.34), transparent 36%),
+    linear-gradient(135deg, #059669 0%, #10b981 48%, #4f46e5 100%);
 }
 
-/* TEXTE HEADER */
-.card-cover .title {
-  color: #1e293b;
-  font-weight: 600;
+.card-cover::after {
+  content: "";
+  position: absolute;
+  right: -42px;
+  bottom: -58px;
+  width: 160px;
+  height: 160px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
 }
 
-.badge {
-  background: #e2e8f0;
-  color: #334155;
+.card-cover .title,
+.card-cover h3,
+.card-cover h4 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  color: #ffffff;
+  font-size: 19px;
+  line-height: 1.25;
+  font-weight: 900;
+  letter-spacing: -0.03em;
 }
 
 /* BODY */
 .card-body {
-  padding: 15px;
+  flex: 1;
+  padding: 20px;
 }
 
-/* ========================= */
-/* 📊 PROGRESSION */
-/* ========================= */
-.progress-container {
-  width: 100%;
-  height: 10px;
-  background: #e2e8f0;
-  border-radius: 10px;
-  margin: 10px 0;
-}
-
-.progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981, #34d399);
-}
-
-/* ========================= */
-/* 🔘 BOUTONS */
-/* ========================= */
-.btn-primary {
-  background: #10b981;
-  color: white;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  background: #059669;
-}
-
-/* ========================= */
-/* 🤖 RECOMMANDATIONS */
-/* ========================= */
-
-/* 🔥 BADGE STYLE PRO */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-
-  padding: 6px 12px;
-  border-radius: 999px; /* 🔥 cercle / pill */
-
-  font-size: 12px;
+.card-body p {
+  margin: 0 0 12px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.65;
   font-weight: 500;
-
-  width: fit-content; /* 🔥 évite rectangle étiré */
 }
 
-/* IA */
-.badge-ia {
-  background: #e0e7ff;
-  color: #3730a3;
+.card-body strong {
+  color: #0f172a;
+  font-weight: 850;
 }
 
-/* SKILL */
-.badge-skill {
-  background: #dcfce7;
-  color: #065f46;
-}
+/* =========================================================
+   BADGES
+========================================================= */
 
-/* 🔥 ESPACE ENTRE ELEMENTS */
-.reco-card {
-  padding: 18px;
-}
-
-/* espace texte */
-.reason {
-  margin: 10px 0;
-}
-
-/* 🔥 BOUTON */
-.btn-primary {
-  margin-top: 15px; /* 🔥 espace */
-  padding: 10px 16px;
-  border-radius: 10px;
+.badge {
+  position: relative;
+  z-index: 1;
 
   display: inline-flex;
   align-items: center;
   gap: 6px;
+
+  width: fit-content;
+  min-height: 30px;
+  padding: 6px 12px;
+
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+
+  background: rgba(255, 255, 255, 0.20);
+  color: #ffffff;
+
+  font-size: 12px;
+  font-weight: 850;
+  backdrop-filter: blur(10px);
 }
 
-/* hover doux */
-.btn-primary:hover {
-  transform: scale(1.05);
+/* Recommandations */
+.badge-ia {
+  background: #eef2ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
 }
 
-/* SCORE */
+.badge-skill {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #bbf7d0;
+}
+
+/* =========================================================
+   PROGRESSION
+========================================================= */
+
+.progress-container,
+.bar {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  margin: 14px 0 10px;
+
+  border-radius: 999px;
+  background: #dbeafe;
+}
+
+.progress-bar,
+.fill {
+  height: 100%;
+  border-radius: 999px;
+
+  background: linear-gradient(90deg, #10b981, #4f46e5);
+  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.28);
+
+  transition: width 0.25s ease;
+}
+
+/* =========================================================
+   BOUTONS
+========================================================= */
+
+.btn-primary,
+.btn-secondary {
+  min-height: 42px;
+  padding: 10px 16px;
+
+  border: none;
+  border-radius: 14px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 850;
+
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  margin-top: 14px;
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  box-shadow: 0 14px 30px rgba(16, 185, 129, 0.25);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 38px rgba(16, 185, 129, 0.34);
+}
+
+.btn-secondary {
+  margin-top: 10px;
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #eef2ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+  transform: translateY(-1px);
+}
+
+.btn-secondary.done {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #bbf7d0;
+}
+
+button:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   RECOMMANDATIONS
+========================================================= */
+
+.reco-card {
+  position: relative;
+  padding: 22px;
+  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.07);
+  transition: all 0.2s ease;
+}
+
+.reco-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  border-radius: 24px 0 0 24px;
+  background: linear-gradient(180deg, #4f46e5, #10b981);
+}
+
+.reco-card:hover {
+  transform: translateY(-3px);
+  border-color: #c7d2fe;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.12);
+}
+
+.reason {
+  margin: 12px 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.65;
+  font-weight: 500;
+}
+
 .score {
   color: #f59e0b;
+  font-weight: 900;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 768px) {
+  .container {
+    padding: 18px;
+  }
+
+  .section-title {
+    font-size: 24px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .card,
+  .reco-card {
+    border-radius: 22px;
+  }
+
+  .card-cover {
+    min-height: 118px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
 }

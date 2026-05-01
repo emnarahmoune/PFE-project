@@ -14,7 +14,6 @@ export interface EmployeProfil {
   statut: string;
   soldeConges: number;
   managerNom?: string;
-  serviceLibelle?: string;
   dateCreation: Date;
   adresse?: string;
 }

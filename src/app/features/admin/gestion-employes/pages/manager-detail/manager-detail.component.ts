@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { EmployeService } from '../../services/employe.service';
+import { EmployeService } from '../../../../../core/services/employe.service';
 import { Employe } from '../../models/employe.model';
 import { DemandeConge } from '../../../../employee/models/conge.model';
 import { HistoriqueCongesModalComponent } from '../historique-conges-modal/historique-conges-modal.component';

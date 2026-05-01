@@ -64,6 +64,20 @@ recommendations: any[] = [];
     'Logistique': '#3D5A9E',
   };
 
+
+  getAdminDisplayName(): string {
+  const name = `${this.userPrenom || ''} ${this.userNom || ''}`.trim();
+
+  if (name) {
+    return name;
+  }
+
+  if (this.userEmail) {
+    return this.userEmail;
+  }
+
+  return 'Administrateur';
+}
   constructor(
     private dashboardService: DashboardService,
     private authService: AuthService,

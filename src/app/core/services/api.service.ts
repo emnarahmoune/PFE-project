@@ -41,6 +41,17 @@ private getHeaders(): HttpHeaders {
     });
   }
 
+  patch(endpoint: string, data: any): Observable<any> {
+  return this.http.patch(`${this.baseUrl}/${endpoint}`, data, {
+    headers: this.getHeaders()
+  });
+}
+
+putSimple(endpoint: string, data: any): Observable<any> {
+  return this.http.put(`${this.baseUrl}/${endpoint}`, data, {
+    headers: this.getHeaders()
+  });
+}
   // 🔥 GET BY ID
   getById<T>(endpoint: string, id: number): Observable<T> {
     return this.http.get<T>(`${this.baseUrl}/${endpoint}/${id}`, {
@@ -54,6 +65,7 @@ private getHeaders(): HttpHeaders {
       headers: this.getHeaders()
     });
   }
+
 
   // 🔥 PUT
   put<T>(endpoint: string, id: number, data: any): Observable<T> {

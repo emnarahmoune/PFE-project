@@ -64,11 +64,12 @@ export class KeycloakInitService {
       console.log('🔄 Synchronisation utilisateur avec le backend...');
       
       const userInfo = await lastValueFrom(
-        this.http.get(`${this.apiUrl}/auth/sync`, { headers })
+       this.http.post(`${this.apiUrl}/auth/sync`, {}, { headers })
       );
       
       console.log('✅ Utilisateur synchronisé:', userInfo);
       localStorage.setItem('user_info', JSON.stringify(userInfo));
+      this.setUser(userInfo);
       
     } catch (error) {
       console.error('❌ Erreur synchronisation:', error);
@@ -180,4 +181,14 @@ export class KeycloakInitService {
   async isUser(): Promise<boolean> {
     return this.hasRole('user');
   }
+
+  private currentUser: any = null;
+
+setUser(user: any) {
+  this.currentUser = user;
+}
+
+getUser() {
+  return this.currentUser || JSON.parse(localStorage.getItem('user_info') || '{}');
+}
 }

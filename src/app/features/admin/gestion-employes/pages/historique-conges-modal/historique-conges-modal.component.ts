@@ -3,7 +3,7 @@ import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { EmployeService } from '../../services/employe.service';
+import { EmployeService } from '../../../../../core/services/employe.service';
 import { DemandeConge } from '../../../../employee/models/conge.model';
 
 @Component({
@@ -59,12 +59,12 @@ export class HistoriqueCongesModalComponent implements OnInit {
 
   ngOnInit(): void {
     this.employeService.getEmployeConges(this.data.employeId).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         if (res.success) this.conges = res.data;
         else this.snackBar.open('Erreur chargement des congés', 'Fermer', { duration: 3000 });
         this.loading = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.snackBar.open('Erreur technique', 'Fermer', { duration: 3000 });
         this.loading = false;
       }

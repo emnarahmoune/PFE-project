@@ -1,231 +1,379 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+
 import { ManagerService, ManagerStats } from '../../../../core/services/manager.service';
 import { DemandeConge } from '../../../employee/models/conge.model';
+import { AuthService } from '../../../../core/services/auth.service';
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+}
+
+interface StatCard {
+  title: string;
+  value: string | number;
+  emojiIcon: string;
+  trend?: string;
+  change?: string;
+}
+
+interface TopCompetence {
+  nom: string;
+  count: number;
+  pourcentage: number;
+}
 
 @Component({
   selector: 'app-dashboard-manager',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  templateUrl: './dashboard-manager.component.html'
+  templateUrl: './dashboard-manager.component.html',
+  styleUrls: ['./dashboard-manager.component.css']
 })
 export class DashboardManagerComponent implements OnInit {
 
   equipe: any[] = [];
-   stats: ManagerStats = {} as ManagerStats; 
+  stats: ManagerStats = {} as ManagerStats;
   conges: DemandeConge[] = [];
 
-  currentMonth: string = '';
-  currentYear: number = 0;
-  refreshing: boolean = false;
-  statCards: any[] = [];
+  currentMonth = '';
+  currentYear = 0;
+  refreshing = false;
+
+  statCards: StatCard[] = [];
   recentEmployees: any[] = [];
   alerts: any[] = [];
-  topCompetences: any[] = [];
+  topCompetences: TopCompetence[] = [];
 
   loading = true;
   errorMessage = '';
   currentDate = new Date();
 
-  constructor(private managerService: ManagerService) {}
+  userNom = '';
+  userPrenom = '';
+  userEmail = '';
 
-  ngOnInit() {
+  constructor(
+    private managerService: ManagerService,
+    private authService: AuthService
+  ) {}
+
+  ngOnInit(): void {
+    this.loadUserInfo();
     this.initDates();
     this.loadData();
   }
 
-  initDates() {
+  loadUserInfo(): void {
+    const user = this.authService.getCurrentUser();
+
+    if (user) {
+      this.userNom = user.nom || '';
+      this.userPrenom = user.prenom || '';
+      this.userEmail = user.email || '';
+    }
+  }
+
+  getManagerDisplayName(): string {
+    const fullName = `${this.userPrenom || ''} ${this.userNom || ''}`.trim();
+
+    if (fullName) {
+      return fullName;
+    }
+
+    if (this.userEmail) {
+      return this.userEmail;
+    }
+
+    return 'Manager';
+  }
+
+  initDates(): void {
     this.currentMonth = this.getCurrentMonth();
     this.currentYear = new Date().getFullYear();
   }
 
   getCurrentMonth(): string {
-    const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 
-                    'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const months = [
+      'janvier',
+      'février',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'août',
+      'septembre',
+      'octobre',
+      'novembre',
+      'décembre'
+    ];
+
     return months[new Date().getMonth()];
   }
 
-  loadData() {
+  loadData(): void {
     this.loading = true;
     this.errorMessage = '';
 
-    this.managerService.getStats().subscribe({
-      next: (response: { success: boolean; data: ManagerStats }) => {
-        if (response.success) {
-          this.stats = response.data;
-          this.updateStatCards();
-          this.updateRecentEmployees();
-          this.updateAlerts();
-          this.updateTopCompetences();
-        } else {
-          this.errorMessage = 'Erreur lors du chargement des statistiques';
-          this.setDefaultData();
-        }
-        this.loading = false;
-      },
-      error: (err: any) => {
-        console.error('Erreur stats:', err);
-        this.errorMessage = 'Erreur lors du chargement des statistiques';
-        this.loading = false;
-        this.setDefaultData();
-      }
-    });
+    forkJoin({
+      statsResponse: this.managerService.getStats().pipe(
+        catchError((err) => {
+          console.error('Erreur stats:', err);
+          return of({ success: false, data: {} as ManagerStats });
+        })
+      ),
 
-    this.managerService.getEquipe().subscribe({
-      next: (response: { success: boolean; data: any[] }) => {
-        if (response.success) {
-          this.equipe = response.data || [];
-        } else {
-          this.equipe = [];
+      equipeResponse: this.managerService.getEquipe().pipe(
+        catchError((err) => {
+          console.error('Erreur équipe:', err);
+          return of({ success: false, data: [] as any[] });
+        })
+      ),
+
+      congesResponse: this.managerService.getConges().pipe(
+        catchError((err) => {
+          console.error('Erreur congés:', err);
+          return of({ success: false, data: [] as DemandeConge[] });
+        })
+      )
+    }).subscribe({
+      next: ({ statsResponse, equipeResponse, congesResponse }) => {
+        this.stats = statsResponse.success ? statsResponse.data : {} as ManagerStats;
+        this.equipe = equipeResponse.success ? equipeResponse.data || [] : [];
+        this.conges = congesResponse.success ? congesResponse.data || [] : [];
+
+        if (!statsResponse.success || !equipeResponse.success || !congesResponse.success) {
+          this.errorMessage = 'Certaines données n’ont pas pu être chargées depuis le backend.';
         }
-        this.updateRecentEmployees();
+
+        this.buildDashboardFromRealData();
+        this.loading = false;
+        this.refreshing = false;
       },
-      error: (err: any) => {
-        console.error('Erreur équipe:', err);
+
+      error: (err) => {
+        console.error('Erreur dashboard manager:', err);
+        this.errorMessage = 'Erreur lors du chargement du dashboard.';
+        this.stats = {} as ManagerStats;
         this.equipe = [];
-      }
-    });
-
-    this.managerService.getConges().subscribe({
-      next: (response: { success: boolean; data: DemandeConge[] }) => {
-        if (response.success) {
-          this.conges = response.data || [];
-        } else {
-          this.conges = [];
-        }
-        console.log('Congés chargés:', this.conges);
-        this.updateStatCards();
-        this.updateAlerts();
-      },
-      error: (err: any) => {
-        console.error('Erreur congés:', err);
         this.conges = [];
+        this.buildDashboardFromRealData();
+        this.loading = false;
+        this.refreshing = false;
       }
     });
-
-    setTimeout(() => {
-      if (this.loading) {
-        this.loading = false;
-      }
-    }, 3000);
   }
 
-  setDefaultData() {
-    this.stats = {
-      employes: 45,
-      congesEnAttente: 0,
-      absenteisme: 0,
-      turnover: 0,
-      totalEmployes: 45,
-      employesActifs: 42,
-      masseSalariale: 125000,
-      salaireMoyen: 2850,
-      parDepartement: {
-        'IT': 12,
-        'RH': 5,
-        'Marketing': 8,
-        'Finance': 6,
-        'Commercial': 14
-      }
-    };
+  buildDashboardFromRealData(): void {
     this.updateStatCards();
+    this.updateRecentEmployees();
+    this.updateAlerts();
+    this.updateTopCompetences();
   }
 
-  rafraichir() {
+  rafraichir(): void {
     this.refreshing = true;
     this.loadData();
-    setTimeout(() => {
-      this.refreshing = false;
-    }, 1000);
   }
 
-  exporterRapport() {
+  exporterRapport(): void {
     console.log('Exportation du rapport...');
     alert('Exportation en cours...');
   }
 
-  updateStatCards() {
-    const congesList = Array.isArray(this.conges) ? this.conges : [];
-    
+  updateStatCards(): void {
+    const totalEmployes = this.getTotalEmployesReel();
+    const employesActifs = this.getEmployesActifsReel();
+    const congesEnAttente = this.getCongesEnAttenteReel();
+    const tauxPresence = this.getTauxPresenceReel();
+
     this.statCards = [
       {
         title: 'Total employés',
-        value: this.stats.totalEmployes || 0,
+        value: totalEmployes,
         emojiIcon: '👥',
         trend: '',
         change: ''
       },
       {
         title: 'Employés actifs',
-        value: this.stats.employesActifs || 0,
+        value: employesActifs,
         emojiIcon: '💼',
         trend: '',
         change: ''
       },
       {
         title: 'Congés en attente',
-        value: congesList.filter(c => c.statut === 'EN_ATTENTE').length,
+        value: congesEnAttente,
         emojiIcon: '⏳',
         trend: '',
         change: ''
       },
       {
         title: 'Taux de présence',
-        value: this.stats.tauxPresence ? `${this.stats.tauxPresence}%` : '95%',
+        value: `${tauxPresence}%`,
         emojiIcon: '📊',
-        trend: 'up',
-        change: '+2%'
+        trend: '',
+        change: ''
       }
     ];
   }
 
-  private isCongeEnCours(conge: DemandeConge): boolean {
-    if (!conge.dateDebut || !conge.dateFin) return false;
+  getTotalEmployesReel(): number {
+    if (Array.isArray(this.equipe) && this.equipe.length > 0) {
+      return this.equipe.length;
+    }
+
+    const statsAny = this.stats as any;
+
+    if (typeof statsAny.totalEmployes === 'number') {
+      return statsAny.totalEmployes;
+    }
+
+    if (typeof statsAny.employes === 'number') {
+      return statsAny.employes;
+    }
+
+    return 0;
+  }
+
+  getEmployesActifsReel(): number {
+    if (Array.isArray(this.equipe) && this.equipe.length > 0) {
+      return this.equipe.filter((employe: any) => {
+        const statut = String(
+          employe.statut ||
+          employe.status ||
+          employe.etat ||
+          ''
+        ).toUpperCase();
+
+        return statut === 'ACTIF' || statut === 'ACTIVE' || statut === 'EN_POSTE';
+      }).length;
+    }
+
+    const statsAny = this.stats as any;
+
+    if (typeof statsAny.employesActifs === 'number') {
+      return statsAny.employesActifs;
+    }
+
+    return 0;
+  }
+
+  getCongesEnAttenteReel(): number {
+    if (!Array.isArray(this.conges)) {
+      return 0;
+    }
+
+    return this.conges.filter((conge: any) => {
+      const statut = String(conge.statut || conge.status || '').toUpperCase();
+      return statut === 'EN_ATTENTE' || statut === 'PENDING';
+    }).length;
+  }
+
+  getCongesApprouvesReel(): number {
+    if (!Array.isArray(this.conges)) {
+      return 0;
+    }
+
+    return this.conges.filter((conge: any) => {
+      const statut = String(conge.statut || conge.status || '').toUpperCase();
+      return statut === 'APPROUVE' || statut === 'APPROUVÉ' || statut === 'APPROVED';
+    }).length;
+  }
+
+  getCongesEnCoursReel(): number {
+    if (!Array.isArray(this.conges)) {
+      return 0;
+    }
+
+    return this.conges.filter((conge: any) => this.isCongeEnCours(conge)).length;
+  }
+
+  getTauxPresenceReel(): number {
+    const statsAny = this.stats as any;
+
+    if (typeof statsAny.tauxPresence === 'number') {
+      return Math.round(statsAny.tauxPresence);
+    }
+
+    const employesActifs = this.getEmployesActifsReel();
+
+    if (employesActifs === 0) {
+      return 0;
+    }
+
+    const congesEnCours = this.getCongesEnCoursReel();
+    const presents = Math.max(employesActifs - congesEnCours, 0);
+
+    return Math.round((presents / employesActifs) * 100);
+  }
+
+  private isCongeEnCours(conge: any): boolean {
+    const statut = String(conge.statut || conge.status || '').toUpperCase();
+
+    const isApproved =
+      statut === 'APPROUVE' ||
+      statut === 'APPROUVÉ' ||
+      statut === 'APPROVED';
+
+    if (!isApproved || !conge.dateDebut || !conge.dateFin) {
+      return false;
+    }
+
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const dateDebut = new Date(conge.dateDebut);
+    dateDebut.setHours(0, 0, 0, 0);
+
     const dateFin = new Date(conge.dateFin);
+    dateFin.setHours(23, 59, 59, 999);
+
     return today >= dateDebut && today <= dateFin;
   }
 
-  updateRecentEmployees() {
-    if (this.equipe && this.equipe.length > 0) {
-      this.recentEmployees = this.equipe
-        .sort((a, b) => {
-          const dateA = a.dateEmbauche ? new Date(a.dateEmbauche).getTime() : 0;
-          const dateB = b.dateEmbauche ? new Date(b.dateEmbauche).getTime() : 0;
-          return dateB - dateA;
-        })
-        .slice(0, 5);
-    } else {
-      this.recentEmployees = [
-        { prenom: 'Marie', nom: 'Lambert', email: 'marie.lambert@entreprise.com', poste: 'Développeur Frontend', departement: 'IT', dateEmbauche: '2024-01-15', statut: 'Actif' },
-        { prenom: 'Thomas', nom: 'Bernard', email: 'thomas.bernard@entreprise.com', poste: 'Chef de projet', departement: 'Marketing', dateEmbauche: '2024-02-01', statut: 'Actif' },
-        { prenom: 'Sophie', nom: 'Martin', email: 'sophie.martin@entreprise.com', poste: 'Responsable RH', departement: 'RH', dateEmbauche: '2024-02-20', statut: 'Actif' }
-      ];
+  updateRecentEmployees(): void {
+    if (!Array.isArray(this.equipe) || this.equipe.length === 0) {
+      this.recentEmployees = [];
+      return;
     }
+
+    this.recentEmployees = [...this.equipe]
+      .sort((a: any, b: any) => {
+        const dateA = a.dateEmbauche ? new Date(a.dateEmbauche).getTime() : 0;
+        const dateB = b.dateEmbauche ? new Date(b.dateEmbauche).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, 5);
   }
 
-  updateAlerts() {
+  updateAlerts(): void {
     this.alerts = [];
-    const congesList = Array.isArray(this.conges) ? this.conges : [];
-    
-    const congesEnAttente = congesList.filter(c => c.statut === 'EN_ATTENTE');
-    if (congesEnAttente.length > 0) {
+
+    const congesEnAttente = this.getCongesEnAttenteReel();
+
+    if (congesEnAttente > 0) {
       this.alerts.push({
         type: 'warning',
-        message: `${congesEnAttente.length} demande(s) de congé en attente de validation`,
+        message: `${congesEnAttente} demande(s) de congé en attente de validation`,
         time: 'En attente',
         lien: '/manager/conges'
       });
     }
 
-    const congesApprouves = congesList.filter(c => c.statut === 'APPROUVE');
-    if (congesApprouves.length > 0) {
+    const congesEnCours = this.getCongesEnCoursReel();
+
+    if (congesEnCours > 0) {
       this.alerts.push({
         type: 'info',
-        message: `${congesApprouves.length} congé(s) approuvé(s) à planifier`,
-        time: 'À venir',
+        message: `${congesEnCours} employé(s) actuellement en congé`,
+        time: 'Aujourd’hui',
         lien: '/manager/conges'
       });
     }
@@ -233,66 +381,136 @@ export class DashboardManagerComponent implements OnInit {
     if (this.alerts.length === 0) {
       this.alerts.push({
         type: 'success',
-        message: 'Tous les indicateurs sont au vert',
+        message: 'Aucune alerte RH pour le moment',
         time: 'Maintenant',
         lien: null
       });
     }
   }
 
-  updateTopCompetences() {
-    this.topCompetences = [
-      { nom: 'JavaScript', count: 12, pourcentage: 85 },
-      { nom: 'Angular', count: 8, pourcentage: 65 },
-      { nom: 'Python', count: 6, pourcentage: 45 },
-      { nom: 'React', count: 5, pourcentage: 35 },
-      { nom: 'Java', count: 4, pourcentage: 28 }
-    ];
+  updateTopCompetences(): void {
+    const competenceCounter = new Map<string, number>();
+
+    if (!Array.isArray(this.equipe)) {
+      this.topCompetences = [];
+      return;
+    }
+
+    this.equipe.forEach((employe: any) => {
+      const competences =
+        employe.competences ||
+        employe.competenceList ||
+        employe.skills ||
+        [];
+
+      if (!Array.isArray(competences)) {
+        return;
+      }
+
+      competences.forEach((competence: any) => {
+        const nom =
+          typeof competence === 'string'
+            ? competence
+            : competence.nom || competence.name || competence.libelle;
+
+        if (!nom) {
+          return;
+        }
+
+        competenceCounter.set(nom, (competenceCounter.get(nom) || 0) + 1);
+      });
+    });
+
+    const maxCount = Math.max(...Array.from(competenceCounter.values()), 0);
+
+    this.topCompetences = Array.from(competenceCounter.entries())
+      .map(([nom, count]) => ({
+        nom,
+        count,
+        pourcentage: maxCount > 0 ? Math.round((count / maxCount) * 100) : 0
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
   }
 
   getMasseSalarialeFormatee(): string {
-    const masseSalariale = this.stats.masseSalariale || 125000;
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(masseSalariale);
+    const statsAny = this.stats as any;
+    const masseSalariale = Number(statsAny.masseSalariale || 0);
+
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(masseSalariale);
   }
 
   getSalaireMoyenFormate(): string {
-    const salaireMoyen = this.stats.salaireMoyen || 2850;
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(salaireMoyen);
+    const statsAny = this.stats as any;
+    const salaireMoyen = Number(statsAny.salaireMoyen || 0);
+
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(salaireMoyen);
   }
 
   getDepartements(): string[] {
-    if (this.stats.parDepartement) {
-      return Object.keys(this.stats.parDepartement);
+    const statsAny = this.stats as any;
+
+    if (statsAny.parDepartement && Object.keys(statsAny.parDepartement).length > 0) {
+      return Object.keys(statsAny.parDepartement);
     }
-    return ['IT', 'RH', 'Marketing', 'Finance', 'Commercial'];
+
+    const departements = new Set<string>();
+
+    this.equipe.forEach((employe: any) => {
+      if (employe.departement) {
+        departements.add(employe.departement);
+      }
+    });
+
+    return Array.from(departements);
   }
 
   getTauxRemplissage(dept: string): number {
-    if (this.stats.parDepartement && this.stats.parDepartement[dept]) {
-      const total = 20;
-      const current = this.stats.parDepartement[dept];
-      return Math.min((current / total) * 100, 100);
+    if (!dept) {
+      return 0;
     }
-    return 75;
+
+    const totalEmployes = this.getTotalEmployesReel();
+
+    if (totalEmployes === 0) {
+      return 0;
+    }
+
+    const count = this.equipe.filter((employe: any) => employe.departement === dept).length;
+
+    return Math.round((count / totalEmployes) * 100);
   }
 
   getAvatarBg(departement: string): string {
-    const colors: {[key: string]: string} = {
-      'IT': '#667eea',
-      'RH': '#48bb78',
-      'Marketing': '#ed8936',
-      'Finance': '#4299e1',
-      'Commercial': '#9f7aea'
+    const colors: { [key: string]: string } = {
+      IT: '#667eea',
+      RH: '#48bb78',
+      Marketing: '#ed8936',
+      Finance: '#4299e1',
+      Commercial: '#9f7aea',
+      Technique: '#0ea5e9',
+      Direction: '#1e293b'
     };
+
     return colors[departement] || '#718096';
   }
 
   getAlertEmoji(type: string): string {
-    switch(type) {
-      case 'warning': return '⚠️';
-      case 'info': return 'ℹ️';
-      case 'success': return '✅';
-      default: return '📌';
+    switch (type) {
+      case 'warning':
+        return '⚠️';
+      case 'info':
+        return 'ℹ️';
+      case 'success':
+        return '✅';
+      default:
+        return '📌';
     }
   }
 }

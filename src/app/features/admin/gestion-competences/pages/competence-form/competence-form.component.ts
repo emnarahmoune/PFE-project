@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
-import { CompetenceService } from '../../services/competence.service';
+import { CompetenceService } from '../../../../../core/services/competence.service';
 import { Competence } from '../../models/competence.model';
 
 @Component({
@@ -35,6 +35,7 @@ import { Competence } from '../../models/competence.model';
   styleUrls: ['./competence-form.component.css']
 })
 export class CompetenceFormComponent implements OnInit {
+
   competenceForm: FormGroup;
   isEditMode = false;
   competenceId?: number;
@@ -71,24 +72,42 @@ export class CompetenceFormComponent implements OnInit {
     }
   }
 
+  // 🔥 NORMALISATION CATEGORIE
+  normalizeCategorie(categorie: string): string {
+    if (!categorie) return '';
+
+    const cat = categorie.toUpperCase().replace(' ', '_');
+
+    if (cat.includes('SOFT')) return 'SOFT_SKILL';
+    if (cat.includes('TECH')) return 'TECHNIQUE';
+    if (cat.includes('MANAGE')) return 'MANAGEMENT';
+    if (cat.includes('LANG')) return 'LINGUISTIQUE';
+
+    return cat;
+  }
+
   loadCompetence(): void {
     if (!this.competenceId) return;
 
     this.loading = true;
+
     this.competenceService.getById(this.competenceId).subscribe({
-      next: (response) => {
+      next: (response: any) => {
         const competence = response.data as Competence;
+
+        console.log('DATA BACKEND:', competence); // debug
+
         this.competenceForm.patchValue({
           nom: competence.nom,
           description: competence.description,
-          categorie: competence.categorie
+          categorie: this.normalizeCategorie(competence.categorie)
         });
+
         this.loading = false;
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Erreur chargement compétence:', error);
-        this.snackBar.open('Erreur lors du chargement de la compétence', 'Fermer', { duration: 3000 });
-        this.loading = false;
+        this.snackBar.open('Erreur chargement', 'Fermer', { duration: 3000 });
         this.router.navigate(['/admin/competences']);
       }
     });
@@ -101,34 +120,20 @@ export class CompetenceFormComponent implements OnInit {
     }
 
     this.submitting = true;
-    const competenceData: Competence = this.competenceForm.value;
 
-    const request = this.isEditMode && this.competenceId
-      ? this.competenceService.update(this.competenceId, competenceData)
-      : this.competenceService.create(competenceData);
+    const request = this.isEditMode
+      ? this.competenceService.update(this.competenceId!, this.competenceForm.value)
+      : this.competenceService.create(this.competenceForm.value);
 
     request.subscribe({
-      next: (response) => {
+      next: () => {
         this.submitting = false;
-        this.snackBar.open(
-          this.isEditMode ? 'Compétence modifiée avec succès' : 'Compétence créée avec succès',
-          'Fermer',
-          { duration: 3000 }
-        );
+        this.snackBar.open('Succès', 'Fermer', { duration: 3000 });
         this.router.navigate(['/admin/competences']);
       },
-      error: (error) => {
+      error: (error: any) => {
         this.submitting = false;
-        console.error('Erreur sauvegarde:', error);
-        
-        let errorMessage = 'Erreur lors de la sauvegarde';
-        if (error.error?.message) {
-          errorMessage = error.error.message;
-        } else if (error.status === 409) {
-          errorMessage = 'Une compétence avec ce nom existe déjà';
-        }
-
-        this.snackBar.open(errorMessage, 'Fermer', { duration: 5000 });
+        console.error(error);
       }
     });
   }
@@ -140,43 +145,54 @@ export class CompetenceFormComponent implements OnInit {
   markFormGroupTouched(formGroup: FormGroup): void {
     Object.values(formGroup.controls).forEach(control => {
       control.markAsTouched();
-      if (control instanceof FormGroup) {
-        this.markFormGroupTouched(control);
-      }
     });
   }
 
-  // Getters pour accéder facilement aux contrôles
-  get nom() { return this.competenceForm.get('nom'); }
-  get description() { return this.competenceForm.get('description'); }
-  get categorie() { return this.competenceForm.get('categorie'); }
- // Méthodes utilitaires pour l'aperçu
-getCategorieColor(categorie: string): string {
-  switch(categorie) {
-    case 'TECHNIQUE': return 'primary';
-    case 'SOFT_SKILL': return 'accent';
-    case 'LINGUISTIQUE': return 'warn';
-    case 'MANAGEMENT': return 'info';
-    default: return '';
+getNomErrorMessage(): string {
+  if (this.nom?.hasError('required')) {
+    return 'Le nom est requis';
   }
+  if (this.nom?.hasError('minlength')) {
+    return 'Minimum 2 caractères';
+  }
+  if (this.nom?.hasError('maxlength')) {
+    return 'Maximum 100 caractères';
+  }
+  return '';
 }
 
-getCategorieLabel(categorie: string): string {
-  const cat = this.categories.find(c => c.value === categorie);
-  return cat ? cat.label : categorie;
+
+
+getDescriptionErrorMessage(): string {
+  if (this.description?.hasError('required')) {
+    return 'La description est requise';
+  }
+  if (this.description?.hasError('minlength')) {
+    return 'Minimum 10 caractères';
+  }
+  if (this.description?.hasError('maxlength')) {
+    return 'Maximum 500 caractères';
+  }
+  return '';
 }
-  // Messages d'erreur personnalisés
-  getNomErrorMessage(): string {
-    if (this.nom?.hasError('required')) return 'Le nom est requis';
-    if (this.nom?.hasError('minlength')) return 'Minimum 2 caractères';
-    if (this.nom?.hasError('maxlength')) return 'Maximum 100 caractères';
-    return '';
+  
+  getCategorieLabel(value: string): string {
+    const cat = this.categories.find(c => c.value === value);
+    return cat ? cat.label : value;
   }
 
-  getDescriptionErrorMessage(): string {
-    if (this.description?.hasError('required')) return 'La description est requise';
-    if (this.description?.hasError('minlength')) return 'Minimum 10 caractères';
-    if (this.description?.hasError('maxlength')) return 'Maximum 500 caractères';
-    return '';
-  }
+  get nom() {
+  return this.competenceForm.get('nom');
+}
+
+get description() {
+  return this.competenceForm.get('description');
+}
+
+get categorie() {
+  return this.competenceForm.get('categorie');
+}
+goBack(): void {
+  this.router.navigate(['/admin/competences']);
+}
 }

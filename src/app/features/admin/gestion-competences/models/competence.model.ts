@@ -5,6 +5,7 @@ export interface Competence {
   categorie: 'TECHNIQUE' | 'SOFT_SKILL' | 'LINGUISTIQUE' | 'MANAGEMENT';
   nombreEmployes?: number;
   niveauMoyen?: number;
+  employes?: any[];
 }
 
 export interface CompetenceResponse {
