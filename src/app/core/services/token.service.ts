@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 
 export interface UtilisateurInfo {
+  photoUrl: null;
   id: number;
   email: string;
   nom: string;

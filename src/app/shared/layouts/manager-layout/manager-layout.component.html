@@ -1,98 +1,91 @@
-<div class="layout">
+<div class="layout" [class.dark-theme]="darkMode">
 
-  <!-- Sidebar -->
-  <aside class="sidebar" [class.collapsed]="!isSidebarOpen" [class.open]="isSidebarOpen">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" [class.collapsed]="!isSidebarOpen">
 
     <div class="sidebar-header">
       <div class="logo">
-        <span class="logo-icon">◈</span>
-        <span class="logo-text" *ngIf="isSidebarOpen">PeopleOS</span>
+        <div class="logo-icon">◈</div>
+        <div class="logo-text" *ngIf="isSidebarOpen">PeopleOS</div>
       </div>
 
-      <button class="collapse-btn" type="button" (click)="toggleSidebar()">
-        <span class="collapse-icon">{{ isSidebarOpen ? '◀' : '▶' }}</span>
+      <button (click)="toggleSidebar()">
+        {{ isSidebarOpen ? '◀' : '▶' }}
       </button>
     </div>
 
+    <!-- MENU -->
     <nav class="sidebar-nav">
-      <a
-        *ngFor="let item of menuItems"
-        [routerLink]="item.path"
-        routerLinkActive="active"
-        class="nav-item"
-        [class.active]="isRouteActive(item.path)"
-      >
-        <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
-        <span class="nav-label" *ngIf="isSidebarOpen">{{ item.label }}</span>
+      <a *ngFor="let item of menuItems"
+         [routerLink]="item.path"
+         routerLinkActive="active"
+         class="nav-item"
+         [class.active]="isRouteActive(item.path)">
+
+        <span class="nav-icon">{{ item.icon }}</span>
+        <span *ngIf="isSidebarOpen">{{ item.label }}</span>
       </a>
     </nav>
 
-    <div class="sidebar-footer">
+    <!-- FOOTER -->
+    <div class="sidebar-footer" *ngIf="isSidebarOpen">
 
-      <div class="user-info" *ngIf="isSidebarOpen">
-        <div class="user-avatar">{{ getUserInitials() }}</div>
+      <div class="user-info">
+        <div class="user-avatar">
+          {{ getUserInitials() }}
+        </div>
 
-        <div class="user-details">
-          <span class="user-name">{{ getUserName() }}</span>
-          <span class="user-role">MANAGER</span>
+        <div>
+          <div>{{ getUserName() }}</div>
+          <div>{{ userRole }}</div>
         </div>
       </div>
 
-      <button class="logout-btn" type="button" (click)="logout()">
-        <span class="logout-icon">🚪</span>
-        <span *ngIf="isSidebarOpen">Déconnexion</span>
-      </button>
+      <button (click)="logout()">🚪 Déconnexion</button>
 
-      <div class="version" *ngIf="isSidebarOpen">
-        © {{ currentYear }} PeopleOS v2.0
-      </div>
+      <div>© {{ currentYear }}</div>
 
     </div>
 
   </aside>
 
-  <!-- Main content -->
+  <!-- MAIN -->
   <main class="main">
 
+    <!-- TOPBAR -->
     <header class="topbar">
 
       <div class="topbar-left">
-        <button class="menu-toggle" type="button" (click)="toggleSidebar()">
-          <span class="menu-icon">☰</span>
-        </button>
-
-        <h1 class="page-title">{{ getCurrentPageTitle() }}</h1>
+        <button (click)="toggleSidebar()">☰</button>
+        <h1>{{ getCurrentPageTitle() }}</h1>
       </div>
 
       <div class="topbar-right">
 
+        <button (click)="toggleTheme()">
+          {{ darkMode ? '🌙' : '☀️' }}
+        </button>
+
         <div class="user-menu">
-          <div class="user-avatar small">{{ getUserInitials() }}</div>
-          <span class="user-name">{{ getUserName() }}</span>
 
-          <button class="dropdown-btn" type="button" [matMenuTriggerFor]="userMenu">
-            ▾
-          </button>
+          <div class="user-avatar small">
+            <img *ngIf="userPhotoUrl"
+                 [src]="userPhotoUrl"
+                 (error)="userPhotoUrl = null">
+            <span *ngIf="!userPhotoUrl">{{ getUserInitials() }}</span>
+          </div>
+
+          <span>{{ getUserName() }}</span>
+
+          <button (click)="logout()">🚪</button>
+
         </div>
-
-        <mat-menu #userMenu="matMenu">
-          <button mat-menu-item disabled>
-            <mat-icon>badge</mat-icon>
-            <span>Manager</span>
-          </button>
-
-          <mat-divider></mat-divider>
-
-          <button mat-menu-item type="button" (click)="logout()">
-            <mat-icon>logout</mat-icon>
-            <span>Déconnexion</span>
-          </button>
-        </mat-menu>
 
       </div>
 
     </header>
 
+    <!-- CONTENT -->
     <div class="content">
       <router-outlet></router-outlet>
     </div>

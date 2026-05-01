@@ -1,0 +1,213 @@
+<div class="manager-profil-container">
+  <!-- Header animé -->
+  <div class="header-section animate-fade-in">
+    <div class="title-wrapper">
+      <div class="icon-badge">
+        <mat-icon>shield</mat-icon>
+      </div>
+      <div>
+        <h1>Mon profil manager</h1>
+        <p>Gérez vos informations, votre sécurité et votre photo de profil</p>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-overlay">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Chargement de votre profil...</p>
+  </div>
+
+  <div *ngIf="!loading && profileData" class="profil-grid animate-slide-up">
+    <!-- Carte latérale -->
+    <div class="sidebar-card">
+      <mat-card class="glass-card profile-summary">
+        <!-- Photo + zone d'upload -->
+      <div class="photo-section">
+  <div class="current-photo">
+    <div *ngIf="currentPhotoUrl; else noPhoto" class="photo-wrapper">
+      <img [src]="currentPhotoUrl" class="profile-photo" alt="Photo profil" (error)="onImageError()">
+    </div>
+    <ng-template #noPhoto>
+      <div class="avatar-large">{{ getUserInitials() }}</div>
+    </ng-template>
+  </div>
+          <div class="photo-actions">
+            <input type="file" #fileInput accept="image/jpeg,image/png,image/gif" 
+                   (change)="onFileSelected($event)" style="display:none">
+            <button mat-raised-button color="primary" (click)="fileInput.click()">
+              <mat-icon>cloud_upload</mat-icon> Choisir une photo
+            </button>
+            <button *ngIf="selectedFile" mat-raised-button color="accent" 
+                    [disabled]="uploadProgress" (click)="uploadPhoto()">
+              <mat-icon *ngIf="!uploadProgress">save</mat-icon>
+              <mat-spinner diameter="20" *ngIf="uploadProgress"></mat-spinner>
+              <span *ngIf="!uploadProgress">Télécharger</span>
+            </button>
+            <button *ngIf="profileData.photoUrl" mat-stroked-button color="warn" (click)="deletePhoto()">
+              <mat-icon>delete</mat-icon> Supprimer
+            </button>
+          </div>
+          <div *ngIf="photoPreview" class="photo-preview">
+            <p>Aperçu :</p>
+            <img [src]="photoPreview" class="preview-img">
+          </div>
+        </div>
+
+        <h2>{{ profileData.nomComplet }}</h2>
+        <span class="role-badge">Manager</span>
+        <div class="stats-mini">
+          <div class="stat">
+            <mat-icon>group</mat-icon>
+            <span>{{ profileData.nombreEmployesGeres }}</span>
+            <label>Employés</label>
+          </div>
+          <div class="stat">
+            <mat-icon>stars</mat-icon>
+            <span>{{ profileData.ancienneteManager }} mois</span>
+            <label>Manager</label>
+          </div>
+          <div class="stat">
+            <mat-icon>calendar_today</mat-icon>
+            <span>{{ profileData.anciennete }} ans</span>
+            <label>Ancienneté</label>
+          </div>
+        </div>
+        <mat-divider></mat-divider>
+        <div class="info-line">
+          <mat-icon>badge</mat-icon>
+          <span>Matricule : {{ profileData.matricule }}</span>
+        </div>
+        <div class="info-line">
+          <mat-icon>date_range</mat-icon>
+          <span>Nomination : {{ profileData.dateNomination | date:'dd MMM yyyy' }}</span>
+        </div>
+        <div class="info-line">
+          <mat-icon>work</mat-icon>
+          <span>Département : {{ profileData.departement || 'Non défini' }}</span>
+        </div>
+        <div class="info-line">
+          <mat-icon [class]="statutClass">check_circle</mat-icon>
+          <span>Statut : {{ profileData.statutCompte }}</span>
+        </div>
+      </mat-card>
+    </div>
+
+    <!-- Colonne principale -->
+    <div class="main-content">
+      <!-- Informations personnelles -->
+      <mat-card class="glass-card form-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>person_outline</mat-icon> Informations personnelles
+          </mat-card-title>
+          <mat-card-subtitle>Modifiez vos coordonnées professionnelles</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="profileForm" class="profile-form">
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Nom *</mat-label>
+                <input matInput formControlName="nom" [readonly]="!editMode">
+                <mat-error *ngIf="profileForm.get('nom')?.hasError('required')">Requis</mat-error>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Prénom *</mat-label>
+                <input matInput formControlName="prenom" [readonly]="!editMode">
+                <mat-error *ngIf="profileForm.get('prenom')?.hasError('required')">Requis</mat-error>
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Email *</mat-label>
+                <input matInput formControlName="email" type="email" [readonly]="!editMode">
+                <mat-error *ngIf="profileForm.get('email')?.hasError('email')">Format invalide</mat-error>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Téléphone</mat-label>
+                <input matInput formControlName="telephone" [readonly]="!editMode">
+              </mat-form-field>
+            </div>
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Poste</mat-label>
+                <input matInput formControlName="poste" [readonly]="!editMode">
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Département</mat-label>
+                <input matInput formControlName="departement" [readonly]="!editMode">
+              </mat-form-field>
+            </div>
+          </form>
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <ng-container *ngIf="!editMode">
+            <button mat-raised-button color="primary" (click)="toggleEditMode()">
+              <mat-icon>edit</mat-icon> Modifier
+            </button>
+          </ng-container>
+          <ng-container *ngIf="editMode">
+            <button mat-button (click)="toggleEditMode()">Annuler</button>
+            <button mat-raised-button color="primary" [disabled]="submitting || profileForm.invalid" (click)="saveProfile()">
+              <mat-icon *ngIf="!submitting">save</mat-icon>
+              <mat-spinner diameter="20" *ngIf="submitting"></mat-spinner>
+              <span *ngIf="!submitting">Enregistrer</span>
+            </button>
+          </ng-container>
+        </mat-card-actions>
+      </mat-card>
+
+      <!-- Sécurité -->
+      <mat-card class="glass-card password-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>security</mat-icon> Sécurité
+          </mat-card-title>
+          <mat-card-subtitle>Changez votre mot de passe régulièrement</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <ng-container *ngIf="!passwordEditMode">
+            <button mat-stroked-button color="accent" (click)="togglePasswordEdit()">
+              <mat-icon>vpn_key</mat-icon> Changer mon mot de passe
+            </button>
+          </ng-container>
+          <form *ngIf="passwordEditMode" [formGroup]="passwordForm" class="password-form animate-expand">
+            <mat-form-field appearance="outline">
+              <mat-label>Ancien mot de passe</mat-label>
+              <input matInput [type]="hideOld ? 'password' : 'text'" formControlName="oldPassword">
+              <button mat-icon-button matSuffix (click)="hideOld = !hideOld" type="button">
+                <mat-icon>{{hideOld ? 'visibility_off' : 'visibility'}}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('oldPassword')?.hasError('required')">Requis</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Nouveau mot de passe (min. 8)</mat-label>
+              <input matInput [type]="hideNew ? 'password' : 'text'" formControlName="newPassword">
+              <button mat-icon-button matSuffix (click)="hideNew = !hideNew" type="button">
+                <mat-icon>{{hideNew ? 'visibility_off' : 'visibility'}}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('newPassword')?.hasError('required')">Requis</mat-error>
+              <mat-error *ngIf="passwordForm.get('newPassword')?.hasError('minlength')">Min 8 caractères</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Confirmation</mat-label>
+              <input matInput [type]="hideConfirm ? 'password' : 'text'" formControlName="confirmPassword">
+              <button mat-icon-button matSuffix (click)="hideConfirm = !hideConfirm" type="button">
+                <mat-icon>{{hideConfirm ? 'visibility_off' : 'visibility'}}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('confirmPassword')?.hasError('required')">Requis</mat-error>
+              <mat-error *ngIf="passwordForm.hasError('mismatch')">Mots de passe différents</mat-error>
+            </mat-form-field>
+            <div class="password-actions">
+              <button mat-button (click)="togglePasswordEdit()">Annuler</button>
+              <button mat-raised-button color="primary" [disabled]="submitting || passwordForm.invalid" (click)="changePassword()">
+                <mat-icon *ngIf="!submitting">check</mat-icon>
+                <mat-spinner diameter="20" *ngIf="submitting"></mat-spinner>
+                <span *ngIf="!submitting">Enregistrer</span>
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

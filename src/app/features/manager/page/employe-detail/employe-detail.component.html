@@ -1,7 +1,11 @@
 <div class="detail-container">
-  <div class="loader" *ngIf="loading">
-    <div class="spinner"></div>
-    <p>Chargement du profil...</p>
+  <!-- Skeleton loader -->
+  <div class="skeleton-detail" *ngIf="loading">
+    <div class="sk-avatar"></div>
+    <div class="sk-line"></div>
+    <div class="sk-line short"></div>
+    <div class="sk-line"></div>
+    <div class="sk-line short"></div>
   </div>
 
   <div class="error-card" *ngIf="error && !loading">
@@ -22,7 +26,7 @@
     </div>
 
     <h2 class="name">{{ employe.prenom }} {{ employe.nom }}</h2>
-    <p class="role">{{ employe.poste }}</p>
+    <p class="role">💼 {{ employe.poste }}</p>
 
     <div class="info-grid">
       <div class="info-item">
@@ -53,13 +57,12 @@
         <span class="label">Solde congés</span>
         <span class="value">{{ employe.soldeConges }} jours</span>
       </div>
-      <div class="info-item" *ngIf="employe.managerNom">
-        <span class="label">Manager</span>
-        <span class="value">{{ employe.managerNom }}</span>
-      </div>
+      
     </div>
 
-    <!-- Indicateurs RH -->
+   
+
+    <!-- Indicateurs RH avec tooltips -->
     <div class="indicateurs-rh">
       <h3>📊 Indicateurs RH</h3>
       <div class="indicateurs-grid">
@@ -68,12 +71,14 @@
           <span class="value">{{ absenteisme != null ? (absenteisme | number:'1.1-1') : '?' }}%</span>
           <span class="label">Absentéisme</span>
           <div class="date" *ngIf="absenteismeDate">Dernier calcul : {{ absenteismeDate | date:'dd/MM/yyyy' }}</div>
+          <span class="tooltip">Taux d'absence sur les 12 derniers mois</span>
         </div>
         <div class="indicator" [class]="getScoreClass(scoreTurnover)">
           <span class="icon">⚠️</span>
           <span class="value">{{ scoreTurnover ?? '?' }}</span>
           <span class="label">Risque turnover</span>
           <div class="niveau" *ngIf="scoreTurnoverNiveau">Niveau : {{ scoreTurnoverNiveau }}</div>
+          <span class="tooltip">Score de probabilité de départ (0-100). Plus il est élevé, plus le risque est fort.</span>
         </div>
       </div>
     </div>

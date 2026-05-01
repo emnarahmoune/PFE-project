@@ -2,21 +2,29 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { WorkflowService, Task } from '../../../../../core/services/workflow.service';
 import { ManagerService } from '../../../../../core/services/manager.service';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { NotificationService } from '../../../../../core/services/notification.service';
 import { Employe } from '../../../../admin/gestion-employes/models/employe.model';
 import { DemandeConge, SoldeConges } from '../../../../employee/models/conge.model';
+import { ManagerCalendarComponent } from '../../manager-calendar/manager-calendar.component';
+import { MatTabGroup, MatTab } from "@angular/material/tabs";
+import { MatIcon } from "@angular/material/icon";
 
 @Component({
   selector: 'app-approbation-conge',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, MatProgressSpinnerModule, ManagerCalendarComponent, MatTabGroup, MatTab, MatIcon],
   templateUrl: './approbation-conge.component.html',
   styleUrls: ['./approbation-conge.component.scss']
 })
 export class ApprobationCongeComponent implements OnInit {
+equipeSize: any;
+getTotalApproved() {
+throw new Error('Method not implemented.');
+}
   
   
   loading = false;
@@ -32,12 +40,13 @@ export class ApprobationCongeComponent implements OnInit {
   
   // Détails employé
   showDetailsModal = false;
-  currentTask: Task | null = null;  // ✅ Tâche pour le modal détails
+  currentTask: Task | null = null;
   employeDetails: Employe | null = null;
   employeSolde: SoldeConges | null = null;
   employeHistorique: DemandeConge[] = [];
   loadingDetails = false;
   detailsError = '';
+  
 
   // Pour les modaux d'approbation/refus
   selectedTaskForApproval: Task | null = null;
@@ -234,4 +243,5 @@ getUrgentTasksCount(): number {
       default: return statut;
     }
   }
+  
 }

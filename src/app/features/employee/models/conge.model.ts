@@ -29,6 +29,9 @@ export interface DemandeConge {
 
 // ✅ Interface pour le solde de congés (retournée par /mon-solde-conges)
 export interface SoldeConges {
+congesPris: any;
+soldePrecedent: any;
+soldeActuel: any;
   total: number;      // solde total (initial)
   pris: number;       // jours déjà pris (somme des jours approuvés)
   restant: number;    // solde restant

@@ -1,0 +1,27 @@
+<div class="calendar-layout">
+  <div class="calendar-sidebar">
+    <h3>Navigation</h3>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Année</mat-label>
+      <mat-select [(value)]="selectedYear" (selectionChange)="changeYearMonth()">
+        <mat-option *ngFor="let year of years" [value]="year">{{ year }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Mois</mat-label>
+      <mat-select [(value)]="selectedMonth" (selectionChange)="changeYearMonth()">
+        <mat-option *ngFor="let month of months; let i = index" [value]="i">{{ month }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+
+    <h3>Légende</h3>
+    <div class="legend-item"><span class="legend-color approved"></span> Approuvé</div>
+    <div class="legend-item"><span class="legend-color pending"></span> En attente RH</div>
+    <div class="legend-item"><span class="legend-color refused"></span> Refusé (manager/RH)</div>
+    <div class="legend-item"><span class="legend-color other"></span> Autre</div>
+    <div class="legend-note">* Congés des membres de votre équipe</div>
+  </div>
+  <div class="calendar-container">
+    <full-calendar #calendar [options]="calendarOptions"></full-calendar>
+  </div>
+</div>

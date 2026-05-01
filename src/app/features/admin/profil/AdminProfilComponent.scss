@@ -1,0 +1,456 @@
+// ========== VARIABLES ==========
+$primary: #1976d2;
+$primary-light: #42a5f5;
+$primary-dark: #0d47a1;
+$accent: #ff4081;
+$success: #10b981;
+$warning: #f59e0b;
+$error: #ef4444;
+$text-primary: #1e293b;
+$text-secondary: #64748b;
+$bg-light: #f1f5f9;
+$glass-bg: rgba(255, 255, 255, 0.85);
+$glass-border: rgba(255, 255, 255, 0.3);
+$shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+$transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+$transition-slow: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+// ========== CONTENEUR PRINCIPAL ==========
+.profil-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
+
+  @media (max-width: 1024px) {
+    padding: 1rem;
+  }
+}
+
+// ========== HEADER ==========
+.profil-header {
+  margin-bottom: 2rem;
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .icon-wrapper {
+      background: linear-gradient(135deg, $primary, $primary-light);
+      border-radius: 24px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: $shadow-md;
+
+      .header-icon {
+        font-size: 2.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        color: white;
+      }
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, $primary, $primary-light);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    p {
+      margin: 0.25rem 0 0;
+      color: $text-secondary;
+      font-size: 0.9rem;
+    }
+  }
+}
+
+// ========== CHARGEMENT ==========
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+
+  .loading-spinner {
+    position: relative;
+    &::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      right: -4px;
+      bottom: -4px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, $primary, $primary-light);
+      opacity: 0.3;
+      animation: pulse 1.5s infinite;
+    }
+  }
+
+  .loading-text {
+    color: $text-secondary;
+    font-weight: 500;
+    animation: fadeInOut 2s infinite;
+  }
+}
+
+// ========== GRILLE PRINCIPALE ==========
+.profil-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 2rem;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ========== CARTE PROFIL (SIDEBAR) ==========
+.profile-card {
+  background: $glass-bg;
+  backdrop-filter: blur(10px);
+  border-radius: 32px;
+  border: 1px solid $glass-border;
+  overflow: hidden;
+  box-shadow: $shadow-lg;
+  transition: $transition-slow;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 25px 35px -12px rgba(0, 0, 0, 0.2);
+  }
+
+  .profile-cover {
+    height: 120px;
+    background: linear-gradient(135deg, $primary, $primary-dark);
+  }
+
+  // ========== SECTION PHOTO ==========
+  .profile-avatar-wrapper {
+    position: relative;
+    margin-top: -50px;
+    display: flex;
+    justify-content: center;
+
+    .profile-photo-container {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 4px solid white;
+      box-shadow: $shadow-md;
+      background: #f0f0f0;
+
+      .profile-photo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+    }
+
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, $primary, $primary-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: white;
+      border: 4px solid white;
+      box-shadow: $shadow-md;
+    }
+
+    .edit-avatar-btn {
+      position: absolute;
+      bottom: 5px;
+      right: calc(50% - 55px);
+      background: white;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      box-shadow: $shadow-sm;
+      transition: $transition-fast;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: $primary;
+      }
+
+      &:hover {
+        transform: scale(1.1);
+        background: $primary;
+        mat-icon { color: white; }
+      }
+    }
+  }
+
+  .photo-actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin: 1rem 0;
+
+    button {
+      font-size: 0.75rem;
+      mat-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+      }
+    }
+  }
+
+  .photo-preview {
+    text-align: center;
+    margin-top: 0.5rem;
+    .preview-img {
+      max-width: 80px;
+      max-height: 80px;
+      border-radius: 8px;
+      border: 2px solid $primary;
+    }
+  }
+
+  .profile-info {
+    text-align: center;
+    padding: 1rem 1.5rem 0;
+
+    h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: $text-primary;
+    }
+
+    .role-badge {
+      display: inline-block;
+      background: rgba($primary, 0.1);
+      color: $primary;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      margin: 0.5rem 0;
+    }
+
+    .position {
+      color: $text-secondary;
+      font-size: 0.85rem;
+    }
+  }
+
+  .profile-stats {
+    padding: 1.5rem;
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+
+      mat-icon {
+        color: $primary;
+        font-size: 1.25rem;
+      }
+
+      .stat-label {
+        display: block;
+        font-size: 0.7rem;
+        color: $text-secondary;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .stat-value {
+        font-weight: 600;
+        color: $text-primary;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 20px;
+        font-size: 0.7rem;
+
+        &.status-active { background: $success; color: white; }
+        &.status-inactive { background: $error; color: white; }
+        &.status-locked { background: $warning; color: white; }
+      }
+    }
+  }
+}
+
+// ========== FORMULAIRES (colonne droite) ==========
+.form-card {
+  background: $glass-bg;
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  border: 1px solid $glass-border;
+  box-shadow: $shadow-md;
+  transition: $transition-slow;
+  margin-bottom: 1.5rem;
+
+  &:hover {
+    box-shadow: $shadow-lg;
+  }
+
+  mat-card-header {
+    padding: 1.5rem 1.5rem 0;
+
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+
+      mat-icon {
+        color: $primary;
+      }
+    }
+  }
+
+  mat-card-content {
+    padding: 1.5rem;
+  }
+
+  .profile-form {
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .mat-mdc-form-field {
+      width: 100%;
+    }
+  }
+
+  mat-card-actions {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    gap: 0.5rem;
+
+    .action-btn {
+      transition: $transition-fast;
+      &:hover {
+        transform: translateY(-2px);
+      }
+    }
+
+    .cancel-btn {
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+  }
+}
+
+.password-card {
+  .password-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    animation: slideDown 0.3s ease;
+
+    .password-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+  }
+}
+
+// ========== ANIMATIONS ==========
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); max-height: 0; }
+  to { opacity: 1; transform: translateY(0); max-height: 500px; }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+  100% { opacity: 0.3; transform: scale(1); }
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease forwards;
+}
+
+.animate-expand {
+  animation: slideDown 0.3s ease forwards;
+}
+
+// ========== THEME SOMBRE ==========
+:host-context(body.dark-theme) {
+  .profil-container {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  }
+
+  .glass-effect {
+    background: rgba(30, 41, 59, 0.8);
+    backdrop-filter: blur(10px);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .profile-card .profile-avatar,
+  .profile-card .edit-avatar-btn mat-icon { color: white; }
+
+  .profile-card .edit-avatar-btn:hover { background: $primary; }
+
+  .profile-stats .stat-value,
+  .profile-info h2,
+  mat-card-title { color: #f1f5f9; }
+
+  .mat-mdc-form-field label, .mat-mdc-input-element { color: #e2e8f0; }
+
+  .mat-card-actions { border-top-color: rgba(255, 255, 255, 0.08); }
+}
