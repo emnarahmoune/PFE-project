@@ -5,6 +5,8 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * Entité Competence - Catalogue des compétences
  * Conforme au diagramme de classes :
@@ -68,4 +70,9 @@ public class Competence {
         if (this.nom == null || this.nom.isBlank())
             throw new IllegalStateException("Le nom de la compétence est obligatoire");
     }
+
+
+@ManyToMany(mappedBy = "competences")
+@JsonIgnoreProperties({"competences"}) // 🔥 coupe la boucle
+private List<Employe> employes;
 }

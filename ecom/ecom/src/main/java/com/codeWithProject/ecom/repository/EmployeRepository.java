@@ -23,15 +23,14 @@ public interface EmployeRepository extends JpaRepository<Employe, Long> {
 @Query("SELECT e FROM Employe e WHERE LOWER(TRIM(e.email)) = LOWER(TRIM(:email))")
 Optional<Employe> findByEmailIgnoreCase(@Param("email") String email);
 
-    Optional<Employe> findByEmail(String email);
 
     // ===== RECHERCHES PAR TYPE =====
-    @Query("SELECT e FROM Employe e WHERE e.typeEmploye = 'MANAGER'")
+    @Query("SELECT e FROM Employe e WHERE e.role = 'MANAGER'")
     List<Employe> findAllManagers();
 
-    List<Employe> findByTypeEmploye(String typeEmploye);
-
-    @Query("SELECT e FROM Employe e WHERE e.typeEmploye = 'ADMIN_RH'")
+    List<Employe> findByRole(String role);
+    
+    @Query("SELECT e FROM Employe e WHERE e.role = 'ADMIN_RH'")
     List<Employe> findAllAdminRH();
 
 
@@ -39,8 +38,9 @@ Optional<Employe> findByEmailIgnoreCase(@Param("email") String email);
 
     // ===== RECHERCHES PAR MANAGER =====
     List<Employe> findByManagerId(Long managerId);
-    List<Employe> findByManagerEmail(String email);
-    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL AND e.typeEmploye = 'EMPLOYE'")
+   
+   
+    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL AND e.role = 'EMPLOYE'")
     List<Employe> findEmployesSansManager();
 
     // ===== RECHERCHES PAR ATTRIBUTS =====
@@ -123,9 +123,17 @@ Optional<Employe> findByEmailIgnoreCase(@Param("email") String email);
     // ===== AUTRES =====
     List<Employe> findByManagerEmail(String email);
 
-    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL AND e.typeEmploye = 'EMPLOYE'")
+    @Query("SELECT e FROM Employe e WHERE e.manager IS NULL AND e.role = 'EMPLOYE'")
     List<Employe> findByManagerIsNull();
 
+
+    @Query("SELECT COUNT(e) FROM Employe e")
+    int countAllEmployes();
+
+
+
+
+    
 
     @Query("SELECT e FROM Employe e WHERE e.manager.id = :managerId AND e.statut = 'ACTIF'")
     List<Employe> findActifsByManagerId(@Param("managerId") Long managerId);

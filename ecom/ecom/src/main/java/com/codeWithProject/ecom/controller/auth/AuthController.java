@@ -4,7 +4,6 @@ import com.codeWithProject.ecom.entity.AdministrateurRH;
 import com.codeWithProject.ecom.entity.Employe;
 import com.codeWithProject.ecom.entity.Manager;
 import com.codeWithProject.ecom.repository.EmployeRepository;
-import com.codeWithProject.ecom.repository.ManagerRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,16 +11,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,157 +24,59 @@ import java.util.stream.Collectors;
 public class AuthController {
 
     private final EmployeRepository employeRepository;
-    private final ManagerRepository managerRepository;
     private final EntityManager entityManager;
 
-    @GetMapping("/sync")
+    // ✅ IMPORTANT : POST (et pas GET)
+    @PostMapping("/sync")
     @Transactional
     public ResponseEntity<Map<String, Object>> syncUser(@AuthenticationPrincipal Jwt jwt) {
-        log.info("=== SYNC USER - Synchronisation utilisateur Keycloak ===");
+
+        log.info("=== SYNC USER ===");
 
         if (jwt == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Non authentifié"));
         }
 
+        // 🔹 1. EMAIL
         String email = jwt.getClaimAsString("email");
-        if (email == null || email.isEmpty()) {
-            throw new RuntimeException("❌ Email introuvable dans le token");
-        }
-        email = email.trim().toLowerCase();
-        log.info("Email extrait du token: {}", email);
 
-        // 1. Extraire les rôles Keycloak
+// 🔥 fallback si email absent
+if (email == null || email.isEmpty()) {
+    email = jwt.getClaimAsString("preferred_username");
+}
+
+if (email == null || email.isEmpty()) {
+    throw new RuntimeException("Email introuvable dans le token");
+}
+email = email.trim().toLowerCase();
+
+
+        // 🔹 2. INFOS KEYCLOAK
+        String prenom = jwt.getClaimAsString("given_name");
+        String nom = jwt.getClaimAsString("family_name");
+
+        if (prenom == null) prenom = email.split("@")[0];
+        if (nom == null) nom = prenom.toUpperCase();
+
+        // 🔹 3. ROLES
         List<String> roles = extractRoles(jwt);
-        List<String> normalizedRoles = roles.stream()
-                .map(String::toUpperCase)
-                .collect(Collectors.toList());
-        log.info("Rôles extraits (normalisés): {}", normalizedRoles);
-
-        // 2. Déterminer le type d'employé et le rôle Spring
-        String targetType;   // "EMPLOYE", "MANAGER", "ADMIN_RH"
         String roleSpring;
 
-        if (normalizedRoles.contains("ADMIN_RH") || normalizedRoles.contains("ADMIN")) {
-            targetType = Employe.TYPE_ADMIN_RH;
+        if (roles.contains("ADMIN_RH") || roles.contains("ADMIN")) {
             roleSpring = "ADMIN_RH";
-        } else if (normalizedRoles.contains("MANAGER")) {
-            targetType = Employe.TYPE_MANAGER;
+        } else if (roles.contains("MANAGER")) {
             roleSpring = "manager";
         } else {
-            targetType = Employe.TYPE_EMPLOYE;
             roleSpring = "user";
         }
 
-        // 3. Récupérer l'employé existant
+        // 🔹 4. CHECK EXISTING USER
         Employe employe = employeRepository.findByEmail(email).orElse(null);
 
         if (employe == null) {
-            // Création d'un nouvel employé avec la bonne sous-classe
-            employe = createEmployeOfType(jwt, email, targetType, roleSpring);
-            log.info("✅ Nouvel employé créé - ID: {}, type: {}", employe.getId(), targetType);
-        } else {
-            // Mise à jour : vérifier si le type a changé
-            String currentType = employe.getTypeEmploye();
-            if (!targetType.equals(currentType)) {
-                log.info("Changement de type détecté: {} -> {}", currentType, targetType);
-                convertEmployeType(employe, targetType);
-                // Recharger l'employé après conversion
-                employe = employeRepository.findById(employe.getId()).orElse(employe);
-            }
-
-            // Mise à jour du rôle Spring si nécessaire
-            if (!roleSpring.equals(employe.getRole())) {
-                employe.setRole(roleSpring);
-                employe = employeRepository.save(employe);
-            }
-
-            // Mise à jour du mot de passe si absent
-            if (employe.getPassword() == null || employe.getPassword().isEmpty()) {
-                employe.setPassword("keycloak-auth");
-                employe = employeRepository.save(employe);
-            }
-        }
-
-        // 4. Mettre à jour la dernière connexion
-        employe.setDerniereConnexion(LocalDateTime.now());
-        if (employe.getNombreConnexions() == null) employe.setNombreConnexions(0);
-        employe.setNombreConnexions(employe.getNombreConnexions() + 1);
-        employe = employeRepository.save(employe);
-
-        // 5. Construire la réponse
-        Map<String, Object> response = new HashMap<>();
-        response.put("id", employe.getId());
-        response.put("email", employe.getEmail());
-        response.put("nom", employe.getNom());
-        response.put("prenom", employe.getPrenom());
-        response.put("role", employe.getTypeEmploye());
-        response.put("employeId", employe.getId());
-        response.put("matricule", employe.getMatricule());
-        response.put("departement", employe.getDepartement());
-        response.put("poste", employe.getPoste());
-        response.put("soldeConges", employe.getSoldeConges());
-
-        log.info("=== SYNC USER TERMINÉ AVEC SUCCÈS ===");
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * Crée un employé de la classe concrète appropriée.
-     */
-    private Employe createEmployeOfType(Jwt jwt, String email, String targetType, String roleSpring) {
-        String prenom = jwt.getClaimAsString("given_name");
-        if (prenom == null) prenom = email.split("@")[0];
-        String nom = jwt.getClaimAsString("family_name");
-        if (nom == null) nom = prenom.toUpperCase();
-        String matricule = generateUniqueMatricule();
-
-        Employe employe;
-        if (Employe.TYPE_MANAGER.equals(targetType)) {
-            Manager manager = new Manager();
-            manager.setMatricule(matricule);
-            manager.setNom(nom);
-            manager.setPrenom(prenom);
-            manager.setEmail(email);
-            manager.setTelephone("");
-            manager.setPassword("keycloak-auth");
-            manager.setDateEmbauche(LocalDate.now());
-            manager.setPoste("À définir");
-            manager.setSalaire(0.0);
-            manager.setStatut("ACTIF");
-            manager.setDepartement("À définir");
-            manager.setSoldeConges(25);
-            manager.setActif(true);
-            manager.setCompteVerrouille(false);
-            manager.setNombreConnexions(0);
-            manager.setTentativesEchec(0);
-            manager.setDateCreation(LocalDate.now());
-            manager.setRole(roleSpring);
-            manager.setDateNomination(LocalDate.now());
-            employe = manager;
-        } else if (Employe.TYPE_ADMIN_RH.equals(targetType)) {
-            AdministrateurRH admin = new AdministrateurRH();
-            admin.setMatricule(matricule);
-            admin.setNom(nom);
-            admin.setPrenom(prenom);
-            admin.setEmail(email);
-            admin.setTelephone("");
-            admin.setPassword("keycloak-auth");
-            admin.setDateEmbauche(LocalDate.now());
-            admin.setPoste("À définir");
-            admin.setSalaire(0.0);
-            admin.setStatut("ACTIF");
-            admin.setDepartement("À définir");
-            admin.setSoldeConges(25);
-            admin.setActif(true);
-            admin.setCompteVerrouille(false);
-            admin.setNombreConnexions(0);
-            admin.setTentativesEchec(0);
-            admin.setDateCreation(LocalDate.now());
-            admin.setRole(roleSpring);
-            employe = admin;
-        } else {
+            // ✅ CREATION
             employe = Employe.builder()
-                    .matricule(matricule)
+                    .matricule(generateMatricule())
                     .nom(nom)
                     .prenom(prenom)
                     .email(email)
@@ -199,48 +95,55 @@ public class AuthController {
                     .dateCreation(LocalDate.now())
                     .role(roleSpring)
                     .build();
-        }
-        return employeRepository.save(employe);
-    }
 
-    /**
-     * Convertit un employé existant vers un nouveau type (EMPLOYE, MANAGER, ADMIN_RH).
-     * Utilise des requêtes natives pour mettre à jour le discriminateur et les tables filles.
-     */
-    private void convertEmployeType(Employe employe, String newType) {
-        Long id = employe.getId();
-        if (Employe.TYPE_MANAGER.equals(newType)) {
-            // Mettre à jour le discriminateur
-            entityManager.createNativeQuery("UPDATE employes SET type_employe = 'MANAGER' WHERE id = ?")
-                    .setParameter(1, id)
-                    .executeUpdate();
-            // Insérer dans la table managers
-            entityManager.createNativeQuery("INSERT INTO managers (employe_id, date_nomination) VALUES (?, CURDATE())")
-                    .setParameter(1, id)
-                    .executeUpdate();
-        } else if (Employe.TYPE_ADMIN_RH.equals(newType)) {
-            entityManager.createNativeQuery("UPDATE employes SET type_employe = 'ADMIN_RH' WHERE id = ?")
-                    .setParameter(1, id)
-                    .executeUpdate();
-            entityManager.createNativeQuery("INSERT INTO administrateurs_rh (employe_id) VALUES (?)")
-                    .setParameter(1, id)
-                    .executeUpdate();
+            employe = employeRepository.save(employe);
+            log.info("✅ Nouvel utilisateur créé");
+
         } else {
-            // Revenir à EMPLOYE : supprimer les lignes filles
-            entityManager.createNativeQuery("DELETE FROM managers WHERE employe_id = ?")
-                    .setParameter(1, id)
-                    .executeUpdate();
-            entityManager.createNativeQuery("DELETE FROM administrateurs_rh WHERE employe_id = ?")
-                    .setParameter(1, id)
-                    .executeUpdate();
-            entityManager.createNativeQuery("UPDATE employes SET type_employe = 'EMPLOYE' WHERE id = ?")
-                    .setParameter(1, id)
-                    .executeUpdate();
+            // ✅ UPDATE USER EXISTANT
+
+            // 🔥 CORRECTION IMPORTANTE (username manquant)
+            if (employe.getNom() == null || employe.getNom().isEmpty()) {
+                employe.setNom(nom);
+            }
+
+            if (employe.getPrenom() == null || employe.getPrenom().isEmpty()) {
+                employe.setPrenom(prenom);
+            }
+
+            // update role
+            if (!roleSpring.equals(employe.getRole())) {
+                employe.setRole(roleSpring);
+            }
+
+            // password fallback
+            if (employe.getPassword() == null) {
+                employe.setPassword("keycloak-auth");
+            }
         }
-        // Vider le cache persistence pour refléter les changements
-        entityManager.clear();
+
+        // 🔹 5. UPDATE CONNEXION
+        employe.setDerniereConnexion(LocalDateTime.now());
+        employe.setNombreConnexions(
+                Optional.ofNullable(employe.getNombreConnexions()).orElse(0) + 1
+        );
+
+        employe = employeRepository.save(employe);
+
+        // 🔹 6. RESPONSE
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", employe.getId());
+        response.put("email", employe.getEmail());
+        response.put("nom", employe.getNom());
+        response.put("prenom", employe.getPrenom());
+        response.put("role", employe.getRole());
+
+        log.info("✅ SYNC OK");
+
+        return ResponseEntity.ok(response);
     }
 
+    // 🔹 EXTRACTION ROLES KEYCLOAK
     private List<String> extractRoles(Jwt jwt) {
         Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
         if (realmAccess != null && realmAccess.containsKey("roles")) {
@@ -249,16 +152,8 @@ public class AuthController {
         return List.of();
     }
 
-    private String generateUniqueMatricule() {
-        long count = employeRepository.count();
-        int maxAttempts = 100;
-        for (int i = 0; i < maxAttempts; i++) {
-            count++;
-            String matricule = String.format("EMP%03d", count);
-            if (!employeRepository.existsByMatricule(matricule)) {
-                return matricule;
-            }
-        }
+    // 🔹 GENERATE MATRICULE
+    private String generateMatricule() {
         return "EMP" + System.currentTimeMillis();
     }
 }

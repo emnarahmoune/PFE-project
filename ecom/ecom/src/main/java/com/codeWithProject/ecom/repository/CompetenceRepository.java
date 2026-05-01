@@ -21,6 +21,10 @@ public interface CompetenceRepository extends JpaRepository<Competence, Long> {
     @Query("SELECT DISTINCT c.categorie FROM Competence c")
     List<String> findAllCategories();
 
+
+    @Query("SELECT c FROM Competence c LEFT JOIN FETCH c.employes WHERE c.id = :id")
+    Optional<Competence> findByIdWithEmployes(Long id);
+
     // ===== RECHERCHES AVANCÉES =====
     @Query("SELECT c FROM Competence c WHERE LOWER(c.nom) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Competence> searchCompetences(@Param("keyword") String keyword);

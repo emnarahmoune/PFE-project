@@ -80,8 +80,9 @@ Long getEmployeIdByEmail(String email);
      * @return L'employé mis à jour
      */
 
-    EmployeDTO changeEmailByEmail(String email, String newEmail);
 
+    void updateCompetence(Long userId, Long compId, int niveau);
+    List<FormationEmployeDTO> getFormationsByEmployeId(Long employeId);
     // ===== MÉTHODES POUR MANAGER =====
     List<EmployeDTO> findAllManagers();
     List<EmployeDTO> getEquipeByManagerEmail(String managerEmail);

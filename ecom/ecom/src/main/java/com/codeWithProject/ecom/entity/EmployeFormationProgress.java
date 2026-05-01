@@ -16,6 +16,10 @@ public class EmployeFormationProgress {
 
     private boolean completed;
 
+@ManyToOne
+@JoinColumn(name = "formation_id")
+private Formation formation;
+
     // GETTERS
     public Long getId() { return id; }
     public Long getEmployeId() { return employeId; }

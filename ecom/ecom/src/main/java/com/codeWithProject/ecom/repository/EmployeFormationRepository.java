@@ -14,6 +14,9 @@ import java.util.Optional;
 @Repository
 public interface EmployeFormationRepository extends JpaRepository<EmployeFormation, Long> {
 
+
+
+
     //  formations d’un employé
 List<EmployeFormation> findByEmploye_Id(Long employeId);
     //  employés inscrits à une formation
@@ -49,4 +52,8 @@ WHERE ef.employe.id = :employeId
 """)
 List<EmployeFormation> findByEmployeId(@Param("employeId") Long employeId);
 
+
+
+@Query("SELECT COUNT(ef) FROM EmployeFormation ef WHERE ef.formation.id = :id")
+int countByFormationId(@Param("id") Long id);
 }

@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 /**
  * DTO pour l'entité Competence
@@ -25,4 +26,8 @@ public class CompetenceDTO {
     public void setNom(String nom) { this.nom = nom; }
 
     private Long nombreEmployes; // Nombre d'employés avec cette compétence
+// 🔥 AJOUT IMPORTANT
+private List<EmployeDTO> employes;
+private Long competenceId;
+private Integer niveau;
 }

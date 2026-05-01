@@ -2,10 +2,13 @@ package com.codeWithProject.ecom.controller;
 
 import com.codeWithProject.ecom.controller.dto.ApiResponse;  // ← AJOUT
 import com.codeWithProject.ecom.entity.Competence;
+import com.codeWithProject.ecom.entity.Employe;
+import com.codeWithProject.ecom.entity.EmployeCompetence;
 import com.codeWithProject.ecom.repository.CompetenceRepository;
 import com.codeWithProject.ecom.service.CompetenceService;
 import com.codeWithProject.ecom.service.dto.CompetenceDTO;
 import io.swagger.v3.oas.annotations.Operation;
+import com.codeWithProject.ecom.repository.EmployeCompetenceRepository;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -19,9 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.*;
 
 /**
@@ -37,6 +37,7 @@ public class CompetenceController {
 
     private final CompetenceService competenceService;
     private final CompetenceRepository competenceRepository;
+    private final EmployeCompetenceRepository employeCompetenceRepository;
 
     /**
      * Récupère toutes les compétences
@@ -85,6 +86,39 @@ public class CompetenceController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+
+    
+@GetMapping("/{id}/details")
+public ResponseEntity<?> getCompetenceDetails(@PathVariable Long id) {
+
+    Competence competence = competenceRepository.findByIdWithEmployes(id)
+        .orElseThrow(() -> new RuntimeException("Compétence introuvable"));
+
+    List<Map<String, Object>> employes = new ArrayList<>();
+
+    for (EmployeCompetence ec : employeCompetenceRepository.findByCompetenceId(id)) {
+    Employe emp = ec.getEmploye();
+
+    Map<String, Object> e = new HashMap<>();
+    e.put("id", emp.getId());
+    e.put("nom", emp.getNom());
+    e.put("prenom", emp.getPrenom());
+    e.put("niveau", ec.getNiveau()); // 🔥 important
+
+    employes.add(e);
+}
+
+    return ResponseEntity.ok(Map.of(
+            "success", true,
+            "data", Map.of(
+                    "nom", competence.getNom(),
+                    "description", competence.getDescription(),
+                    "categorie", competence.getCategorie(),
+                    "nombreEmployes", employes.size(),
+                    "employes", employes
+            )
+    ));
+}
     /**
      * Récupère une compétence par son nom
      */
@@ -159,16 +193,12 @@ public class CompetenceController {
     /**
      * Supprime une compétence
      */
+
     @DeleteMapping("/{id}")
-    @Operation(summary = "Supprime une compétence")
-    public ResponseEntity<ApiResponse<Void>> deleteCompetence(
-            @Parameter(description = "ID de la compétence") @PathVariable Long id) {
-
-        log.info("DELETE /api/competences/{}", id);
-
-        competenceService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Compétence supprimée avec succès"));
-    }
+public ResponseEntity<?> delete(@PathVariable Long id) {
+    competenceService.delete(id);
+    return ResponseEntity.ok().build();
+}
 
     /**
      * Vérifie si un nom de compétence existe

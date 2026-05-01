@@ -63,6 +63,7 @@ public class EmployeDTO {
     private Integer nombreFormations;
     private Integer nombreDemandesConge;
     private Integer soldeCongesRestant;
+    private String adresse;
 
     // ── IDs pour les relations ────────────────────
     private List<Long> competenceIds;
@@ -74,4 +75,8 @@ public class EmployeDTO {
     private String statutCompte;
     private boolean peutSeConnecter;
     private String statutCouleur;
+
+    // 🔥 NOUVEAU
+private List<CompetenceEmployeDTO> competences;
+private List<FormationEmployeDTO> formations;
 }

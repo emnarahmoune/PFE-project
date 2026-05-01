@@ -3,6 +3,7 @@ package com.codeWithProject.ecom.service.impl;
 import com.codeWithProject.ecom.entity.*;
 import com.codeWithProject.ecom.repository.*;
 import com.codeWithProject.ecom.service.FormationService;
+import com.codeWithProject.ecom.service.dto.EmployeDTO;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,37 +24,198 @@ public class FormationServiceImpl implements FormationService {
     private final EmployeRepository employeRepository;
 
     // 🔥 CREATE
-    @Override
-    public Formation create(Formation formation) {
-        return formationRepository.save(formation);
+ // 🔥 CREATE
+@Override
+public Formation create(Formation formation) {
+
+    if (formation.getActif() == null) {
+        formation.setActif(true);
     }
+
+    if (formation.getVideos() != null) {
+        for (int i = 0; i < formation.getVideos().size(); i++) {
+            FormationVideo video = formation.getVideos().get(i);
+
+            video.setFormation(formation);
+
+            if (video.getOrdre() == 0) {
+                video.setOrdre(i + 1);
+            }
+        }
+    }
+
+    if (formation.getSupports() != null) {
+        for (int i = 0; i < formation.getSupports().size(); i++) {
+            FormationSupport support = formation.getSupports().get(i);
+
+            support.setFormation(formation);
+
+            if (support.getOrdre() == 0) {
+                support.setOrdre(i + 1);
+            }
+        }
+    }
+
+    return formationRepository.save(formation);
+}
 
     // 🔍 GET ALL
-    @Override
-    public List<Formation> getAll() {
-        return formationRepository.findAll();
-    }
+ @Override
+public List<Map<String, Object>> getAll() {
+
+    List<Formation> formations = formationRepository.findAll();
+
+    long totalEmployes = employeRepository.count();
+
+    return formations.stream().map(f -> {
+
+        int nbParticipants =
+            employeFormationRepository.countByFormationId(f.getId());
+
+        Map<String, Object> map = new HashMap<>();
+
+        map.put("id", f.getId());
+        map.put("titre", f.getTitre());
+        map.put("description", f.getDescription());
+        map.put("domaine", f.getDomaine());
+        map.put("dureeHeures", f.getDureeHeures());
+        map.put("actif", f.getActif());
+
+        // 🔥 IMPORTANT
+        map.put("nombreParticipants", nbParticipants);
+        map.put("totalEmployes", totalEmployes);
+
+        return map;
+
+    }).toList();
+}
 
     // 🔍 GET BY ID
-    @Override
-    public Formation getById(Long id) {
-        return formationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Formation non trouvée"));
+public Map<String, Object> getByIdComplete(Long id) {
+    Formation formation = formationRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Formation introuvable"));
+
+    Map<String, Object> response = new HashMap<>();
+
+    response.put("id", formation.getId());
+    response.put("titre", formation.getTitre());
+    response.put("description", formation.getDescription());
+    response.put("domaine", formation.getDomaine());
+    response.put("dureeHeures", formation.getDureeHeures());
+    response.put("actif", formation.getActif());
+
+    List<Map<String, Object>> videos = new ArrayList<>();
+
+    if (formation.getVideos() != null) {
+        formation.getVideos()
+                .stream()
+                .sorted(Comparator.comparingInt(FormationVideo::getOrdre))
+                .forEach(v -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("id", v.getId());
+                    item.put("titre", v.getTitre());
+                    item.put("urlYoutube", v.getUrlYoutube());
+                    item.put("ordre", v.getOrdre());
+                    videos.add(item);
+                });
     }
 
-    // 🔄 UPDATE
-    @Override
-    public Formation update(Long id, Formation f) {
-        Formation formation = getById(id);
+    response.put("videos", videos);
 
-        formation.setTitre(f.getTitre());
-        formation.setDescription(f.getDescription());
-        formation.setDomaine(f.getDomaine());
-        formation.setDureeHeures(f.getDureeHeures());
+    List<Map<String, Object>> supports = new ArrayList<>();
+
+    if (formation.getSupports() != null) {
+        formation.getSupports()
+                .stream()
+                .sorted(Comparator.comparingInt(FormationSupport::getOrdre))
+                .forEach(s -> {
+                    Map<String, Object> item = new HashMap<>();
+                    item.put("id", s.getId());
+                    item.put("titre", s.getTitre());
+                    item.put("fichierUrl", s.getFichierUrl());
+                    item.put("ordre", s.getOrdre());
+                    supports.add(item);
+                });
+    }
+
+    response.put("supports", supports);
+
+    return response;
+}
+
+
+    // 🔄 UPDATE// 🔄 UPDATE
+@Override
+public Formation update(Long id, Formation f) {
+    Formation formation = getById(id);
+
+    formation.setTitre(f.getTitre());
+    formation.setDescription(f.getDescription());
+    formation.setDomaine(f.getDomaine());
+    formation.setDureeHeures(f.getDureeHeures());
+
+    if (f.getActif() != null) {
         formation.setActif(f.getActif());
-
-        return formationRepository.save(formation);
     }
+
+    // Remplacer les vidéos
+    formation.getVideos().clear();
+
+    if (f.getVideos() != null) {
+        for (int i = 0; i < f.getVideos().size(); i++) {
+            FormationVideo video = f.getVideos().get(i);
+
+            video.setId(null);
+            video.setFormation(formation);
+
+            if (video.getOrdre() == 0) {
+                video.setOrdre(i + 1);
+            }
+
+            formation.getVideos().add(video);
+        }
+    }
+
+    // Remplacer les supports PDF
+    formation.getSupports().clear();
+
+    if (f.getSupports() != null) {
+        for (int i = 0; i < f.getSupports().size(); i++) {
+            FormationSupport support = f.getSupports().get(i);
+
+            support.setId(null);
+            support.setFormation(formation);
+
+            if (support.getOrdre() == 0) {
+                support.setOrdre(i + 1);
+            }
+
+            formation.getSupports().add(support);
+        }
+    }
+
+    return formationRepository.save(formation);
+}
+
+
+@Override
+public List<EmployeDTO> getParticipants(Long formationId) {
+
+    List<EmployeFormation> list = employeFormationRepository.findByFormation_Id(formationId);
+
+    return list.stream()
+        .map(ef -> ef.getEmploye())
+        .map(e -> EmployeDTO.builder()
+            .id(e.getId())
+            .nom(e.getNom())
+            .prenom(e.getPrenom())
+            .email(e.getEmail())
+            .poste(e.getPoste())
+            .departement(e.getDepartement())
+            .build()
+        )
+        .toList();
+}
 
     // ❌ DELETE
     @Override
@@ -342,4 +504,52 @@ public List<Formation> getRecommendationsBySkills(Long employeId) {
             .limit(3)
             .toList();
 }
+
+@Override
+public Map<String, Object> getByIdWithEmployes(Long id) {
+
+    Map<String, Object> response = new HashMap<>(getByIdComplete(id));
+
+    List<EmployeDTO> participants = employeFormationRepository
+            .findByFormation_Id(id)
+            .stream()
+            .map(ef -> {
+                Employe e = ef.getEmploye();
+
+                return EmployeDTO.builder()
+                        .id(e.getId())
+                        .nom(e.getNom())
+                        .prenom(e.getPrenom())
+                        .email(e.getEmail())
+                        .poste(e.getPoste())
+                        .departement(e.getDepartement())
+                        .build();
+            })
+            .toList();
+
+    response.put("employes", participants);
+    response.put("nombreParticipants", participants.size());
+
+    return response;
+}
+
+@Override
+public void activer(Long id) {
+    Formation f = formationRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Formation introuvable"));
+
+    f.setActif(true);
+    formationRepository.save(f);
+}
+
+@Override
+public void desactiver(Long id) {
+    Formation f = formationRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Formation introuvable"));
+
+    f.setActif(false);
+    formationRepository.save(f);
+}
+
+
 }

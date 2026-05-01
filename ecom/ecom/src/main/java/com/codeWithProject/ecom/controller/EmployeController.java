@@ -6,13 +6,22 @@ import com.codeWithProject.ecom.entity.EmployeCompetence;
 import com.codeWithProject.ecom.repository.EmployeCompetenceRepository;
 import com.codeWithProject.ecom.repository.EmployeRepository;
 import com.codeWithProject.ecom.service.EmployeService;
-import com.codeWithProject.ecom.service.dto.*;
+import com.codeWithProject.ecom.service.dto.ChangePasswordRequest;
+import com.codeWithProject.ecom.service.dto.CompetenceEmployeDTO;
+import com.codeWithProject.ecom.service.dto.EmployeDTO;
+import com.codeWithProject.ecom.service.dto.FormationEmployeDTO;
+import com.codeWithProject.ecom.service.dto.HistoriqueCongeDTO;
+import com.codeWithProject.ecom.service.dto.SoldeCongesDTO;
+import com.codeWithProject.ecom.service.dto.TableauBordEmployeDTO;
+import com.codeWithProject.ecom.service.dto.UpdateProfilRequest;
 import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
+import com.codeWithProject.ecom.service.mapper.EmployeMapper;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,18 +29,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-import java.util.HashMap;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.core.Authentication;
-import java.security.Principal;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/employes")
 @RequiredArgsConstructor
@@ -42,11 +48,49 @@ public class EmployeController {
     private final EmployeService employeService;
     private final EmployeRepository employeRepository;
     private final EmployeCompetenceRepository employeCompetenceRepository;
+    private final EmployeMapper employeMapper;
+
+    // ===== DTO INTERNE POUR ASSIGNER UN MANAGER =====
+
+    @Getter
+    @Setter
+    public static class AssignManagerRequest {
+        private Long managerId;
+    }
+
+    // ===== HELPERS AUTH =====
+
+    private String extractEmailFromAuthentication(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof Jwt jwt) {
+            String email = jwt.getClaimAsString("email");
+
+            if (email == null || email.isBlank()) {
+                email = jwt.getClaimAsString("preferred_username");
+            }
+
+            if (email == null || email.isBlank()) {
+                email = jwt.getSubject();
+            }
+
+            return email;
+        }
+
+        return authentication.getName();
+    }
 
     // ===== LISTES GÉNÉRALES =====
+
     @GetMapping
     public ResponseEntity<ApiResponse<List<EmployeDTO>>> getAllEmployes() {
-        return ResponseEntity.ok(ApiResponse.success(employeService.findAll(), "Employés récupérés"));
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findAll(), "Employés récupérés")
+        );
     }
 
     @GetMapping("/paged")
@@ -54,17 +98,27 @@ public class EmployeController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "asc") String direction) {
-        Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+            @RequestParam(defaultValue = "asc") String direction
+    ) {
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
         Pageable pageable = PageRequest.of(page, size, sort);
-        return ResponseEntity.ok(ApiResponse.success(employeService.findAll(pageable), "Employés paginés récupérés"));
+
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findAll(pageable), "Employés paginés récupérés")
+        );
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<EmployeDTO>> getEmployeById(@PathVariable Long id) {
-        return employeService.findById(id)
-                .map(emp -> ResponseEntity.ok(ApiResponse.success(emp, "Employé trouvé")))
-                .orElse(ResponseEntity.notFound().build());
+        EmployeDTO dto = employeService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employé introuvable"));
+
+        dto.setFormations(employeService.getFormationsByEmployeId(id));
+
+        return ResponseEntity.ok(ApiResponse.success(dto, "OK"));
     }
 
     @GetMapping("/matricule/{matricule}")
@@ -75,76 +129,94 @@ public class EmployeController {
     }
 
     @GetMapping("/departement/{departement}")
-    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesByDepartement(@PathVariable String departement) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.findByDepartement(departement), "Employés par département"));
+    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesByDepartement(
+            @PathVariable String departement
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findByDepartement(departement), "Employés par département")
+        );
     }
 
     @GetMapping("/statut/{statut}")
-    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesByStatut(@PathVariable String statut) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.findByStatut(statut), "Employés par statut"));
+    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesByStatut(
+            @PathVariable String statut
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findByStatut(statut), "Employés par statut")
+        );
     }
 
     @GetMapping("/actifs")
     public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesActifs() {
-        return ResponseEntity.ok(ApiResponse.success(employeService.findActifs(), "Employés actifs"));
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findActifs(), "Employés actifs")
+        );
+    }
+
+    @GetMapping("/me")
+    public EmployeDTO getCurrentUser(Authentication authentication) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        Employe employe = employeRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return employeMapper.toDto(employe);
     }
 
     @GetMapping("/manager/{managerId}")
-    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesByManager(@PathVariable Long managerId) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.findByManagerId(managerId), "Employés du manager"));
+    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesByManager(
+            @PathVariable Long managerId
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findByManagerId(managerId), "Employés du manager")
+        );
     }
 
-    // ✅ Alias pour obtenir l'équipe d'un manager (utilisé par le front-end)
     @GetMapping("/manager/{managerId}/equipe")
-    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEquipeByManager(@PathVariable Long managerId) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.findByManagerId(managerId), "Équipe récupérée"));
+    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEquipeByManager(
+            @PathVariable Long managerId
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findByManagerId(managerId), "Équipe récupérée")
+        );
     }
-
-
-@DeleteMapping("/me/competences/{id}")
-public ResponseEntity<?> deleteCompetence(
-        @PathVariable Long id,
-        Authentication auth
-) {
-
-    Jwt jwt = (Jwt) auth.getPrincipal();
-    String email = jwt.getClaim("email");
-
-    Employe emp = employeRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("User not found"));
-
-    EmployeCompetence ec = employeCompetenceRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Compétence introuvable"));
-
-    if (!ec.getEmploye().getId().equals(emp.getId())) {
-        throw new RuntimeException("Unauthorized");
-    }
-
-    employeCompetenceRepository.delete(ec);
-
-    return ResponseEntity.ok(Map.of("status", "deleted"));
-}
 
     @GetMapping("/service/{serviceId}")
-    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesByService(@PathVariable Long serviceId) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.findByServiceId(serviceId), "Employés du service"));
+    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesByService(
+            @PathVariable Long serviceId
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findByServiceId(serviceId), "Employés du service")
+        );
     }
 
     @GetMapping("/solde-conges-faible/{seuil}")
-    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesSoldeCongesFaible(@PathVariable Integer seuil) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.findSoldeCongesFaible(seuil), "Employés solde faible"));
+    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesSoldeCongesFaible(
+            @PathVariable Integer seuil
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findSoldeCongesFaible(seuil), "Employés solde faible")
+        );
     }
 
     // ===== CRUD =====
+
     @PostMapping
-    public ResponseEntity<ApiResponse<EmployeDTO>> createEmploye(@Valid @RequestBody EmployeDTO dto) {
+    public ResponseEntity<ApiResponse<EmployeDTO>> createEmploye(
+            @Valid @RequestBody EmployeDTO dto
+    ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(employeService.create(dto), "Employé créé"));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<EmployeDTO>> updateEmploye(@PathVariable Long id, @Valid @RequestBody EmployeDTO dto) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.update(id, dto), "Employé mis à jour"));
+    public ResponseEntity<ApiResponse<EmployeDTO>> updateEmploye(
+            @PathVariable Long id,
+            @Valid @RequestBody EmployeDTO dto
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.update(id, dto), "Employé mis à jour")
+        );
     }
 
     @PatchMapping("/{id}/profil")
@@ -152,259 +224,447 @@ public ResponseEntity<?> deleteCompetence(
             @PathVariable Long id,
             @RequestParam(required = false) String poste,
             @RequestParam(required = false) Double salaire,
-            @RequestParam(required = false) String departement) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.mettreAJourProfil(id, poste, salaire, departement), "Profil mis à jour"));
+            @RequestParam(required = false) String departement
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        employeService.mettreAJourProfil(id, poste, salaire, departement),
+                        "Profil mis à jour"
+                )
+        );
     }
 
-    @PatchMapping("/{id}/statut")
-    public ResponseEntity<ApiResponse<EmployeDTO>> changerStatut(@PathVariable Long id, @RequestParam String statut) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.changerStatut(id, statut), "Statut changé"));
+    @PutMapping("/statut/{id}")
+    public ResponseEntity<?> changeStatut(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body
+    ) {
+        String statut = body.get("statut");
+        return ResponseEntity.ok(employeService.changerStatut(id, statut));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteEmploye(@PathVariable Long id) {
         employeService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Employé supprimé"));
+        return ResponseEntity.ok(
+                ApiResponse.success(null, "Employé désactivé")
+        );
+    }
+
+    // ===== ASSIGNATION MANAGER =====
+
+    /*
+     * Route compatible avec ton frontend actuel :
+     * PUT /api/employes/manager/7
+     * Body :
+     * {
+     *   "managerId": 2
+     * }
+     */
+    @PutMapping("/manager/{employeId}")
+    @Operation(summary = "Assigne un manager à un employé")
+    public ResponseEntity<ApiResponse<EmployeDTO>> assignerManagerAvecBody(
+            @PathVariable Long employeId,
+            @RequestBody AssignManagerRequest request
+    ) {
+        if (request == null || request.getManagerId() == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(HttpStatus.BAD_REQUEST, "managerId est obligatoire"));
+        }
+
+        EmployeDTO updated = employeService.updateManager(employeId, request.getManagerId());
+
+        return ResponseEntity.ok(
+                ApiResponse.success(updated, "Manager assigné")
+        );
+    }
+
+    /*
+     * Ancienne route conservée :
+     * PUT /api/employes/7/manager/2
+     */
+    @PutMapping("/{employeId}/manager/{managerId}")
+    @Operation(summary = "Assigne un manager à un employé avec managerId dans l'URL")
+    public ResponseEntity<ApiResponse<EmployeDTO>> assignManagerAvecPath(
+            @PathVariable Long employeId,
+            @PathVariable Long managerId
+    ) {
+        EmployeDTO updated = employeService.updateManager(employeId, managerId);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(updated, "Manager assigné")
+        );
+    }
+
+    /*
+     * Option pour retirer le manager :
+     * DELETE /api/employes/7/manager
+     */
+    @DeleteMapping("/{employeId}/manager")
+    @Operation(summary = "Retire le manager d'un employé")
+    public ResponseEntity<ApiResponse<EmployeDTO>> retirerManager(
+            @PathVariable Long employeId
+    ) {
+        EmployeDTO updated = employeService.updateManager(employeId, null);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(updated, "Manager retiré")
+        );
     }
 
     // ===== STATISTIQUES =====
+
     @GetMapping("/count")
     public ResponseEntity<ApiResponse<Long>> countEmployes() {
-        return ResponseEntity.ok(ApiResponse.success(employeService.count(), "Nombre d'employés"));
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.count(), "Nombre d'employés")
+        );
     }
 
     @GetMapping("/stats/departement")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getStatsByDepartement() {
-        return ResponseEntity.ok(ApiResponse.success(employeService.countByDepartement(), "Stats par département"));
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.countByDepartement(), "Stats par département")
+        );
     }
 
     @GetMapping("/stats/statut")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getStatsByStatut() {
-        return ResponseEntity.ok(ApiResponse.success(employeService.countByStatut(), "Stats par statut"));
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.countByStatut(), "Stats par statut")
+        );
     }
 
     @GetMapping("/stats/masse-salariale")
     public ResponseEntity<ApiResponse<Double>> getMasseSalariale() {
-        return ResponseEntity.ok(ApiResponse.success(employeService.calculerMasseSalariale(), "Masse salariale"));
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.calculerMasseSalariale(), "Masse salariale")
+        );
     }
 
     @GetMapping("/stats/salaire-moyen")
     public ResponseEntity<ApiResponse<Double>> getSalaireMoyen() {
-        return ResponseEntity.ok(ApiResponse.success(employeService.calculerSalaireMoyen(), "Salaire moyen"));
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.calculerSalaireMoyen(), "Salaire moyen")
+        );
     }
 
     @GetMapping("/stats/tableau-bord")
     public ResponseEntity<ApiResponse<TableauBordEmployeDTO>> getStatsTableauBord() {
-        return ResponseEntity.ok(ApiResponse.success(employeService.getStatsTableauBord(), "Tableau de bord"));
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.getStatsTableauBord(), "Tableau de bord")
+        );
     }
 
     @GetMapping("/recents")
-    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesRecents(@RequestParam(defaultValue = "10") int limit) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.findEmployesRecents(limit), "Employés récents"));
+    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesRecents(
+            @RequestParam(defaultValue = "10") int limit
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findEmployesRecents(limit), "Employés récents")
+        );
     }
 
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<EmployeDTO>>> searchEmployes(@RequestParam String keyword) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.search(keyword), "Résultats recherche"));
+    public ResponseEntity<ApiResponse<List<EmployeDTO>>> searchEmployes(
+            @RequestParam String keyword
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.search(keyword), "Résultats recherche")
+        );
     }
 
     // ===== ESPACE EMPLOYÉ CONNECTÉ =====
+
     @GetMapping("/mon-profil")
-    public ResponseEntity<ApiResponse<EmployeDTO>> getMonProfil(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        String email = userDetails.getUsername();
+    public ResponseEntity<ApiResponse<EmployeDTO>> getMonProfil(Authentication authentication) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+        }
+
         EmployeDTO employe = employeService.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé non trouvé"));
-        return ResponseEntity.ok(ApiResponse.success(employe, "Profil récupéré"));
+
+        return ResponseEntity.ok(
+                ApiResponse.success(employe, "Profil récupéré")
+        );
     }
-
-
 
     @GetMapping("/mon-solde-conges")
-    public ResponseEntity<ApiResponse<SoldeCongesDTO>> getMonSoldeConges(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        return ResponseEntity.ok(ApiResponse.success(employeService.getSoldeCongesByEmail(userDetails.getUsername()), "Solde récupéré"));
+    public ResponseEntity<ApiResponse<SoldeCongesDTO>> getMonSoldeConges(Authentication authentication) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+        }
+
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.getSoldeCongesByEmail(email), "Solde récupéré")
+        );
     }
 
-
     @GetMapping("/mes-competences")
-    public ResponseEntity<ApiResponse<List<CompetenceEmployeDTO>>> getMesCompetences(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        return ResponseEntity.ok(ApiResponse.success(employeService.getCompetencesByEmail(userDetails.getUsername()), "Compétences récupérées"));
+    public ResponseEntity<ApiResponse<List<CompetenceEmployeDTO>>> getMesCompetences(Authentication authentication) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+        }
+
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.getCompetencesByEmail(email), "Compétences récupérées")
+        );
     }
 
     @GetMapping("/mes-formations")
-    public ResponseEntity<ApiResponse<List<FormationEmployeDTO>>> getMesFormations(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        return ResponseEntity.ok(ApiResponse.success(employeService.getFormationsByEmail(userDetails.getUsername()), "Formations récupérées"));
+    public ResponseEntity<ApiResponse<List<FormationEmployeDTO>>> getMesFormations(Authentication authentication) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+        }
+
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.getFormationsByEmail(email), "Formations récupérées")
+        );
     }
 
     @GetMapping("/mon-historique-conges")
-    public ResponseEntity<ApiResponse<List<HistoriqueCongeDTO>>> getMonHistoriqueConges(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        return ResponseEntity.ok(ApiResponse.success(employeService.getHistoriqueCongesByEmail(userDetails.getUsername()), "Historique récupéré"));
+    public ResponseEntity<ApiResponse<List<HistoriqueCongeDTO>>> getMonHistoriqueConges(Authentication authentication) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+        }
+
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.getHistoriqueCongesByEmail(email), "Historique récupéré")
+        );
     }
 
-    @PatchMapping("/mon-profil")
-    public ResponseEntity<ApiResponse<EmployeDTO>> updateMonProfil(@AuthenticationPrincipal UserDetails userDetails, @Valid @RequestBody UpdateProfilRequest request) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        return ResponseEntity.ok(ApiResponse.success(employeService.updateProfilByEmail(userDetails.getUsername(), request), "Profil mis à jour"));
+@PutMapping("/mon-profil")
+public ResponseEntity<ApiResponse<EmployeDTO>> updateMonProfilPut(
+        Authentication authentication,
+        @Valid @RequestBody UpdateProfilRequest request
+) {
+    String email = extractEmailFromAuthentication(authentication);
+
+    if (email == null || email.isBlank()) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
     }
+
+    log.info("Mise à jour du profil connecté: {}", email);
+
+    EmployeDTO updated = employeService.updateProfilByEmail(email, request);
+
+    return ResponseEntity.ok(
+            ApiResponse.success(updated, "Profil mis à jour")
+    );
+}
+
 
     @PostMapping("/change-password")
-    public ResponseEntity<ApiResponse<Void>> changePassword(@AuthenticationPrincipal UserDetails userDetails, @Valid @RequestBody ChangePasswordRequest request) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        employeService.changePasswordByEmail(userDetails.getUsername(), request);
-        return ResponseEntity.ok(ApiResponse.success(null, "Mot de passe changé"));
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            Authentication authentication,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+        }
+
+        employeService.changePasswordByEmail(email, request);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(null, "Mot de passe changé")
+        );
     }
 
     @PatchMapping("/change-email")
-    public ResponseEntity<ApiResponse<EmployeDTO>> changeEmail(@AuthenticationPrincipal UserDetails userDetails, @RequestParam String newEmail) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        return ResponseEntity.ok(ApiResponse.success(employeService.changeEmailByEmail(userDetails.getUsername(), newEmail), "Email changé"));
+    public ResponseEntity<ApiResponse<EmployeDTO>> changeEmail(
+            Authentication authentication,
+            @RequestParam String newEmail
+    ) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+        }
+
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.changeEmailByEmail(email, newEmail), "Email changé")
+        );
     }
 
     // ===== MÉTHODES POUR MANAGER ET ADMIN =====
+
     @GetMapping("/managers")
-    @Operation(summary = "Liste tous les managers (admin)")
+    @Operation(summary = "Liste tous les managers")
     public ResponseEntity<ApiResponse<List<EmployeDTO>>> getAllManagers() {
-        return ResponseEntity.ok(ApiResponse.success(employeService.findAllManagers(), "Managers récupérés"));
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.findAllManagers(), "Managers récupérés")
+        );
     }
 
     @GetMapping("/equipe")
     @Operation(summary = "Récupère l'équipe du manager connecté")
-    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getMyEquipe(@AuthenticationPrincipal Jwt jwt) {
-        if (jwt == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        String email = jwt.getClaimAsString("email");
-        if (email == null) email = jwt.getClaimAsString("preferred_username");
-        if (email == null) email = jwt.getSubject();
-        return ResponseEntity.ok(ApiResponse.success(employeService.getEquipeByManagerEmail(email), "Équipe récupérée"));
+    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getMyEquipe(Authentication authentication) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+        }
+
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.getEquipeByManagerEmail(email), "Équipe récupérée")
+        );
     }
 
     @GetMapping("/manager/employe/{employeId}")
     @Operation(summary = "Détails d'un employé pour son manager")
-    public ResponseEntity<ApiResponse<EmployeDTO>> getEmployeForManager(@PathVariable Long employeId, @AuthenticationPrincipal Jwt jwt) {
-        if (jwt == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        String email = jwt.getClaimAsString("email");
-        if (email == null) email = jwt.getClaimAsString("preferred_username");
-        if (email == null) email = jwt.getSubject();
-        return ResponseEntity.ok(ApiResponse.success(employeService.getEmployeForManager(employeId, email), "Employé trouvé"));
+    public ResponseEntity<ApiResponse<EmployeDTO>> getEmployeForManager(
+            @PathVariable Long employeId,
+            Authentication authentication
+    ) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        if (email == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+        }
+
+        return ResponseEntity.ok(
+                ApiResponse.success(employeService.getEmployeForManager(employeId, email), "Employé trouvé")
+        );
     }
 
-    @PutMapping("/{employeId}/manager/{managerId}")
-    @Operation(summary = "Assigne un manager à un employé (admin)")
-    public ResponseEntity<ApiResponse<EmployeDTO>> assignManager(@PathVariable Long employeId, @PathVariable(required = false) Long managerId) {
-        return ResponseEntity.ok(ApiResponse.success(employeService.updateManager(employeId, managerId), "Manager assigné"));
+    // ===== COMPÉTENCES EMPLOYÉ CONNECTÉ =====
+
+    @GetMapping("/me/competences")
+    public List<Map<String, Object>> getMyCompetences(Authentication authentication) {
+        String email = extractEmailFromAuthentication(authentication);
+
+        Employe emp = employeRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Employé introuvable"));
+
+        List<EmployeCompetence> list =
+                employeCompetenceRepository.findByEmploye_Id(emp.getId());
+
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (EmployeCompetence ec : list) {
+            Map<String, Object> item = new HashMap<>();
+
+            item.put("id", ec.getId());
+            item.put("nom", ec.getCompetence().getNom());
+            item.put("competenceId", ec.getCompetence().getId());
+            item.put("niveau", convertLevelToInt(ec.getNiveau()));
+
+            result.add(item);
+        }
+
+        return result;
     }
 
+    @PostMapping("/me/competences")
+    public ResponseEntity<?> addCompetence(
+            @RequestBody Map<String, Object> body,
+            Authentication authentication
+    ) {
+        String email = extractEmailFromAuthentication(authentication);
 
-   // 🔥 GET compétences employé
-// ================================
-// 🔥 GET compétences employé connecté
-// ================================
-@GetMapping("/me/competences")
-public List<Map<String, Object>> getMyCompetences(Authentication auth) {
+        Employe emp = employeRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-    Jwt jwt = (Jwt) auth.getPrincipal();
-    String email = jwt.getClaim("email");
+        Long compId = Long.valueOf(body.get("competenceId").toString());
+        int niveau = Integer.parseInt(body.get("niveau").toString());
 
-    // 🔥 AJOUT IMPORTANT
-    Employe emp = employeRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Employé introuvable"));
+        employeService.addCompetence(emp.getId(), compId, niveau);
 
-    // 🔥 maintenant emp existe
-    List<EmployeCompetence> list =
-            employeCompetenceRepository.findByEmploye_Id(emp.getId());
-
-    List<Map<String, Object>> result = new ArrayList<>();
-
-    for (EmployeCompetence ec : list) {
-
-        Map<String, Object> item = new HashMap<>();
-
-        item.put("id", ec.getId());
-        item.put("nom", ec.getCompetence().getNom());
-        item.put("competenceId", ec.getCompetence().getId());
-        item.put("niveau", convertLevelToInt(ec.getNiveau()));
-
-        result.add(item);
+        return ResponseEntity.ok(Map.of("status", "added"));
     }
 
-    return result;
-}
+    @PutMapping("/me/competences")
+    public ResponseEntity<?> updateCompetences(
+            @RequestBody List<Map<String, Object>> body,
+            Authentication authentication
+    ) {
+        String email = extractEmailFromAuthentication(authentication);
 
-@PostMapping("/me/competences")
-public ResponseEntity<?> addCompetence(
-        @RequestBody Map<String, Object> body,
-        Authentication auth
-) {
+        Employe emp = employeRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Employé introuvable"));
 
-    Jwt jwt = (Jwt) auth.getPrincipal();
-    String email = jwt.getClaim("email");
+        for (Map<String, Object> item : body) {
+            Long compId = Long.valueOf(item.get("competenceId").toString());
+            int niveau = Integer.parseInt(item.get("niveau").toString());
 
-    Employe emp = employeRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+            EmployeCompetence ec = employeCompetenceRepository
+                    .findByEmploye_IdAndCompetence_Id(emp.getId(), compId)
+                    .orElseThrow(() -> new RuntimeException("Compétence non trouvée"));
 
-    Long compId = Long.valueOf(body.get("competenceId").toString());
-    int niveau = Integer.parseInt(body.get("niveau").toString());
+            ec.setNiveau(convertToLevel(niveau));
 
-    employeService.addCompetence(emp.getId(), compId, niveau);
+            employeCompetenceRepository.save(ec);
+        }
 
-    return ResponseEntity.ok(Map.of("status", "added"));
-}
-
-
-@PutMapping("/me/competences")
-public ResponseEntity<?> updateCompetences(
-        @RequestBody List<Map<String, Object>> body,
-        Authentication auth
-) {
-
-    Jwt jwt = (Jwt) auth.getPrincipal();
-    String email = jwt.getClaim("email");
-
-    Employe emp = employeRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Employé introuvable"));
-
-    for (Map<String, Object> item : body) {
-
-        Long compId = Long.valueOf(item.get("competenceId").toString());
-        int niveau = Integer.parseInt(item.get("niveau").toString());
-
-        EmployeCompetence ec = employeCompetenceRepository
-                .findByEmploye_IdAndCompetence_Id(emp.getId(), compId)
-                .orElseThrow(() -> new RuntimeException("Compétence non trouvée"));
-
-        ec.setNiveau(convertToLevel(niveau));
-
-        employeCompetenceRepository.save(ec);
+        return ResponseEntity.ok(Map.of("status", "updated"));
     }
 
-    return ResponseEntity.ok(Map.of("status", "updated"));
-}
+    @DeleteMapping("/me/competences/{id}")
+    public ResponseEntity<?> deleteCompetence(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        String email = extractEmailFromAuthentication(authentication);
 
-private String convertToLevel(int niveau) {
-    return switch (niveau) {
-        case 1 -> "DEBUTANT";
-        case 2 -> "INTERMEDIAIRE";
-        case 3 -> "AVANCE";
-        case 4 -> "EXPERT";
-        default -> "DEBUTANT";
-    };
-}
-private int convertLevelToInt(String niveau) {
-    return switch (niveau) {
-        case "DEBUTANT" -> 1;
-        case "INTERMEDIAIRE" -> 2;
-        case "AVANCE" -> 3;
-        case "EXPERT" -> 4;
-        default -> 1;
-    };
-}
+        Employe emp = employeRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
+        EmployeCompetence ec = employeCompetenceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Compétence introuvable"));
 
+        if (!ec.getEmploye().getId().equals(emp.getId())) {
+            throw new RuntimeException("Unauthorized");
+        }
 
+        employeCompetenceRepository.delete(ec);
 
+        return ResponseEntity.ok(Map.of("status", "deleted"));
+    }
 
+    private String convertToLevel(int niveau) {
+        return switch (niveau) {
+            case 1 -> "DEBUTANT";
+            case 2 -> "INTERMEDIAIRE";
+            case 3 -> "AVANCE";
+            case 4 -> "EXPERT";
+            default -> "DEBUTANT";
+        };
+    }
 
+    private int convertLevelToInt(String niveau) {
+        if (niveau == null) {
+            return 1;
+        }
+
+        return switch (niveau) {
+            case "DEBUTANT" -> 1;
+            case "INTERMEDIAIRE" -> 2;
+            case "AVANCE" -> 3;
+            case "EXPERT" -> 4;
+            default -> 1;
+        };
+    }
 }

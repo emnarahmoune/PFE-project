@@ -23,11 +23,17 @@ public class FormationDTO {
     private Integer dureeHeures;
     private Boolean actif;
     private LocalDateTime dateCreation;
+    private String urlVideo;
+private String pdfPath;
 
+private int nombreParticipants;
+private int totalEmployes;
     // Statistiques
-    private Integer nombreParticipants;
     private List<Long> participantIds;
 
     // Pour l'affichage
     private String resume;
+
+ private List<FormationVideoDTO> videos;
+private List<FormationSupportDTO> supports;
 }

@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.repository.query.Param;
-
+import java.util.Optional;
 import java.util.List;
 
 @Repository
@@ -19,7 +19,13 @@ public interface FormationRepository extends JpaRepository<Formation, Long> {
     List<Formation> findByActifTrue();
 
 
-
+   @Query("""
+            SELECT f
+            FROM Formation f
+            JOIN f.employes e
+            WHERE e.id = :employeId
+            """)
+    List<Formation> findFormationsByEmployeId(@Param("employeId") Long employeId);
 
     @Query("""
     SELECT f FROM Formation f
@@ -53,6 +59,8 @@ JOIN FETCH ef.formation
 WHERE ef.employe.id = :employeId
 """)
 List<EmployeFormation> findByEmployeId(@Param("employeId") Long employeId);
+
+
 
 
 @Query("""

@@ -5,13 +5,13 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "formation_video")
+@Table(name = "formation_support")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FormationVideo {
+public class FormationSupport {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,8 +19,8 @@ public class FormationVideo {
 
     private String titre;
 
-    @Column(name = "url_youtube")
-    private String urlYoutube;
+    @Column(name = "fichier_url", length = 1000)
+    private String fichierUrl;
 
     private int ordre;
 

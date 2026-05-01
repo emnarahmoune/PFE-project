@@ -5,6 +5,9 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 
 @Entity
@@ -39,6 +42,8 @@ public class Formation {
     private LocalDateTime dateCreation;
 
  
+    @Column(name = "url_youtube")
+    private String urlVideo;
 
     @PrePersist
     public void prePersist() {
@@ -50,6 +55,28 @@ public class Formation {
     }
 
 
-    
-     
+    @OneToMany(
+        mappedBy = "formation",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+)
+private List<FormationVideo> videos = new ArrayList<>();
+
+@OneToMany(
+        mappedBy = "formation",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true
+)
+private List<FormationSupport> supports = new ArrayList<>();
+
+@ManyToMany
+private List<Employe> employes;
+
+public List<Employe> getEmployes() {
+    return employes;
+}
+
+public void setEmployes(List<Employe> employes) {
+    this.employes = employes;
+}
 }

@@ -4,6 +4,7 @@ import com.codeWithProject.ecom.entity.Competence;
 import com.codeWithProject.ecom.repository.CompetenceRepository;
 import com.codeWithProject.ecom.service.CompetenceService;
 import com.codeWithProject.ecom.service.dto.CompetenceDTO;
+import com.codeWithProject.ecom.service.dto.EmployeDTO;
 import com.codeWithProject.ecom.service.exception.BusinessException;
 import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
 import com.codeWithProject.ecom.service.mapper.CompetenceMapper;
@@ -48,13 +49,6 @@ public class CompetenceServiceImpl implements CompetenceService {
         return new PageImpl<>(dtos, pageable, page.getTotalElements());
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<CompetenceDTO> findById(Long id) {
-        log.debug("Recherche de compétence par ID : {}", id);
-        return competenceRepository.findById(id)
-                .map(mapper::toDto);
-    }
 
     @Override
     @Transactional(readOnly = true)
@@ -130,21 +124,7 @@ public class CompetenceServiceImpl implements CompetenceService {
         return mapper.toDto(saved);
     }
 
-    @Override
-    public void delete(Long id) {
-        log.debug("Suppression de la compétence ID: {}", id);
-
-        Competence competence = competenceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Compétence", id));
-
-        // Vérifier que la compétence n'est pas utilisée
-        if (competence.getEmployeCompetences() != null && !competence.getEmployeCompetences().isEmpty()) {
-            throw new BusinessException("Impossible de supprimer une compétence attribuée à des employés");
-        }
-
-        competenceRepository.delete(competence);
-        log.info("Compétence supprimée avec succès - ID: {}", id);
-    }
+   
 
     @Override
     @Transactional(readOnly = true)
@@ -199,4 +179,49 @@ public class CompetenceServiceImpl implements CompetenceService {
                 .map(mapper::toDto)
                 .collect(Collectors.toList());
     }
+
+
+
+
+    @Override
+public Optional<CompetenceDTO> findById(Long id) {
+
+    Competence c = competenceRepository.findByIdWithEmployes(id)
+        .orElseThrow(() -> new RuntimeException("Compétence introuvable"));
+
+    CompetenceDTO dto = new CompetenceDTO();
+
+    dto.setId(c.getId());
+    dto.setNom(c.getNom());
+    dto.setDescription(c.getDescription());
+    dto.setCategorie(c.getCategorie());
+
+    // 🔥 NOMBRE
+   dto.setNombreEmployes((long) c.getEmployes().size());
+
+    // 🔥 LISTE EMPLOYES
+    List<EmployeDTO> employes = c.getEmployes().stream().map(e -> {
+        EmployeDTO emp = new EmployeDTO();
+        emp.setId(e.getId());
+        emp.setNom(e.getNom());
+        emp.setPrenom(e.getPrenom());
+        emp.setPoste(e.getPoste());
+        return emp;
+    }).toList();
+
+    dto.setEmployes(employes);
+
+    return Optional.of(dto);
+}
+public void delete(Long id) {
+    Competence competence = competenceRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Compétence introuvable"));
+
+    // 🔥 IMPORTANT : vider les relations
+    competence.getEmployes().clear();
+
+    competenceRepository.save(competence);
+
+    competenceRepository.delete(competence);
+}
 }
