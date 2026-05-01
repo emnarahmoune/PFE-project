@@ -35,7 +35,7 @@ public class DemandeCongeAdminDTO {
     private String processInstanceId;
     private String currentTaskId;
     private String taskId;   // ID de la tâche Camunda active
-
+    private Integer joursUrgenceNonCouverts;
     /**
      * Fabrique un DTO à partir de l'entité, sans appel externe.
      * (Préférer l'utilisation dans le service pour gérer les tâches Camunda)

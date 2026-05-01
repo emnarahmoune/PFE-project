@@ -61,7 +61,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Endpoints publics
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/photos/**").permitAll()   // ✅ Autorise l'accès aux images
+                        // Endpoints nécessitant authentification
                         .requestMatchers("/api/conges/**").authenticated()
                         .requestMatchers("/api/workflow/manager/**").hasAnyRole("manager", "MANAGER")
                         .requestMatchers("/api/workflow/rh/**").hasAnyRole("admin_rh", "ADMIN_RH", "admin")
@@ -84,7 +87,6 @@ public class SecurityConfig {
             if (realmAccess != null && realmAccess.containsKey("roles")) {
                 List<String> roles = (List<String>) realmAccess.get("roles");
                 for (String role : roles) {
-                    // Mapping des rôles Keycloak vers les rôles Spring Security
                     if ("admin".equalsIgnoreCase(role)) {
                         authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN_RH"));
                     } else if ("manager".equalsIgnoreCase(role)) {

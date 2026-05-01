@@ -31,7 +31,9 @@ public class WorkflowService {
     private final DemandeCongeRepository demandeRepository;
     private final EmployeRepository employeRepository;
     private final ManagerRepository managerRepository;
-    private final AdministrateurRHRepository administrateurRHRepository; // Ajouté
+    private final AdministrateurRHRepository administrateurRHRepository;
+
+    // ========== MÉTHODES EXISTANTES (NON MODIFIÉES) ==========
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getManagerTasks(String managerEmail) {
@@ -55,7 +57,14 @@ public class WorkflowService {
                 .orderByTaskCreateTime().desc()
                 .list();
         log.info("Admin {} a {} tâche(s) en attente", adminEmail, tasks.size());
-        return tasks.stream().map(this::mapTaskToMap).collect(Collectors.toList());
+
+        if (!tasks.isEmpty()) {
+            return tasks.stream().map(this::mapTaskToMap).collect(Collectors.toList());
+        }
+
+        log.warn("Aucune tâche Camunda trouvée pour l'admin {}. Fallback sur les demandes en base.", adminEmail);
+        List<DemandeConge> demandes = demandeRepository.findByStatut("EN_ATTENTE_RH");
+        return demandes.stream().map(this::mapDemandeToMap).collect(Collectors.toList());
     }
 
     private Map<String, Object> mapTaskToMap(Task task) {
@@ -86,10 +95,33 @@ public class WorkflowService {
                     taskInfo.put("employeNom", demande.getEmploye().getNom());
                     taskInfo.put("employePrenom", demande.getEmploye().getPrenom());
                     taskInfo.put("employeEmail", demande.getEmploye().getEmail());
+                    taskInfo.put("employeDepartement", demande.getEmploye().getDepartement());
                 }
             });
         }
         return taskInfo;
+    }
+
+    private Map<String, Object> mapDemandeToMap(DemandeConge d) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("taskId", "fallback-" + d.getId());
+        map.put("taskName", "Validation RH");
+        map.put("createTime", d.getDateSoumission());
+        map.put("processInstanceId", d.getProcessInstanceId());
+        map.put("employeId", d.getEmploye() != null ? d.getEmploye().getId() : null);
+        map.put("nbJours", d.getJoursOuvres());
+        map.put("demandeId", d.getId());
+        map.put("dateDebut", d.getDateDebut() != null ? d.getDateDebut().toString() : null);
+        map.put("dateFin", d.getDateFin() != null ? d.getDateFin().toString() : null);
+        map.put("type", d.getType());
+        map.put("commentaire", d.getCommentaire());
+        if (d.getEmploye() != null) {
+            map.put("employeNom", d.getEmploye().getNom());
+            map.put("employePrenom", d.getEmploye().getPrenom());
+            map.put("employeEmail", d.getEmploye().getEmail());
+            map.put("employeDepartement", d.getEmploye().getDepartement());
+        }
+        return map;
     }
 
     @Transactional
@@ -103,20 +135,25 @@ public class WorkflowService {
         Map<String, Object> vars = runtimeService.getVariables(processInstanceId);
         Long demandeId = vars.get("demandeId") != null ? Long.valueOf(vars.get("demandeId").toString()) : null;
 
+        DemandeConge demande = null;
         if (demandeId != null) {
-            DemandeConge demande = demandeRepository.findById(demandeId).orElse(null);
+            demande = demandeRepository.findById(demandeId).orElse(null);
             if (demande != null) {
-                if (!"EN_ATTENTE".equals(demande.getStatut()))
-                    throw new BusinessException("Seules les demandes EN_ATTENTE peuvent être validées/refusées");
-
-                Employe employeManager = employeRepository.findByEmail(managerEmail).orElse(null);
-                if (employeManager != null && "MANAGER".equalsIgnoreCase(employeManager.getRole())) {
-                    Manager manager = managerRepository.findByEmployeId(employeManager.getId())
-                            .orElseThrow(() -> new BusinessException("Manager non trouvé pour " + managerEmail));
-                    demande.setManager(manager);
-                    demandeRepository.save(demande);
-                    log.info("✅ Manager {} enregistré pour la demande {}", managerEmail, demandeId);
+                if (demande.getManager() == null) {
+                    Employe employeManager = employeRepository.findByEmail(managerEmail).orElse(null);
+                    if (employeManager != null && "MANAGER".equalsIgnoreCase(employeManager.getRole())) {
+                        Manager manager = managerRepository.findByEmployeId(employeManager.getId())
+                                .orElseThrow(() -> new BusinessException("Manager non trouvé pour " + managerEmail));
+                        demande.setManager(manager);
+                    }
                 }
+                if (approve) {
+                    demande.approuverParManager();
+                } else {
+                    demande.refuserParManager(comment != null ? comment : "Refusé par manager");
+                }
+                demandeRepository.saveAndFlush(demande);
+                log.info("Statut demande {} mis à jour : {}", demandeId, demande.getStatut());
             }
         }
 
@@ -127,6 +164,7 @@ public class WorkflowService {
         log.info("Décision manager: taskId={}, approve={}, manager={}", taskId, approve, managerEmail);
     }
 
+    // ========== METHODE CORRIGÉE : plus de double déduction ==========
     @Transactional
     public void processRHDecision(String taskId, Boolean approve, String comment, String adminEmail) {
         Task task = taskService.createTaskQuery().taskId(taskId).singleResult();
@@ -138,16 +176,18 @@ public class WorkflowService {
         Map<String, Object> vars = runtimeService.getVariables(processInstanceId);
         Long demandeId = vars.get("demandeId") != null ? Long.valueOf(vars.get("demandeId").toString()) : null;
 
-        // ✅ Enregistrer l'admin RH dans la demande
         if (demandeId != null) {
             DemandeConge demande = demandeRepository.findById(demandeId).orElse(null);
             if (demande != null) {
-                if (!"EN_ATTENTE".equals(demande.getStatut()))
-                    throw new BusinessException("Seules les demandes EN_ATTENTE peuvent être validées/refusées");
-
                 administrateurRHRepository.findByEmail(adminEmail).ifPresent(demande::setAdminRh);
-                demandeRepository.save(demande);
-                log.info("✅ Admin RH {} enregistré pour la demande {}", adminEmail, demandeId);
+                if (approve) {
+                    // ✅ On change le statut, mais on ne déduit PAS le solde ici
+                    demande.valider();  // passe à APPROUVE
+                } else {
+                    demande.refuserAvecMotif(comment != null ? comment : "Refusé par RH");
+                }
+                demandeRepository.saveAndFlush(demande);
+                log.info("Statut demande {} mis à jour : {}", demandeId, demande.getStatut());
             }
         }
 
@@ -157,6 +197,7 @@ public class WorkflowService {
         taskService.complete(taskId, variables);
         log.info("Décision RH: taskId={}, approve={}, admin={}", taskId, approve, adminEmail);
     }
+    // ========== FIN DE LA CORRECTION ==========
 
     @Transactional(readOnly = true)
     public Map<String, Object> getProcessStatus(String processInstanceId) {
@@ -177,19 +218,6 @@ public class WorkflowService {
             return taskInfo;
         }).collect(Collectors.toList());
         status.put("activeTasks", tasksInfo);
-        Long demandeId = variables.get("demandeId") != null ? Long.valueOf(variables.get("demandeId").toString()) : null;
-        if (demandeId != null) {
-            demandeRepository.findById(demandeId).ifPresent(demande -> {
-                status.put("demande", Map.of(
-                        "id", demande.getId(),
-                        "statut", demande.getStatut(),
-                        "dateDebut", demande.getDateDebut() != null ? demande.getDateDebut().toString() : null,
-                        "dateFin", demande.getDateFin() != null ? demande.getDateFin().toString() : null,
-                        "type", demande.getType(),
-                        "joursOuvres", demande.getJoursOuvres()
-                ));
-            });
-        }
         return status;
     }
 

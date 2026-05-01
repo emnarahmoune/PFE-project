@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.Set;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Entity
@@ -32,6 +33,13 @@ public class DemandeConge {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
+
+    @Column(name = "date_soumission")
+    private LocalDateTime dateSoumission;
+    @Column(name = "pieces_jointes", columnDefinition = "TEXT")
+    private String piecesJointes;
+    @Column(name = "date_refus_manager")
+    private LocalDateTime dateRefusManager;
 
     @Column(name = "date_debut", nullable = false)
     private LocalDate dateDebut;
@@ -65,6 +73,9 @@ public class DemandeConge {
     @Builder.Default
     private Boolean urgente = false;
 
+    @Column(name = "jours_urgence_non_couverts")
+    private Integer joursUrgenceNonCouverts;
+
     // ========== RELATIONS ==========
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "employe_id", nullable = false)
@@ -84,14 +95,13 @@ public class DemandeConge {
     @JsonIgnoreProperties({"demandesConge", "competences", "formations"})
     private AdministrateurRH adminRh;
 
-    // ========== WORKFLOW ==========
     @Column(name = "process_instance_id", length = 100)
     private String processInstanceId;
 
     @Column(name = "task_id", length = 100)
     private String currentTaskId;
 
-    // ========== CONSTANTES ET LOGIQUE MÉTIER ==========
+    // ========== CONSTANTES ==========
     private static final Set<DayOfWeek> WEEKEND = Set.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY);
     private static final Set<LocalDate> JOURS_FERIES = new HashSet<>();
 
@@ -116,20 +126,50 @@ public class DemandeConge {
         this.joursOuvres = calculerJoursOuvres();
         verifierSoldeSuffisant();
         this.dateDemande = LocalDate.now();
+        this.dateSoumission = LocalDateTime.now();
         this.statut = "EN_ATTENTE";
-        this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
+        // ✅ Ne pas recalculer l'urgence si elle a déjà été forcée à true (par le DTO)
+        if (this.urgente == null || !this.urgente) {
+            this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
+        }
     }
 
-    public void modifier(LocalDate nouvelleDateDebut, LocalDate nouvelleDateFin,
-                         String nouveauType, String nouveauCommentaire) {
-        verifierModificationAutorisee();
-        if (nouvelleDateDebut != null) this.dateDebut = nouvelleDateDebut;
-        if (nouvelleDateFin != null) this.dateFin = nouvelleDateFin;
-        if (nouveauType != null && !nouveauType.isBlank()) this.type = nouveauType.trim().toUpperCase();
-        if (nouveauCommentaire != null) this.commentaire = nouveauCommentaire;
-        validerDates();
-        this.joursOuvres = calculerJoursOuvres();
-        this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
+    public void approuverParManager() {
+        if (!"EN_ATTENTE_MANAGER".equals(this.statut) && !"EN_ATTENTE".equals(this.statut)) {
+            throw new IllegalStateException("Seules les demandes en attente manager peuvent être approuvées");
+        }
+        this.statut = "EN_ATTENTE_RH";
+        this.dateDecision = LocalDate.now();
+    }
+
+    public void refuserParManager(String motif) {
+        if (!"EN_ATTENTE_MANAGER".equals(this.statut) && !"EN_ATTENTE".equals(this.statut)) {
+            throw new IllegalStateException("Seules les demandes en attente manager peuvent être refusées");
+        }
+        this.statut = "REFUSE_MANAGER";
+        this.dateRefusManager = LocalDateTime.now();
+        this.motifRefus = motif;
+    }
+
+    public void valider() {
+        if (!"EN_ATTENTE_RH".equals(this.statut)) {
+            throw new IllegalStateException("Seules les demandes en attente RH peuvent être validées");
+        }
+        this.statut = "APPROUVE";
+        this.dateDecision = LocalDate.now();
+    }
+
+    public void refuser() {
+        if (!"EN_ATTENTE_RH".equals(this.statut)) {
+            throw new IllegalStateException("Seules les demandes en attente RH peuvent être refusées");
+        }
+        this.statut = "REFUSE";
+        this.dateDecision = LocalDate.now();
+    }
+
+    public void refuserAvecMotif(String motif) {
+        refuser();
+        this.motifRefus = motif;
     }
 
     public void annuler() {
@@ -146,71 +186,23 @@ public class DemandeConge {
         }
     }
 
-    public void valider() {
-        verifierValidationAutorisee();
-        this.statut = "APPROUVE";
-        this.dateDecision = LocalDate.now();
-        if ("ANNUEL".equals(this.type) && this.joursOuvres != null && this.employe != null)
-            this.employe.deduireConges(this.joursOuvres);
-    }
-
-    public void refuser() {
-        verifierValidationAutorisee();
-        this.statut = "REFUSE";
-        this.dateDecision = LocalDate.now();
-    }
-
-    public void refuserAvecMotif(String motif) {
-        refuser();
-        this.motifRefus = motif;
-    }
-
-    public void notifierDecision() {
-        String msg = String.format("Votre demande du %s au %s a été %s",
-                this.dateDebut, this.dateFin,
-                "APPROUVE".equals(this.statut) ? "approuvée" : "refusée");
-        if (this.motifRefus != null) msg += " — Motif : " + this.motifRefus;
-        log.info("NOTIFICATION : {}", msg);
-    }
-
-    // ========== MÉTHODES PRIVÉES ==========
-    private void validerDates() {
-        if (this.dateDebut == null || this.dateFin == null)
-            throw new IllegalStateException("Les dates sont obligatoires");
-        if (this.dateDebut.isAfter(this.dateFin))
-            throw new IllegalStateException("Date début > date fin");
-        if (this.dateDebut.isBefore(LocalDate.now()))
-            throw new IllegalStateException("Date début dans le passé");
-        if (ChronoUnit.MONTHS.between(this.dateDebut, this.dateFin) > 1)
-            throw new IllegalStateException("Durée maximale dépassée (1 mois)");
-    }
-
-    private void validerType() {
-        if (this.type == null || this.type.isBlank())
-            throw new IllegalStateException("Type de congé obligatoire");
-        this.type = this.type.toUpperCase();
-    }
-
-    private void verifierSoldeSuffisant() {
-        if ("ANNUEL".equals(this.type) && this.employe != null && this.joursOuvres != null) {
-            int dispo = this.employe.getSoldeConges();
-            if (dispo < this.joursOuvres)
-                throw new IllegalStateException(
-                        String.format("Solde insuffisant — Disponible : %d, Demandé : %d", dispo, this.joursOuvres));
+    public void modifier(LocalDate nouvelleDateDebut, LocalDate nouvelleDateFin,
+                         String nouveauType, String nouveauCommentaire) {
+        if (!"EN_ATTENTE".equals(this.statut))
+            throw new IllegalStateException("Seules les demandes EN_ATTENTE peuvent être modifiées");
+        if (nouvelleDateDebut != null) this.dateDebut = nouvelleDateDebut;
+        if (nouvelleDateFin != null) this.dateFin = nouvelleDateFin;
+        if (nouveauType != null && !nouveauType.isBlank()) this.type = nouveauType.trim().toUpperCase();
+        if (nouveauCommentaire != null) this.commentaire = nouveauCommentaire;
+        validerDates();
+        this.joursOuvres = calculerJoursOuvres();
+        // ✅ Ne pas recalculer si déjà true
+        if (this.urgente == null || !this.urgente) {
+            this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
         }
     }
 
-    private void verifierModificationAutorisee() {
-        if (!"EN_ATTENTE".equals(this.statut))
-            throw new IllegalStateException("Seules les demandes EN_ATTENTE peuvent être modifiées");
-    }
-
-    private void verifierValidationAutorisee() {
-        if (!"EN_ATTENTE".equals(this.statut))
-            throw new IllegalStateException("Seules les demandes EN_ATTENTE peuvent être validées/refusées");
-    }
-
-    private Integer calculerJoursOuvres() {
+    public Integer calculerJoursOuvres() {
         if (this.dateDebut == null || this.dateFin == null) return 0;
         int count = 0;
         LocalDate cur = this.dateDebut;
@@ -262,6 +254,33 @@ public class DemandeConge {
                 Boolean.TRUE.equals(this.urgente) ? " [URGENT]" : "");
     }
 
+    // ========== MÉTHODES PRIVÉES ==========
+    private void validerDates() {
+        if (this.dateDebut == null || this.dateFin == null)
+            throw new IllegalStateException("Les dates sont obligatoires");
+        if (this.dateDebut.isAfter(this.dateFin))
+            throw new IllegalStateException("Date début > date fin");
+        if (this.dateDebut.isBefore(LocalDate.now()))
+            throw new IllegalStateException("Date début dans le passé");
+        if (ChronoUnit.MONTHS.between(this.dateDebut, this.dateFin) > 1)
+            throw new IllegalStateException("Durée maximale dépassée (1 mois)");
+    }
+
+    private void validerType() {
+        if (this.type == null || this.type.isBlank())
+            throw new IllegalStateException("Type de congé obligatoire");
+        this.type = this.type.toUpperCase();
+    }
+
+    private void verifierSoldeSuffisant() {
+        if ("ANNUEL".equals(this.type) && this.employe != null && this.joursOuvres != null) {
+            int dispo = this.employe.getSoldeConges();
+            if (dispo < this.joursOuvres)
+                throw new IllegalStateException(
+                        String.format("Solde insuffisant — Disponible : %d, Demandé : %d", dispo, this.joursOuvres));
+        }
+    }
+
     // ========== CALLBACKS JPA ==========
     @PrePersist
     protected void onCreate() {
@@ -290,7 +309,8 @@ public class DemandeConge {
         if (this.joursOuvres == null && this.dateDebut != null && this.dateFin != null) {
             this.joursOuvres = calculerJoursOuvres();
         }
-        if (this.urgente == null && this.dateDebut != null) {
+        // ✅ Ne pas recalculer si déjà true
+        if ((this.urgente == null || !this.urgente) && this.dateDebut != null) {
             this.urgente = ChronoUnit.DAYS.between(LocalDate.now(), this.dateDebut) < 7;
         }
     }

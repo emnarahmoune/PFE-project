@@ -5,6 +5,9 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -14,14 +17,14 @@ import java.util.List;
 @Entity
 @Table(name = "employes",
         indexes = {
-                @Index(name = "idx_employe_email", columnList = "email"),
-                @Index(name = "idx_employe_actif", columnList = "actif"),
+                @Index(name = "idx_employe_email",     columnList = "email"),
+                @Index(name = "idx_employe_actif",     columnList = "actif"),
                 @Index(name = "idx_employe_matricule", columnList = "matricule"),
-                @Index(name = "idx_employe_statut", columnList = "statut"),
-                @Index(name = "idx_employe_role", columnList = "role")
+                @Index(name = "idx_employe_statut",    columnList = "statut"),
+                @Index(name = "idx_employe_role",      columnList = "role")
         },
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_employe_email", columnNames = "email"),
+                @UniqueConstraint(name = "uk_employe_email",     columnNames = "email"),
                 @UniqueConstraint(name = "uk_employe_matricule", columnNames = "matricule")
         }
 )
@@ -71,6 +74,9 @@ public class Employe {
     @Builder.Default
     private String statut = "ACTIF";
 
+    @Column(name = "photo_url", length = 255)
+    private String photoUrl;
+
     @Column(name = "departement", length = 100)
     private String departement;
 
@@ -110,10 +116,27 @@ public class Employe {
     private String role;
 
     // ===== RELATIONS =====
-    @ManyToOne(fetch = FetchType.LAZY)
+
+    /**
+     * CORRECTION HHH000179 : la relation vers le manager (qui peut être
+     * un sous-type Manager) provoque un "narrowing proxy" quand Hibernate
+     * charge un proxy Employe et découvre que c'est en réalité un Manager.
+     *
+     * Solution sans bytecode enhancement : FetchType.EAGER sur cette seule
+     * relation ManyToOne. Le coût est acceptable car un employé a toujours
+     * un seul manager, et la jointure est déjà présente dans les requêtes
+     * générées (LEFT JOIN managers visible dans les logs).
+     *
+     * Alternative si EAGER est indésirable : ajouter le plugin
+     * hibernate-enhance-maven-plugin dans pom.xml et utiliser
+     * @LazyToOne(LazyToOneOption.NO_PROXY).
+     */
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "manager_id")
+    @Fetch(FetchMode.SELECT)
     @ToString.Exclude
-    @JsonIgnoreProperties({"employesGeres", "demandesCongeAValider", "manager"})
+    @JsonIgnoreProperties({"employesGeres", "demandesCongeAValider", "manager", "competences",
+            "formations", "demandesConge", "equipe"})
     private Employe manager;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -143,11 +166,12 @@ public class Employe {
     private List<DemandeConge> demandesConge = new ArrayList<>();
 
     // ===== CONSTANTES =====
-    public static final String TYPE_EMPLOYE = "EMPLOYE";
-    public static final String TYPE_MANAGER = "MANAGER";
+    public static final String TYPE_EMPLOYE  = "EMPLOYE";
+    public static final String TYPE_MANAGER  = "MANAGER";
     public static final String TYPE_ADMIN_RH = "ADMIN_RH";
 
     // ===== MÉTHODES MÉTIER =====
+
     public boolean hasRole(String roleName) {
         return role != null && role.equalsIgnoreCase(roleName);
     }
@@ -181,8 +205,8 @@ public class Employe {
 
     private void enregistrerConnexionReussie() {
         this.derniereConnexion = LocalDateTime.now();
-        this.nombreConnexions = (this.nombreConnexions == null ? 0 : this.nombreConnexions) + 1;
-        this.tentativesEchec = 0;
+        this.nombreConnexions  = (this.nombreConnexions == null ? 0 : this.nombreConnexions) + 1;
+        this.tentativesEchec   = 0;
     }
 
     private void enregistrerEchecConnexion() {
@@ -200,7 +224,7 @@ public class Employe {
     public void deverrouiller() {
         this.compteVerrouille = false;
         this.dateVerrouillage = null;
-        this.tentativesEchec = 0;
+        this.tentativesEchec  = 0;
     }
 
     public void activer() {
@@ -213,9 +237,9 @@ public class Employe {
     }
 
     public void mettreAJourInformations(String nom, String prenom, String telephone) {
-        if (nom != null && !nom.trim().isEmpty()) this.nom = nom.trim();
-        if (prenom != null && !prenom.trim().isEmpty()) this.prenom = prenom.trim();
-        if (telephone != null) this.telephone = telephone.trim();
+        if (nom != null       && !nom.trim().isEmpty())    this.nom       = nom.trim();
+        if (prenom != null    && !prenom.trim().isEmpty()) this.prenom    = prenom.trim();
+        if (telephone != null)                             this.telephone = telephone.trim();
     }
 
     public void ajouterConges(int jours) {
@@ -247,21 +271,23 @@ public class Employe {
     @PrePersist
     @PreUpdate
     protected void onPrePersistOrUpdate() {
-        if (this.dateCreation == null) this.dateCreation = LocalDate.now();
-        if (this.actif == null) this.actif = true;
-        if (this.nombreConnexions == null) this.nombreConnexions = 0;
-        if (this.tentativesEchec == null) this.tentativesEchec = 0;
-        if (this.compteVerrouille == null) this.compteVerrouille = false;
-        if (this.statut == null) this.statut = "ACTIF";
-        if (this.soldeConges == null) this.soldeConges = 25;
-        if (this.email != null) this.email = this.email.trim().toLowerCase();
+        if (this.dateCreation      == null)  this.dateCreation      = LocalDate.now();
+        if (this.actif             == null)  this.actif             = true;
+        if (this.nombreConnexions  == null)  this.nombreConnexions  = 0;
+        if (this.tentativesEchec   == null)  this.tentativesEchec   = 0;
+        if (this.compteVerrouille  == null)  this.compteVerrouille  = false;
+        if (this.statut            == null)  this.statut            = "ACTIF";
+        if (this.soldeConges       == null)  this.soldeConges       = 25;
+
+        if (this.email     != null) this.email     = this.email.trim().toLowerCase();
         if (this.matricule != null) this.matricule = this.matricule.trim().toUpperCase();
-        if (this.nom != null) this.nom = this.nom.trim().toUpperCase();
-        if (this.prenom != null) {
-            String p = this.prenom.trim();
+        if (this.nom       != null) this.nom       = this.nom.trim().toUpperCase();
+        if (this.prenom    != null) {
+            String p    = this.prenom.trim();
             this.prenom = p.substring(0, 1).toUpperCase() + p.substring(1).toLowerCase();
         }
     }
+
     @Transient
     public long getAnciennete() {
         if (dateEmbauche == null) return 0;
@@ -276,7 +302,7 @@ public class Employe {
     @Transient
     public String getStatutCompte() {
         if (Boolean.TRUE.equals(compteVerrouille)) return "🔒 Verrouillé";
-        if (!Boolean.TRUE.equals(actif)) return "❌ Inactif";
+        if (!Boolean.TRUE.equals(actif))           return "❌ Inactif";
         return "✅ Actif";
     }
 

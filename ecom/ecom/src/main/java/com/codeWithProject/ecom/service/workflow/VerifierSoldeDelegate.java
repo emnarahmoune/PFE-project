@@ -7,6 +7,7 @@ import com.codeWithProject.ecom.repository.EmployeRepository;
 import com.codeWithProject.ecom.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.camunda.bpm.engine.RuntimeService;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
 import org.camunda.bpm.engine.delegate.JavaDelegate;
 import org.springframework.stereotype.Component;
@@ -22,19 +23,20 @@ public class VerifierSoldeDelegate implements JavaDelegate {
     private final EmployeRepository employeRepository;
     private final DemandeCongeRepository demandeRepository;
     private final NotificationService notificationService;
+    private final RuntimeService runtimeService;
 
     @Override
     @Transactional
     public void execute(DelegateExecution execution) {
         log.info("=== Vérification du solde ===");
 
+        String processInstanceId = execution.getProcessInstanceId();
         String employeIdStr = (String) execution.getVariable("employeId");
         Object nbJoursObj = execution.getVariable("nbJours");
         Integer nbJours = nbJoursObj != null ? ((Number) nbJoursObj).intValue() : 0;
         Long demandeId = execution.getVariable("demandeId") != null ?
                 Long.valueOf(execution.getVariable("demandeId").toString()) : null;
 
-        // 🔥 Récupération du flag "urgente" (depuis le formulaire de demande)
         Boolean urgente = (Boolean) execution.getVariable("urgente");
         if (urgente == null) urgente = false;
 
@@ -55,16 +57,27 @@ public class VerifierSoldeDelegate implements JavaDelegate {
         log.info("Employé ID: {}, Solde total: {}, Pris: {}, Restant: {}, Demandé: {}, Suffisant: {}, Urgente: {}",
                 employeId, soldeTotal, joursPris, soldeRestant, nbJours, soldeSuffisant, urgente);
 
-        // ❌ Refus automatique uniquement si solde insuffisant ET demande non urgente
-        if (!soldeSuffisant && demandeId != null && !urgente) {
+        if (!soldeSuffisant && !urgente) {
+            log.info("❌ Demande {} NON URGENTE et solde insuffisant -> REFUS AUTOMATIQUE", demandeId);
             String motif = String.format("Solde de congés insuffisant (solde restant: %d jours, demandé: %d jours)",
                     soldeRestant, nbJours);
             refuserDemandeEtNotifier(demandeId, motif, employeId);
-        }
-        // ✅ Si urgent + solde insuffisant : on ne fait rien, la demande reste en attente
-        //    La passerelle BPMN enverra la demande vers la tâche du manager (Flow_Urgence)
 
-        log.info("✅ Vérification du solde terminée");
+            // Supprimer l'instance de processus pour éviter toute modification ultérieure
+            try {
+                runtimeService.deleteProcessInstance(processInstanceId, "Refus automatique pour solde insuffisant", true, true);
+                log.info("Instance de processus {} supprimée après refus", processInstanceId);
+            } catch (Exception e) {
+                log.error("Erreur lors de la suppression de l'instance {}: {}", processInstanceId, e.getMessage());
+            }
+            // Ne pas continuer l'exécution du workflow
+            return;
+        } else if (!soldeSuffisant && urgente) {
+            log.info("⏩ Demande URGENTE avec solde insuffisant -> passage au manager");
+        } else {
+            log.info("✅ Solde suffisant -> passage au manager");
+        }
+        log.info("✅ Vérification du solde terminée (suite normale)");
     }
 
     @Transactional
@@ -73,8 +86,10 @@ public class VerifierSoldeDelegate implements JavaDelegate {
         if (demande != null && !"REFUSE".equals(demande.getStatut())) {
             demande.setStatut("REFUSE");
             demande.setMotifRefus(motif);
-            demandeRepository.save(demande);
-            log.info("❌ Demande {} refusée automatiquement - Solde insuffisant", demandeId);
+            demandeRepository.saveAndFlush(demande);
+            log.info("❌ Demande {} refusée automatiquement - Solde insuffisant (statut mis à REFUSE)", demandeId);
+        } else {
+            log.warn("Demande {} introuvable ou déjà refusée", demandeId);
         }
 
         String message = String.format("❌ Votre demande de congé a été refusée automatiquement. Motif : %s", motif);

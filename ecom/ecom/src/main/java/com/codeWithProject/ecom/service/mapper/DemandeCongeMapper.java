@@ -39,7 +39,6 @@ public class DemandeCongeMapper {
             dto.setManagerEmail(entity.getManager().getEmail());
         }
 
-        // ✅ Mapping admin RH
         if (entity.getAdminRh() != null) {
             dto.setAdminRhId(entity.getAdminRh().getId());
             dto.setAdminRhNom(entity.getAdminRh().getNom() + " " + entity.getAdminRh().getPrenom());
@@ -65,6 +64,5 @@ public class DemandeCongeMapper {
                 .urgente(dto.getUrgente() != null ? dto.getUrgente() : false)
                 .processInstanceId(dto.getProcessInstanceId())
                 .build();
-        // Les relations (employe, manager, adminRh) doivent être définies séparément
     }
 }

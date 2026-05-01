@@ -4,8 +4,10 @@ import com.codeWithProject.ecom.controller.dto.ApiResponse;
 import com.codeWithProject.ecom.entity.Employe;
 import com.codeWithProject.ecom.repository.DemandeCongeRepository;
 import com.codeWithProject.ecom.repository.EmployeRepository;
+import com.codeWithProject.ecom.service.DemandeCongeService;
 import com.codeWithProject.ecom.service.ManagerService;
 import com.codeWithProject.ecom.service.WorkflowService;
+import com.codeWithProject.ecom.service.dto.CalendarEventDTO;
 import com.codeWithProject.ecom.service.dto.ManagerDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,6 +40,7 @@ public class ManagerController {
     private final WorkflowService workflowService;
     private final DemandeCongeRepository demandeCongeRepository;
     private final EmployeRepository employeRepository;
+    private final DemandeCongeService demandeCongeService;
 
     @GetMapping
     @Operation(summary = "Liste tous les managers")
@@ -283,5 +286,14 @@ public class ManagerController {
         if (email == null) email = jwt.getClaimAsString("preferred_username");
         if (email == null) email = jwt.getSubject();
         return email;
+    }
+    @GetMapping("/calendar-events")
+    @Operation(summary = "Récupère les événements calendrier des employés de l'équipe du manager connecté")
+    @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
+    public ResponseEntity<List<CalendarEventDTO>> getCalendarEventsForManager(@AuthenticationPrincipal Jwt jwt) {
+        String email = extractEmail(jwt);
+        log.info("GET /api/managers/calendar-events pour manager : {}", email);
+        List<CalendarEventDTO> events = demandeCongeService.getCalendarEventsForManager(email);
+        return ResponseEntity.ok(events);
     }
 }

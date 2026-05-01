@@ -1,7 +1,6 @@
 package com.codeWithProject.ecom.service;
 
-import com.codeWithProject.ecom.service.dto.DemandeCongeDTO;
-import com.codeWithProject.ecom.service.dto.SoldeCongesDTO;
+import com.codeWithProject.ecom.service.dto.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -25,6 +24,14 @@ public interface DemandeCongeService {
     List<DemandeCongeDTO> findDemandesEnAttentePourManager(Long managerId);
     List<DemandeCongeDTO> findCongesEnCours();
 
+
+    List<CalendarEventDTO> getAllCalendarEvents();
+    DemandeRefusDetailsDTO getRefusDetails(Long demandeId);
+
+
+    // Dans DemandeCongeService.java
+    List<CalendarEventDTO> getCalendarEventsForManager(String managerEmail);
+
     // ===== MÉTHODES CRUD =====
     DemandeCongeDTO create(DemandeCongeDTO dto);
     DemandeCongeDTO modifier(Long id, DemandeCongeDTO dto);
@@ -38,7 +45,7 @@ public interface DemandeCongeService {
     Map<String, Long> countByType();
     Map<Integer, Long> getStatsMensuelles(int annee);
     boolean hasConflitDates(Long employeId, LocalDate debut, LocalDate fin, Long demandeId);
-
+    List<DemandeRefusManagerDTO> getDemandesRefuseesParManager();
     // ===== MÉTHODES POUR L'UTILISATEUR AUTHENTIFIÉ =====
     DemandeCongeDTO createForAuthenticatedUser(DemandeCongeDTO dto, String email);
     List<DemandeCongeDTO> findByEmployeEmail(String email);
