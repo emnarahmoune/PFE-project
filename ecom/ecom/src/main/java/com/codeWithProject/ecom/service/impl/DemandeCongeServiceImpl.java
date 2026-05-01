@@ -7,8 +7,7 @@ import com.codeWithProject.ecom.repository.DemandeCongeRepository;
 import com.codeWithProject.ecom.repository.EmployeRepository;
 import com.codeWithProject.ecom.repository.ManagerRepository;
 import com.codeWithProject.ecom.service.DemandeCongeService;
-import com.codeWithProject.ecom.service.dto.DemandeCongeDTO;
-import com.codeWithProject.ecom.service.dto.SoldeCongesDTO;
+import com.codeWithProject.ecom.service.dto.*;
 import com.codeWithProject.ecom.service.exception.BusinessException;
 import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
 import com.codeWithProject.ecom.service.mapper.DemandeCongeMapper;
@@ -24,12 +23,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,7 +42,44 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
     private final RuntimeService runtimeService;
     private final TaskService taskService;
 
-    // ========== MÉTHODES PRIVÉES ==========
+    private static final Set<DayOfWeek> WEEKEND = Set.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY);
+    private static final Set<LocalDate> JOURS_FERIES = new HashSet<>();
+
+    static {
+        JOURS_FERIES.add(LocalDate.of(2026, 1, 1));
+        JOURS_FERIES.add(LocalDate.of(2026, 4, 6));
+        JOURS_FERIES.add(LocalDate.of(2026, 5, 1));
+        JOURS_FERIES.add(LocalDate.of(2026, 5, 8));
+        JOURS_FERIES.add(LocalDate.of(2026, 5, 14));
+        JOURS_FERIES.add(LocalDate.of(2026, 5, 25));
+        JOURS_FERIES.add(LocalDate.of(2026, 7, 14));
+        JOURS_FERIES.add(LocalDate.of(2026, 8, 15));
+        JOURS_FERIES.add(LocalDate.of(2026, 11, 1));
+        JOURS_FERIES.add(LocalDate.of(2026, 11, 11));
+        JOURS_FERIES.add(LocalDate.of(2026, 12, 25));
+    }
+
+    private int calculerJoursOuvres(LocalDate debut, LocalDate fin) {
+        if (debut == null || fin == null) return 0;
+        int count = 0;
+        LocalDate cur = debut;
+        while (!cur.isAfter(fin)) {
+            if (!WEEKEND.contains(cur.getDayOfWeek()) && !JOURS_FERIES.contains(cur)) count++;
+            cur = cur.plusDays(1);
+        }
+        return count;
+    }
+
+    @Override
+    public List<CalendarEventDTO> getAllCalendarEvents() {
+        return demandeCongeRepository.findAllForCalendar();
+    }
+
+    @Override
+    public DemandeRefusDetailsDTO getRefusDetails(Long demandeId) {
+        return demandeCongeRepository.findRefusDetailsById(demandeId)
+                .orElseThrow(() -> new RuntimeException("Demande non trouvée ou non refusée"));
+    }
 
     private Employe getEmployeByEmail(String email) {
         return employeRepository.findByEmail(email)
@@ -58,16 +92,6 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
                 .filter(d -> excludeId == null || !d.getId().equals(excludeId))
                 .filter(d -> "EN_ATTENTE".equals(d.getStatut()) || "APPROUVE".equals(d.getStatut()))
                 .anyMatch(d -> !dateDebut.isAfter(d.getDateFin()) && !dateFin.isBefore(d.getDateDebut()));
-    }
-
-    private int calculateJoursOuvres(LocalDate debut, LocalDate fin) {
-        int jours = 0;
-        LocalDate current = debut;
-        while (!current.isAfter(fin)) {
-            if (current.getDayOfWeek().getValue() < 6) jours++;
-            current = current.plusDays(1);
-        }
-        return jours;
     }
 
     private String getManagerEmailFromEmploye(Employe employe) {
@@ -94,8 +118,6 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         log.warn("Aucun administrateur RH trouvé, utilisation d'un email par défaut");
         return "admin@default.com";
     }
-
-    // ========== MÉTHODES DE L'INTERFACE ==========
 
     @Override
     @Transactional(readOnly = true)
@@ -178,7 +200,6 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
             throw new BusinessException("Une demande de congé existe déjà sur cette période");
         DemandeConge demande = mapper.toEntity(dto);
         demande.setEmploye(employe);
-        demande.setJoursOuvres(calculateJoursOuvres(dto.getDateDebut(), dto.getDateFin()));
         demande.soumettre();
         return mapper.toDto(demandeCongeRepository.save(demande));
     }
@@ -196,7 +217,6 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         demande.modifier(newDebut, newFin,
                 dto.getType() != null ? dto.getType() : demande.getType(),
                 dto.getCommentaire());
-        demande.setJoursOuvres(calculateJoursOuvres(demande.getDateDebut(), demande.getDateFin()));
         return mapper.toDto(demandeCongeRepository.save(demande));
     }
 
@@ -272,6 +292,11 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         return checkConflitDates(employeId, debut, fin, demandeId);
     }
 
+    @Override
+    public List<DemandeRefusManagerDTO> getDemandesRefuseesParManager() {
+        return demandeCongeRepository.findDemandesRefuseesParManager();
+    }
+
     // ========== CRÉATION (avec workflow) ==========
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -286,28 +311,13 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         if (dto.getDateDebut().isBefore(LocalDate.now()))
             throw new BusinessException("La date de début ne peut pas être dans le passé");
 
-        // ✅ Vérification du solde : ne pas bloquer si la demande est urgente
-        boolean urgente = dto.getUrgente() != null && dto.getUrgente();
-        if ("ANNUEL".equals(dto.getType()) && !urgente) {
-            int joursDemandes = calculateJoursOuvres(dto.getDateDebut(), dto.getDateFin());
-            int annee = LocalDate.now().getYear();
-            int joursPris = demandeCongeRepository.sumJoursOuvresApprouvesAnnee(employe.getId(), annee);
-            Integer soldeTotal = employe.getSoldeConges() != null ? employe.getSoldeConges() : 25;
-            int soldeRestant = soldeTotal - joursPris;
-
-            if (soldeRestant < joursDemandes) {
-                throw new BusinessException(String.format(
-                        "Solde insuffisant. Solde restant: %d jours, Demandé: %d jours",
-                        soldeRestant, joursDemandes));
-            }
-        }
+        // ✅ Suppression de la vérification de solde – le workflow gère le refus automatique
 
         if (checkConflitDates(employe.getId(), dto.getDateDebut(), dto.getDateFin(), null))
             throw new BusinessException("Une demande de congé existe déjà sur cette période");
 
         DemandeConge demande = mapper.toEntity(dto);
         demande.setEmploye(employe);
-        demande.setJoursOuvres(calculateJoursOuvres(dto.getDateDebut(), dto.getDateFin()));
         demande.soumettre();
 
         DemandeConge saved = demandeCongeRepository.saveAndFlush(demande);
@@ -323,7 +333,7 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
             workflowVariables.put("dateFin", saved.getDateFin().toString());
             workflowVariables.put("managerEmail", getManagerEmailFromEmploye(employe));
             workflowVariables.put("adminEmail", getAdminRHEmail());
-            workflowVariables.put("urgente", saved.getUrgente()); // variable pour le BPMN
+            workflowVariables.put("urgente", saved.getUrgente());
 
             var processInstance = runtimeService.startProcessInstanceByKey("LeaveRequestProcess", workflowVariables);
             saved.setProcessInstanceId(processInstance.getId());
@@ -383,38 +393,22 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         if (checkConflitDates(employe.getId(), newDebut, newFin, id))
             throw new BusinessException("Une demande de congé existe déjà sur cette période");
 
-        int nouveauxJours = calculateJoursOuvres(newDebut, newFin);
+        int nouveauxJours = calculerJoursOuvres(newDebut, newFin);
         String nouveauType = dto.getType() != null ? dto.getType() : demande.getType();
         boolean urgente = dto.getUrgente() != null && dto.getUrgente();
 
-        // ✅ Vérification du solde uniquement si non urgent
-        if ("ANNUEL".equals(nouveauType) && !urgente) {
-            int annee = LocalDate.now().getYear();
-            int joursPris = demandeCongeRepository.sumJoursOuvresApprouvesAnnee(employe.getId(), annee);
-            Integer soldeTotal = employe.getSoldeConges() != null ? employe.getSoldeConges() : 25;
-            int soldeRestant = soldeTotal - joursPris;
-            if (soldeRestant < nouveauxJours) {
-                throw new BusinessException(String.format(
-                        "Solde insuffisant. Solde restant: %d jours, Demandé: %d jours",
-                        soldeRestant, nouveauxJours));
-            }
-        }
+        // ✅ Suppression de la vérification de solde – le workflow gère le refus automatique
 
-        demande.setDateDebut(newDebut);
-        demande.setDateFin(newFin);
-        demande.setType(nouveauType);
-        demande.setCommentaire(dto.getCommentaire() != null ? dto.getCommentaire() : demande.getCommentaire());
-        demande.setJoursOuvres(nouveauxJours);
-        demande.setUrgente(ChronoUnit.DAYS.between(LocalDate.now(), newDebut) < 7);
+        demande.modifier(newDebut, newFin, nouveauType, dto.getCommentaire());
 
         DemandeConge saved = demandeCongeRepository.save(demande);
 
         if (saved.getProcessInstanceId() != null && !saved.getProcessInstanceId().isEmpty()) {
             try {
-                runtimeService.setVariable(saved.getProcessInstanceId(), "nbJours", nouveauxJours);
-                runtimeService.setVariable(saved.getProcessInstanceId(), "dateDebut", newDebut.toString());
-                runtimeService.setVariable(saved.getProcessInstanceId(), "dateFin", newFin.toString());
-                runtimeService.setVariable(saved.getProcessInstanceId(), "typeConge", nouveauType);
+                runtimeService.setVariable(saved.getProcessInstanceId(), "nbJours", saved.getJoursOuvres());
+                runtimeService.setVariable(saved.getProcessInstanceId(), "dateDebut", saved.getDateDebut().toString());
+                runtimeService.setVariable(saved.getProcessInstanceId(), "dateFin", saved.getDateFin().toString());
+                runtimeService.setVariable(saved.getProcessInstanceId(), "typeConge", saved.getType());
                 runtimeService.setVariable(saved.getProcessInstanceId(), "urgente", saved.getUrgente());
             } catch (Exception e) {
                 log.warn("Impossible de mettre à jour les variables du workflow: {}", e.getMessage());
@@ -470,5 +464,24 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
         supprimerInstanceCamunda(demande.getProcessInstanceId());
         demande.annuler();
         return mapper.toDto(demandeCongeRepository.save(demande));
+    }
+    @Override
+    public List<CalendarEventDTO> getCalendarEventsForManager(String managerEmail) {
+        log.debug("Récupération des événements calendrier pour le manager : {}", managerEmail);
+
+        // Récupérer le manager à partir de son email
+        Manager manager = managerRepository.findByEmail(managerEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Manager", "email", managerEmail));
+
+        // Récupérer tous les employés gérés par ce manager
+        List<Employe> equipe = employeRepository.findByManagerId(manager.getId());
+        List<Long> employesIds = equipe.stream().map(Employe::getId).collect(Collectors.toList());
+
+        if (employesIds.isEmpty()) {
+            return List.of();
+        }
+
+        // Requête personnalisée dans le repository
+        return demandeCongeRepository.findCalendarEventsForEmployes(employesIds);
     }
 }

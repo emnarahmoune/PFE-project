@@ -1,6 +1,9 @@
 package com.codeWithProject.ecom.repository;
 
 import com.codeWithProject.ecom.entity.DemandeConge;
+import com.codeWithProject.ecom.service.dto.CalendarEventDTO;
+import com.codeWithProject.ecom.service.dto.DemandeRefusDetailsDTO;
+import com.codeWithProject.ecom.service.dto.DemandeRefusManagerDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -76,6 +79,33 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
     Optional<String> findCurrentTaskIdByProcessInstanceId(@Param("processInstanceId") String processInstanceId);
     List<DemandeConge> findByStatutAndJoursOuvresGreaterThan(String statut, int jours);
 
+
+    // Supprimer la première version erronée de findAllForCalendar().
+// Garder celle-ci :
+    @Query("SELECT new com.codeWithProject.ecom.service.dto.CalendarEventDTO(" +
+            "d.id, " +
+            "CONCAT(e.prenom, ' ', e.nom, ' (', d.joursOuvres, 'j)'), " +
+            "d.dateDebut, d.dateFin, " +
+            "CASE d.statut " +
+            "  WHEN 'APPROUVE' THEN '#10b981' " +
+            "  WHEN 'EN_ATTENTE_RH' THEN '#f59e0b' " +
+            "  WHEN 'REFUSE_MANAGER' THEN '#ef4444' " +
+            "  WHEN 'REFUSE' THEN '#ef4444' " +
+            "  ELSE '#94a3b8' END, " +
+            "d.statut, d.type, e.nom, e.prenom) " +
+            "FROM DemandeConge d JOIN d.employe e " +
+            "WHERE d.statut IN ('APPROUVE', 'EN_ATTENTE_RH', 'REFUSE_MANAGER', 'REFUSE')")
+    List<CalendarEventDTO> findAllForCalendar();
+
+    @Query("SELECT new com.codeWithProject.ecom.service.dto.DemandeRefusManagerDTO(" +
+            "d.id, e.prenom, e.nom, e.departement, CONCAT(m.prenom, ' ', m.nom), " +
+            "d.dateDebut, d.dateFin, d.motifRefus) " +
+            "FROM DemandeConge d " +
+            "JOIN d.employe e " +
+            "LEFT JOIN d.manager m " +
+            "WHERE d.statut = 'REFUSE_MANAGER' " +
+            "ORDER BY d.dateDecision DESC")
+    List<DemandeRefusManagerDTO> findDemandesRefuseesParManager();
     // Dans DemandeCongeRepository.java
     @Query("SELECT COALESCE(SUM(d.joursOuvres), 0) FROM DemandeConge d " +
             "WHERE d.employe.id = :employeId AND d.statut = 'APPROUVE' " +
@@ -91,13 +121,37 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
             "AND d.type IN ('MALADIE', 'SANS_SOLDE') AND YEAR(d.dateDebut) = :annee")
     int sumJoursAbsence(@Param("employeId") Long employeId, @Param("annee") int annee);
 
-    // ===== NOUVELLES MÉTHODES POUR LES REFUS MANAGER =====
-    @Query("SELECT d FROM DemandeConge d WHERE d.statut = 'REFUSE' AND d.manager IS NOT NULL")
-    List<DemandeConge> findDemandesRefuseesParManager();
 
 
 
+    @Query("SELECT new com.codeWithProject.ecom.service.dto.DemandeRefusDetailsDTO(" +
+            "d.id, e.prenom, e.nom, e.email, e.departement, CONCAT(m.prenom, ' ', m.nom), " +
+            "d.dateDebut, d.dateFin, d.joursOuvres, d.type, d.motifRefus, " +
+            "d.dateSoumission, d.dateRefusManager, d.commentaire, d.piecesJointes) " +
+            "FROM DemandeConge d " +
+            "JOIN d.employe e " +
+            "LEFT JOIN d.manager m " +
+            "WHERE d.id = :id AND d.statut IN ('REFUSE_MANAGER', 'REFUSE')")
+    Optional<DemandeRefusDetailsDTO> findRefusDetailsById(@Param("id") Long id);
 
     // Alternative générique
     List<DemandeConge> findByStatutAndManagerIsNotNull(String statut);
+
+
+    @Query("SELECT new com.codeWithProject.ecom.service.dto.CalendarEventDTO(" +
+            "d.id, " +
+            "CONCAT(e.prenom, ' ', e.nom, ' (', d.joursOuvres, 'j)'), " +
+            "d.dateDebut, d.dateFin, " +
+            "CASE d.statut " +
+            "  WHEN 'APPROUVE' THEN '#10b981' " +
+            "  WHEN 'EN_ATTENTE_RH' THEN '#f59e0b' " +
+            "  WHEN 'REFUSE_MANAGER' THEN '#ef4444' " +
+            "  WHEN 'REFUSE' THEN '#ef4444' " +
+            "  ELSE '#94a3b8' END, " +
+            "d.statut, d.type, e.nom, e.prenom) " +
+            "FROM DemandeConge d JOIN d.employe e " +
+            "WHERE e.id IN :employesIds " +
+            "AND d.statut IN ('APPROUVE', 'EN_ATTENTE_RH', 'REFUSE_MANAGER', 'REFUSE')")
+    List<CalendarEventDTO> findCalendarEventsForEmployes(@Param("employesIds") List<Long> employesIds);
+
 }

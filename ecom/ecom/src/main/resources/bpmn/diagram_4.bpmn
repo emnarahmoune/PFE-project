@@ -44,7 +44,7 @@
     <bpmn:sequenceFlow id="Flow_ManagerNon" name="non" sourceRef="Gateway_ManagerApprouve" targetRef="Task_NotifierRefusManager">
       <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${managerApprouve == false}</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
-    <bpmn:serviceTask id="Task_NotifierRefusManager" name="Notifier refus manager" camunda:class="com.codeWithProject.ecom.service.workflow.NotifierRefusDelegate">
+   <bpmn:serviceTask id="Task_NotifierRefusManager" name="Notifier refus manager" camunda:class="com.codeWithProject.ecom.service.workflow.NotifierRefusManagerDelegate">
       <bpmn:incoming>Flow_ManagerNon</bpmn:incoming>
       <bpmn:outgoing>Flow_RefusManager_End</bpmn:outgoing>
     </bpmn:serviceTask>

@@ -1,6 +1,10 @@
 package com.codeWithProject.ecom.service;
 
+import com.codeWithProject.ecom.service.dto.CalendarEventDTO;
 import com.codeWithProject.ecom.service.dto.DemandeCongeAdminDTO;
+import com.codeWithProject.ecom.service.dto.DemandeRefusDetailsDTO;
+import com.codeWithProject.ecom.service.dto.DemandeRefusManagerDTO;
+
 import java.util.List;
 import java.util.Map;
 
@@ -18,9 +22,11 @@ public interface AdminCongeService {
 
     Map<String, Long> getStatsByStatut();
 
-
+    List<DemandeRefusManagerDTO> getDemandesRefuseesParManager();
     // ✅ Méthode manquante ajoutée
     List<DemandeCongeAdminDTO> getOrphanRequests();
+    // NOUVELLES MÉTHODES
+    List<CalendarEventDTO> getAllCalendarEvents();
+    DemandeRefusDetailsDTO getRefusDetails(Long id);
 
-    List<DemandeCongeAdminDTO> getDemandesRefuseesParManager();
 }

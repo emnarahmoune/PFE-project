@@ -87,6 +87,11 @@ public class SecurityConfig {
                         )
 
                         // Congés
+
+                        // Endpoints publics
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/photos/**").permitAll()   // ✅ Autorise l'accès aux images
+                        // Endpoints nécessitant authentification
                         .requestMatchers("/api/conges/**").authenticated()
 
                         // Workflow manager
@@ -162,52 +167,41 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+   @Bean
+public JwtAuthenticationConverter jwtAuthenticationConverter() {
+    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
 
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            Collection<GrantedAuthority> authorities = new ArrayList<>();
+    converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+        Collection<GrantedAuthority> authorities = new ArrayList<>();
 
-            Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+        Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
 
-            if (realmAccess != null && realmAccess.containsKey("roles")) {
-                Object rolesObject = realmAccess.get("roles");
+        if (realmAccess != null && realmAccess.containsKey("roles")) {
+            List<String> roles = (List<String>) realmAccess.get("roles");
 
-                if (rolesObject instanceof List<?> roles) {
-                    for (Object roleObject : roles) {
-                        String role = String.valueOf(roleObject);
+            for (String role : roles) {
 
-                        if ("admin".equalsIgnoreCase(role)) {
-                            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-                            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN_RH"));
-                            authorities.add(new SimpleGrantedAuthority("admin"));
-                            authorities.add(new SimpleGrantedAuthority("ADMIN_RH"));
-                        } else if ("admin_rh".equalsIgnoreCase(role) || "ADMIN_RH".equalsIgnoreCase(role)) {
-                            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN_RH"));
-                            authorities.add(new SimpleGrantedAuthority("ROLE_admin_rh"));
-                            authorities.add(new SimpleGrantedAuthority("admin_rh"));
-                            authorities.add(new SimpleGrantedAuthority("ADMIN_RH"));
-                        } else if ("manager".equalsIgnoreCase(role) || "MANAGER".equalsIgnoreCase(role)) {
-                            authorities.add(new SimpleGrantedAuthority("ROLE_MANAGER"));
-                            authorities.add(new SimpleGrantedAuthority("ROLE_manager"));
-                            authorities.add(new SimpleGrantedAuthority("manager"));
-                            authorities.add(new SimpleGrantedAuthority("MANAGER"));
-                        } else {
-                            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
-                            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
-                            authorities.add(new SimpleGrantedAuthority(role.toUpperCase()));
-                            authorities.add(new SimpleGrantedAuthority(role));
-                        }
-                    }
+                if ("admin".equalsIgnoreCase(role)) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+                    authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN_RH"));
+
+                } else if ("admin_rh".equalsIgnoreCase(role)) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN_RH"));
+
+                } else if ("manager".equalsIgnoreCase(role)) {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_MANAGER"));
+
+                } else {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
                 }
             }
+        }
 
-            return authorities;
-        });
+        return authorities;
+    });
 
-        return converter;
-    }
+    return converter;
+}
 
     @Bean
     public PasswordEncoder passwordEncoder() {

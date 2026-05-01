@@ -3,7 +3,10 @@ package com.codeWithProject.ecom.controller;
 import com.codeWithProject.ecom.controller.dto.ApiResponse;
 import com.codeWithProject.ecom.service.AdminCongeService;
 import com.codeWithProject.ecom.service.WorkflowService;
+import com.codeWithProject.ecom.service.dto.CalendarEventDTO;
 import com.codeWithProject.ecom.service.dto.DemandeCongeAdminDTO;
+import com.codeWithProject.ecom.service.dto.DemandeRefusDetailsDTO;
+import com.codeWithProject.ecom.service.dto.DemandeRefusManagerDTO;
 import com.codeWithProject.ecom.service.exception.BusinessException;
 import com.codeWithProject.ecom.service.exception.ResourceNotFoundException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,13 +50,45 @@ public class AdminCongeController {
         }
     }
 
-    // ✅ NOUVEAU : récupérer les demandes refusées par les managers
+    // ✅ Événements pour le calendrier FullCalendar (un seul)
+    @GetMapping("/calendar-events")
+    @Operation(summary = "Récupère les événements pour le calendrier")
+    public ResponseEntity<ApiResponse<List<CalendarEventDTO>>> getCalendarEvents() {
+        log.info("GET /api/admin/conges/calendar-events");
+        try {
+            List<CalendarEventDTO> events = adminCongeService.getAllCalendarEvents();
+            return ResponseEntity.ok(ApiResponse.success(events, "Événements récupérés"));
+        } catch (Exception e) {
+            log.error("Erreur: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // ✅ Détails complets d'une demande refusée (manager ou RH) – un seul
+    @GetMapping("/demandes/{id}/refus-details")
+    @Operation(summary = "Détails d'une demande refusée (avec heure de soumission et heure de décision manager)")
+    public ResponseEntity<ApiResponse<DemandeRefusDetailsDTO>> getRefusDetails(@PathVariable Long id) {
+        log.info("GET /api/admin/conges/demandes/{}/refus-details", id);
+        try {
+            DemandeRefusDetailsDTO details = adminCongeService.getRefusDetails(id);
+            return ResponseEntity.ok(ApiResponse.success(details, "Détails récupérés"));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("Erreur: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
     @GetMapping("/refus-manager")
     @Operation(summary = "Récupère les demandes refusées par les managers")
-    public ResponseEntity<ApiResponse<List<DemandeCongeAdminDTO>>> getDemandesRefuseesParManager() {
+    public ResponseEntity<ApiResponse<List<DemandeRefusManagerDTO>>> getDemandesRefuseesParManager() {
         log.info("GET /api/admin/conges/refus-manager");
         try {
-            List<DemandeCongeAdminDTO> demandes = adminCongeService.getDemandesRefuseesParManager();
+            List<DemandeRefusManagerDTO> demandes = adminCongeService.getDemandesRefuseesParManager();
             return ResponseEntity.ok(ApiResponse.success(demandes, "Refus manager récupérés"));
         } catch (Exception e) {
             log.error("Erreur: {}", e.getMessage());

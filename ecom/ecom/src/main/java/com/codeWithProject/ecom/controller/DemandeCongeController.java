@@ -5,8 +5,7 @@ import com.codeWithProject.ecom.entity.Notification;
 import com.codeWithProject.ecom.repository.EmployeRepository;
 import com.codeWithProject.ecom.service.DemandeCongeService;
 import com.codeWithProject.ecom.service.NotificationService;
-import com.codeWithProject.ecom.service.dto.DemandeCongeDTO;
-import com.codeWithProject.ecom.service.dto.SoldeCongesDTO;
+import com.codeWithProject.ecom.service.dto.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+
 
 @RestController
 @RequestMapping("/api/conges")
@@ -65,6 +65,21 @@ public class DemandeCongeController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage(), HttpStatus.BAD_REQUEST));
         }
+    }
+
+
+    @GetMapping("/calendar-events")
+    @Operation(summary = "Récupère les événements pour le calendrier FullCalendar")
+    public ResponseEntity<List<CalendarEventDTO>> getCalendarEvents() {
+        log.info("GET /api/conges/calendar-events");
+        return ResponseEntity.ok(demandeCongeService.getAllCalendarEvents());
+    }
+
+    @GetMapping("/demandes/{id}/refus-details")
+    @Operation(summary = "Détails complets d'une demande refusée (avec heure de soumission et de refus manager)")
+    public ResponseEntity<DemandeRefusDetailsDTO> getRefusDetails(@PathVariable Long id) {
+        log.info("GET /api/demandes/{}/refus-details", id);
+        return ResponseEntity.ok(demandeCongeService.getRefusDetails(id));
     }
 
     @PutMapping("/{id}")
@@ -313,7 +328,13 @@ public class DemandeCongeController {
         Map<String, Long> stats = demandeCongeService.countByStatut();
         return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques par statut récupérées"));
     }
-
+    @GetMapping("/refus-manager")
+    @Operation(summary = "Liste des demandes refusées par un manager (pour admin)")
+    @PreAuthorize("hasRole('ADMIN_RH')")
+    public ResponseEntity<List<DemandeRefusManagerDTO>> getDemandesRefuseesParManager() {
+        log.info("GET /api/conges/refus-manager");
+        return ResponseEntity.ok(demandeCongeService.getDemandesRefuseesParManager());
+    }
     // ===== NOUVEAU : Récupérer les congés d'un employé (pour manager ou admin RH) =====
     @GetMapping("/employe/{employeId}")
     @Operation(summary = "Récupère les congés d'un employé (réservé au manager de cet employé ou admin RH)")
