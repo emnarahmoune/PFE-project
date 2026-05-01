@@ -1,63 +1,91 @@
-<mat-sidenav-container class="sidenav-container">
-  <!-- Sidebar -->
-  <mat-sidenav #sidenav mode="side" [opened]="isSidebarOpen" class="sidenav">
-    <div class="sidenav-header">
+<!-- features/admin/layout/admin-layout.component.html -->
+<div class="layout" [class.dark-theme]="darkMode">
+  <!-- Sidebar moderne -->
+  <aside class="sidebar" [class.collapsed]="!isSidebarOpen" [class.open]="isSidebarOpen">
+    <div class="sidebar-header">
       <div class="logo">
-        <mat-icon>people_outline</mat-icon>
-        <span *ngIf="isSidebarOpen">Espace Manager</span>
+        <div class="logo-icon">◈</div>
+        <div class="logo-text" *ngIf="isSidebarOpen">PeopleOS</div>
       </div>
+      <button class="collapse-btn" (click)="toggleSidebar()" aria-label="Réduire le menu">
+        <i class="collapse-icon">{{ isSidebarOpen ? '◀' : '▶' }}</i>
+      </button>
     </div>
 
-    <mat-divider></mat-divider>
-
-    <mat-nav-list>
-      <a mat-list-item *ngFor="let item of menuItems" [routerLink]="item.path" routerLinkActive="active">
-        <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-        <span matListItemTitle *ngIf="isSidebarOpen">{{ item.label }}</span>
+    <nav class="sidebar-nav">
+      <a *ngFor="let item of menuItems"
+         [routerLink]="item.path"
+         routerLinkActive="active"
+         class="nav-item"
+         [class.active]="isRouteActive(item.path)">
+        <span class="nav-icon">{{ item.icon }}</span>
+        <span class="nav-label" *ngIf="isSidebarOpen">{{ item.label }}</span>
       </a>
-    </mat-nav-list>
+    </nav>
 
-    <div class="sidenav-footer" *ngIf="isSidebarOpen">
-      <mat-divider></mat-divider>
-      <div class="footer-content">
-        <p>&copy; {{ currentYear }} RH Platform</p>
-        <p class="version">Manager v1.0.0</p>
+    <div class="sidebar-footer">
+      <div class="user-info" *ngIf="isSidebarOpen">
+        <!-- Conteneur unique avec overflow:hidden et position:relative -->
+        <div class="user-avatar" [class.has-photo]="!!userPhotoUrl">
+          <img *ngIf="userPhotoUrl"
+               [src]="userPhotoUrl"
+               alt="Photo de profil"
+               class="avatar-img"
+               (error)="userPhotoUrl = null">
+          <span *ngIf="!userPhotoUrl">{{ getUserInitials() }}</span>
+        </div>
+        <div class="user-details">
+          <span class="user-name">{{ getUserName() }}</span>
+          <span class="user-role">{{ userRole }}</span>
+        </div>
       </div>
+
+      <button class="logout-btn" (click)="logout()">
+        <span>🚪</span>
+        <span *ngIf="isSidebarOpen">Déconnexion</span>
+      </button>
+      <div class="version" *ngIf="isSidebarOpen">© {{ currentYear }} PeopleOS v3.0</div>
     </div>
-  </mat-sidenav>
+  </aside>
 
-  <!-- Main content -->
-  <mat-sidenav-content>
-    <!-- Toolbar -->
-    <mat-toolbar class="toolbar">
-      <button mat-icon-button (click)="toggleSidebar()" class="menu-button">
-        <mat-icon>menu</mat-icon>
-      </button>
-      <span class="page-title">{{ getCurrentPageTitle() }}</span>
-      <span class="spacer"></span>
-
-      <!-- User menu -->
-      <button mat-button [matMenuTriggerFor]="userMenu" class="user-button">
-        <mat-icon>account_circle</mat-icon>
-        <span class="user-name">{{ getUserName() }}</span>
-        <mat-icon>arrow_drop_down</mat-icon>
-      </button>
-      <mat-menu #userMenu="matMenu">
-        <button mat-menu-item disabled>
-          <mat-icon>badge</mat-icon>
-          <span>Manager</span>
+  <!-- Contenu principal -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" (click)="toggleSidebar()" aria-label="Menu">
+          <span>☰</span>
         </button>
-        <mat-divider></mat-divider>
-        <button mat-menu-item (click)="logout()">
-          <mat-icon>logout</mat-icon>
-          <span>Déconnexion</span>
-        </button>
-      </mat-menu>
-    </mat-toolbar>
+        <div class="page-title-container">
+          <h1 class="page-title">{{ getCurrentPageTitle() }}</h1>
+          <div class="page-indicator"></div>
+        </div>
+      </div>
 
-    <!-- Page content -->
+      <div class="topbar-right">
+        <button class="theme-toggle" (click)="toggleTheme()" aria-label="Thème">
+          <span>{{ darkMode ? '🌙' : '☀️' }}</span>
+        </button>
+
+        <div class="user-menu">
+          <!-- Même pattern : conteneur unique -->
+          <div class="user-avatar small" [class.has-photo]="!!userPhotoUrl">
+            <img *ngIf="userPhotoUrl"
+                 [src]="userPhotoUrl"
+                 alt="Photo de profil"
+                 class="avatar-img"
+                 (error)="userPhotoUrl = null">
+            <span *ngIf="!userPhotoUrl">{{ getUserInitials() }}</span>
+          </div>
+          <span class="user-name">{{ getUserName() }}</span>
+          <button class="dropdown-btn" (click)="logout()" aria-label="Déconnexion">
+            <span>🚪</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
     <div class="content">
       <router-outlet></router-outlet>
     </div>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+  </main>
+</div>

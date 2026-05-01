@@ -1,7 +1,7 @@
-// src/app/features/manager/pages/employe-detail/employe-detail.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms'; // ← indispensable
 import { forkJoin } from 'rxjs';
 import { ManagerService, Manager } from '../../../../core/services/manager.service';
 import { EmployeService } from '../../../admin/gestion-employes/services/employe.service';
@@ -10,7 +10,7 @@ import { Employe } from '../../../admin/gestion-employes/models/employe.model';
 @Component({
   selector: 'app-employe-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule], // ← FormsModule ajouté
   templateUrl: './employe-detail.component.html',
   styleUrls: ['./employe-detail.component.scss']
 })
@@ -70,11 +70,9 @@ export class EmployeDetailComponent implements OnInit {
       abs: this.managerService.getDernierAbsenteisme(employeId)
     }).subscribe({
       next: (res) => {
-        // Score
         this.scoreTurnover = res.score?.data?.score ?? null;
         this.scoreTurnoverNiveau = res.score?.data?.niveauRisque ?? null;
 
-        // Absentéisme
         const absData = res.abs?.data;
         if (Array.isArray(absData) && absData.length > 0) {
           const monAbs = absData.find((item: any) => item.employeId === employeId);
@@ -92,13 +90,14 @@ export class EmployeDetailComponent implements OnInit {
     });
   }
 
-  updateManager(newManagerId: number): void {
-    if (!this.employe) return;
-    this.employeService.updateManager(this.employe.id!, newManagerId).subscribe({
-      next: (res) => { if (res.success) this.employe = res.data; },
-      error: (err) => console.error(err)
-    });
-  }
+  // Accepte number | null (valeur du select)
+updateManager(newManagerId: number): void {
+  if (!this.employe) return;
+  this.employeService.updateManager(this.employe.id!, newManagerId).subscribe({
+    next: (res) => { if (res.success) this.employe = res.data; },
+    error: (err) => console.error(err)
+  });
+}
 
   getAvatarColor(dept: string): string {
     const colors: Record<string, string> = {

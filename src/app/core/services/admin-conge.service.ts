@@ -1,10 +1,9 @@
-// src/app/core/services/admin-conge.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { AuthService } from './auth.service';
+import { EventInput } from '@fullcalendar/core/index.js';
 
-// Interface de la réponse API (wrapper)
 interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -14,15 +13,15 @@ interface ApiResponse<T> {
 }
 
 export interface TacheRh {
-statut: string;
-nombreJours: any;
+  statut: string;
+  nombreJours: any;
   taskId: string;
   taskName: string;
   createTime: string;
   processInstanceId: string;
   employeId: string;
   nbJours: number;
-  demandeId: number;        // ← c'est l'ID de la demande, utilisé pour les actions
+  demandeId: number;
   montantConge?: number;
   dateDebut?: string;
   dateFin?: string;
@@ -31,6 +30,7 @@ nombreJours: any;
   employeNom?: string;
   employePrenom?: string;
   employeEmail?: string;
+  employeDepartement?: string;
 }
 
 export interface StatsConges {
@@ -39,10 +39,8 @@ export interface StatsConges {
   REFUSE: number;
   [key: string]: number;
 }
+
 export interface DemandeRefusManager {
-  demandeId: number;
-employeDepartement: string|undefined;
-motif: any;
   id: number;
   dateDebut: string;
   dateFin: string;
@@ -52,7 +50,26 @@ motif: any;
   dateDecision: string;
   employeNom: string;
   employePrenom: string;
+  employeDepartement: string;
   managerNom: string;
+}
+
+export interface DemandeRefusDetails {
+  demandeId: number;
+  employeePrenom: string;
+  employeeNom: string;
+  employeeEmail: string;
+  employeeDepartement: string;
+  managerNom: string;
+  dateDebut: string;
+  dateFin: string;
+  nbJours: number;
+  type: string;
+  motifRefus: string;
+  dateSoummission: string;
+  dateDecisionManager: string;
+  commentaireRH?: string;
+  piecesJustificatives?: string[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -72,7 +89,6 @@ export class AdminCongeService {
     });
   }
 
-  // Récupère les tâches RH (désemballe response.data)
   getDemandesAValider(): Observable<TacheRh[]> {
     return this.http.get<ApiResponse<TacheRh[]>>(
       `${this.apiUrl}/a-valider`,
@@ -80,7 +96,6 @@ export class AdminCongeService {
     ).pipe(map(res => res.data || []));
   }
 
-  // ✅ Approbation : PUT /api/admin/conges/{demandeId}/valider
   approuverDemande(demandeId: number, commentaire?: string): Observable<void> {
     const url = commentaire
       ? `${this.apiUrl}/${demandeId}/valider?commentaire=${encodeURIComponent(commentaire)}`
@@ -88,7 +103,6 @@ export class AdminCongeService {
     return this.http.put<void>(url, {}, { headers: this.getHeaders() });
   }
 
-  // ✅ Refus : PUT /api/admin/conges/{demandeId}/refuser
   refuserDemande(demandeId: number, motif: string): Observable<void> {
     return this.http.put<void>(
       `${this.apiUrl}/${demandeId}/refuser?motif=${encodeURIComponent(motif)}`,
@@ -96,19 +110,52 @@ export class AdminCongeService {
       { headers: this.getHeaders() }
     );
   }
-  
 
-  // ✅ NOUVEAU : récupérer les demandes refusées par les managers
-  getRefusManager(): Observable<DemandeRefusManager[]> {
-    return this.http
-      .get<ApiResponse<DemandeRefusManager[]>>(`${this.apiUrl}/refus-manager`, { headers: this.getHeaders() })
+  getAllCongesForCalendar(): Observable<EventInput[]> {
+    return this.http.get<ApiResponse<EventInput[]>>(`${this.apiUrl}/calendar-events`, { headers: this.getHeaders() })
       .pipe(map(res => res.data || []));
-  }  
-  // Statistiques
-  getStats(): Observable<StatsConges> {
-    return this.http.get<ApiResponse<StatsConges>>(
-      `${this.apiUrl}/stats/statut`,
+  }
+
+  getDemandeRefusDetails(demandeId: number): Observable<DemandeRefusDetails> {
+    return this.http.get<ApiResponse<any>>(
+      `${this.apiUrl}/demandes/${demandeId}/refus-details`,
       { headers: this.getHeaders() }
-    ).pipe(map(res => res.data || { EN_ATTENTE: 0, APPROUVE: 0, REFUSE: 0 }));
+    ).pipe(
+      tap(response => console.log('RAW API REFUS DETAILS:', response)),
+      map(response => {
+        if (!response?.success || !response?.data) {
+          throw new Error('Données non trouvées dans la réponse');
+        }
+        const data = response.data;
+        // Mapping robuste pour accepter les deux orthographes possibles
+        return {
+          demandeId: data.demandeId ?? 0,
+          employeePrenom: data.employeePrenom ?? data.employePrenom ?? '',
+          employeeNom: data.employeeNom ?? data.employeNom ?? '',
+          employeeEmail: data.employeeEmail ?? data.employeEmail ?? '',
+          employeeDepartement: data.employeeDepartement ?? data.employeDepartement ?? '',
+          managerNom: data.managerNom ?? '',
+          dateDebut: data.dateDebut ?? '',
+          dateFin: data.dateFin ?? '',
+          nbJours: data.nbJours ?? 0,
+          type: data.type ?? '',
+          motifRefus: data.motifRefus ?? '',
+          dateSoummission: data.dateSoummission ?? data.dateSoumission ?? '',
+          dateDecisionManager: data.dateDecisionManager ?? '',
+          commentaireRH: data.commentaireRH ?? '',
+          piecesJustificatives: data.piecesJustificatives ?? []
+        };
+      })
+    );
+  }
+
+  getRefusManager(): Observable<DemandeRefusManager[]> {
+    return this.http.get<ApiResponse<DemandeRefusManager[]>>(`${this.apiUrl}/refus-manager`, { headers: this.getHeaders() })
+      .pipe(map(res => res.data || []));
+  }
+
+  getStats(): Observable<StatsConges> {
+    return this.http.get<ApiResponse<StatsConges>>(`${this.apiUrl}/stats/statut`, { headers: this.getHeaders() })
+      .pipe(map(res => res.data || { EN_ATTENTE: 0, APPROUVE: 0, REFUSE: 0 }));
   }
 }

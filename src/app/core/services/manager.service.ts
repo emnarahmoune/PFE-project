@@ -135,4 +135,7 @@ export class ManagerService {
       `${environment.apiUrl}/indicateurs/type/ABSENTEISME?employeId=${employeId}`
     );
   }
+  getCalendarEvents(): Observable<any[]> {
+  return this.http.get<any[]>(`${environment.apiUrl}/managers/calendar-events`);
+}
 }

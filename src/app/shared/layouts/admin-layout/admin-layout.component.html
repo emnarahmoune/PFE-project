@@ -1,14 +1,14 @@
-<!-- admin-layout.component.html -->
-<div class="layout">
+<!-- features/admin/layout/admin-layout.component.html -->
+<div class="layout" [class.dark-theme]="darkMode">
   <!-- Sidebar -->
   <aside class="sidebar" [class.collapsed]="!isSidebarOpen" [class.open]="isSidebarOpen">
     <div class="sidebar-header">
       <div class="logo">
-        <span class="logo-icon">◈</span>
-        <span class="logo-text" *ngIf="isSidebarOpen">PeopleOS</span>
+        <div class="logo-icon">◈</div>
+        <div class="logo-text" *ngIf="isSidebarOpen">PeopleOS</div>
       </div>
-      <button class="collapse-btn" (click)="toggleSidebar()">
-        <span class="collapse-icon">{{ isSidebarOpen ? '◀' : '▶' }}</span>
+      <button class="collapse-btn" (click)="toggleSidebar()" aria-label="Réduire le menu">
+        <i class="collapse-icon">{{ isSidebarOpen ? '◀' : '▶' }}</i>
       </button>
     </div>
 
@@ -25,39 +25,61 @@
 
     <div class="sidebar-footer">
       <div class="user-info" *ngIf="isSidebarOpen">
-        <div class="user-avatar">{{ getUserInitials() }}</div>
+        <!-- Conteneur unique avec overflow:hidden -->
+        <div class="user-avatar" [class.has-photo]="!!userPhotoUrl">
+          <img *ngIf="userPhotoUrl"
+               [src]="userPhotoUrl"
+               alt="Photo de profil"
+               class="avatar-img"
+               (error)="userPhotoUrl = null">
+          <span *ngIf="!userPhotoUrl">{{ getUserInitials() }}</span>
+        </div>
         <div class="user-details">
           <span class="user-name">{{ getUserName() }}</span>
           <span class="user-role">{{ userRole }}</span>
         </div>
       </div>
+
       <button class="logout-btn" (click)="logout()">
-        <span class="logout-icon">🚪</span>
+        <span>🚪</span>
         <span *ngIf="isSidebarOpen">Déconnexion</span>
       </button>
-      <div class="version" *ngIf="isSidebarOpen">
-        © {{ currentYear }} PeopleOS v2.0
-      </div>
+      <div class="version" *ngIf="isSidebarOpen">© {{ currentYear }} PeopleOS v3.0</div>
     </div>
   </aside>
 
-  <!-- Main content -->
+  <!-- Contenu principal -->
   <main class="main">
     <header class="topbar">
       <div class="topbar-left">
-        <button class="menu-toggle" (click)="toggleSidebar()">
-          <span class="menu-icon">☰</span>
+        <button class="menu-toggle" (click)="toggleSidebar()" aria-label="Menu">
+          <span>☰</span>
         </button>
-        <h1 class="page-title">{{ getCurrentPageTitle() }}</h1>
+        <div class="page-title-container">
+          <h1 class="page-title">{{ getCurrentPageTitle() }}</h1>
+          <div class="page-indicator"></div>
+        </div>
       </div>
+
       <div class="topbar-right">
-        <button class="theme-toggle" (click)="toggleTheme()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer;">
-          {{ darkMode ? '🌙' : '☀️' }}
+        <button class="theme-toggle" (click)="toggleTheme()" aria-label="Thème">
+          <span>{{ darkMode ? '🌙' : '☀️' }}</span>
         </button>
+
         <div class="user-menu">
-          <div class="user-avatar small">{{ getUserInitials() }}</div>
+          <!-- Même pattern -->
+          <div class="user-avatar small" [class.has-photo]="!!userPhotoUrl">
+            <img *ngIf="userPhotoUrl"
+                 [src]="userPhotoUrl"
+                 alt="Photo de profil"
+                 class="avatar-img"
+                 (error)="userPhotoUrl = null">
+            <span *ngIf="!userPhotoUrl">{{ getUserInitials() }}</span>
+          </div>
           <span class="user-name">{{ getUserName() }}</span>
-          <button class="dropdown-btn" (click)="logout()">🚪</button>
+          <button class="dropdown-btn" (click)="logout()" aria-label="Déconnexion">
+            <span>🚪</span>
+          </button>
         </div>
       </div>
     </header>

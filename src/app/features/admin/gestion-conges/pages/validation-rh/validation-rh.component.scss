@@ -13,7 +13,6 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
   min-height: 100vh;
   padding: 28px 32px;
 
-  // HEADER
   .header {
     display: flex;
     justify-content: space-between;
@@ -55,7 +54,6 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
     }
   }
 
-  // STATS CARDS
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -85,27 +83,11 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
         box-shadow: $shadow-md;
       }
 
-      .stat-icon {
-        font-size: 2.5rem;
-      }
-
+      .stat-icon { font-size: 2.5rem; }
       .stat-info {
-        h2 {
-          font-size: 2rem;
-          font-weight: 800;
-          margin: 0;
-          color: #1e293b;
-        }
-        p {
-          margin: 0;
-          font-size: 0.8rem;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: #5b6e8c;
-        }
+        h2 { font-size: 2rem; font-weight: 800; margin: 0; color: #1e293b; }
+        p { margin: 0; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: #5b6e8c; }
       }
-
       &.pending .stat-icon { color: #f59e0b; }
       &.approved .stat-icon { color: #10b981; }
       &.refused .stat-icon { color: #ef4444; }
@@ -113,7 +95,6 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
     }
   }
 
-  // TABS personnalisés
   .custom-tabs {
     ::ng-deep .mat-tab-header {
       background: transparent;
@@ -135,85 +116,37 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
     }
   }
 
-  // TABLEAU DES DEMANDES
   .card-table {
     background: $card-white;
     border-radius: $border-radius-card;
     padding: 20px;
     margin-top: 1.5rem;
     box-shadow: $shadow-sm;
-    backdrop-filter: blur(2px);
 
     .table-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1.5rem;
-      h2 {
-        font-size: 1.3rem;
-        font-weight: 700;
-        margin: 0;
-      }
-      .pending-chip {
-        background: #fef3c7;
-        color: #b45309;
-        font-weight: 600;
-      }
+      h2 { font-size: 1.3rem; font-weight: 700; margin: 0; }
+      .pending-chip { background: #fef3c7; color: #b45309; font-weight: 600; }
     }
-
-    .table-responsive {
-      overflow-x: auto;
-    }
-
+    .table-responsive { overflow-x: auto; }
     .modern-table {
       width: 100%;
       border-collapse: collapse;
-      th, td {
-        padding: 1rem;
-        text-align: left;
-        border-bottom: 1px solid #eef2ff;
-      }
-      th {
-        background: #fafcff;
-        font-weight: 600;
-        color: #334155;
-      }
-      tr:hover td {
-        background: #fafaff;
-      }
+      th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #eef2ff; }
+      th { background: #fafcff; font-weight: 600; color: #334155; }
+      tr:hover td { background: #fafaff; }
     }
-
     .employee-cell {
       display: flex;
       align-items: center;
       gap: 12px;
-      .avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        background: #6366f1;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-      }
-      .employee-info {
-        display: flex;
-        flex-direction: column;
-        strong { font-size: 0.9rem; }
-        small { font-size: 0.7rem; color: #64748b; }
-      }
+      .avatar { width: 40px; height: 40px; border-radius: 12px; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+      .employee-info { display: flex; flex-direction: column; strong { font-size: 0.9rem; } small { font-size: 0.7rem; color: #64748b; } }
     }
-
-    .days-chip {
-      background: #eef2ff;
-      color: #4f46e5;
-      font-weight: 600;
-      padding: 0.2rem 0.8rem;
-      border-radius: 40px;
-    }
-
+    .days-chip { background: #eef2ff; color: #4f46e5; font-weight: 600; padding: 0.2rem 0.8rem; border-radius: 40px; }
     .actions-group {
       display: flex;
       gap: 8px;
@@ -224,42 +157,30 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
         &.action-reject:hover { color: #ef4444; }
       }
     }
-
-    .empty-state, .loading-spinner {
-      text-align: center;
-      padding: 3rem;
-      color: #94a3b8;
-    }
+    .empty-state, .loading-spinner { text-align: center; padding: 3rem; color: #94a3b8; }
   }
 
-  // CALENDRIER
   .calendar-layout {
     display: grid;
     grid-template-columns: 260px 1fr;
     gap: 24px;
     margin-top: 1.5rem;
-    @media (max-width: 900px) {
-      grid-template-columns: 1fr;
-    }
+    @media (max-width: 900px) { grid-template-columns: 1fr; }
 
     .calendar-sidebar {
       background: $card-white;
       border-radius: $border-radius-card;
       padding: 20px;
       box-shadow: $shadow-sm;
-      h3 {
-        margin-top: 0;
-        font-size: 1.1rem;
-      }
+      h3 { margin-top: 0; font-size: 1.1rem; }
+      .full-width { width: 100%; margin-bottom: 1rem; }
       .legend-item {
         display: flex;
         align-items: center;
         gap: 12px;
         margin-bottom: 12px;
         .legend-color {
-          width: 20px;
-          height: 20px;
-          border-radius: 4px;
+          width: 20px; height: 20px; border-radius: 4px;
           &.approved { background: #10b981; }
           &.pending { background: #f59e0b; }
           &.refused { background: #ef4444; }
@@ -267,7 +188,6 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
         }
       }
     }
-
     .calendar-container {
       background: $card-white;
       border-radius: $border-radius-card;
@@ -276,7 +196,6 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
     }
   }
 
-  // GRILLE REFUS MANAGER
   .refus-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -289,10 +208,7 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
       padding: 20px;
       transition: $transition;
       box-shadow: $shadow-sm;
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: $shadow-md;
-      }
+      &:hover { transform: translateY(-4px); box-shadow: $shadow-md; }
 
       .refus-header {
         display: flex;
@@ -303,115 +219,126 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
           display: flex;
           align-items: center;
           gap: 10px;
-          .avatar-sm {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            background: #6366f1;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-          }
+          .avatar-sm { width: 36px; height: 36px; border-radius: 10px; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
         }
-        .badge-refused {
-          background: #fee2e2;
-          color: #b91c1c;
-          padding: 4px 12px;
-          border-radius: 40px;
-          font-size: 0.7rem;
-          font-weight: 600;
-        }
+        .badge-refused { background: #fee2e2; color: #b91c1c; padding: 4px 12px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; }
       }
-
       .refus-body {
-        p {
-          margin: 0.5rem 0;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 0.85rem;
-          mat-icon {
-            font-size: 1rem;
-            width: 16px;
-            height: 16px;
-            color: #64748b;
-          }
-        }
-        .motif {
-          background: #f8fafc;
-          padding: 8px;
-          border-radius: 12px;
-          margin-top: 8px;
-        }
+        p { margin: 0.5rem 0; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; mat-icon { font-size: 1rem; width: 16px; height: 16px; color: #64748b; } }
+        .motif { background: #f8fafc; padding: 8px; border-radius: 12px; margin-top: 8px; }
       }
-
-      .refus-actions {
-        margin-top: 1rem;
-        text-align: right;
-        .btn-details {
-          font-size: 0.75rem;
-        }
-      }
-    }
-  }
-
-  // MODALS
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    animation: fadeIn 0.2s ease;
-
-    .modal-content {
-      background: white;
-      border-radius: 32px;
-      max-width: 500px;
-      width: 90%;
-      max-height: 85vh;
-      overflow: auto;
-      box-shadow: $shadow-md;
-      animation: slideUp 0.3s ease;
-
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1.5rem 1.5rem 0;
-        h2 { margin: 0; font-size: 1.4rem; }
-        .close-btn {
-          background: none;
-          border: none;
-          font-size: 1.5rem;
-          cursor: pointer;
-          color: #94a3b8;
-          transition: $transition;
-          &:hover { color: #ef4444; }
-        }
-      }
-      .modal-body {
-        padding: 1.5rem;
-        p { margin: 0.5rem 0; }
-        .full-width { width: 100%; margin-top: 1rem; }
-      }
-      .modal-footer {
-        padding: 1rem 1.5rem 1.5rem;
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-      }
+      .refus-actions { margin-top: 1rem; text-align: right; }
     }
   }
 }
+
+// ================= MODALES (styles corrigés, positionnés globalement) =================
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+
+  .modal-content {
+    background: white;
+    border-radius: 32px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 85vh;
+    overflow: auto;
+    box-shadow: $shadow-md;
+    animation: slideUp 0.3s ease;
+
+    &.modal-lg {
+      max-width: 800px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 1.5rem 0;
+      h2 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 600;
+      }
+      .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #94a3b8;
+        transition: $transition;
+        &:hover {
+          color: #ef4444;
+        }
+      }
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      p {
+        margin: 0.5rem 0;
+      }
+      .full-width {
+        width: 100%;
+        margin-top: 1rem;
+      }
+    }
+
+    .modal-footer {
+      padding: 1rem 1.5rem 1.5rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+  }
+}
+
+.detail-section {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #eef2ff;
+  padding-bottom: 1rem;
+  h3 { font-size: 1.1rem; margin-bottom: 0.75rem; color: #4f46e5; }
+  p { margin: 0.3rem 0; font-size: 0.9rem; }
+}
+
+// FullCalendar modern style
+::ng-deep .fc {
+  font-family: 'Inter', sans-serif;
+}
+::ng-deep .fc-toolbar-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+::ng-deep .fc-button {
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: 0.2s;
+  &:hover { transform: translateY(-2px); }
+}
+::ng-deep .fc-daygrid-day { transition: 0.2s; &:hover { background: #f1f5f9; } }
+::ng-deep .fc-event {
+  border-radius: 10px;
+  padding: 4px 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+::ng-deep .fc-day-today { background: rgba(99,102,241,0.08); }
 
 // Animations
 @keyframes fadeInUp {
@@ -425,4 +352,22 @@ $transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
+}
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  gap: 1rem;
+}
+
+.error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #dc3545;
+  gap: 0.5rem;
 }

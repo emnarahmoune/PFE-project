@@ -59,11 +59,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/gestion-conges/pages/validation-rh/validation-rh.component')
           .then(m => m.ValidationRhComponent)
       },
-         {
-  path: 'scores',
-  loadComponent: () => import('./features/admin/scores/admin-scores.component')
-    .then(m => m.AdminScoresComponent)
-},
+      {
+        path: 'scores',
+        loadComponent: () => import('./features/admin/scores/admin-scores.component')
+          .then(m => m.AdminScoresComponent)
+      },
+          
       // Assignation des managers
       {
         path: 'manager-assignment',
@@ -76,12 +77,21 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/gestion-employes/pages/manager-list/manager-list.component')
           .then(m => m.ManagerListComponent)
       },
+  
       // Détail d'un manager
       {
         path: 'managers/:id',
         loadComponent: () => import('./features/admin/gestion-employes/pages/manager-detail/manager-detail.component')
           .then(m => m.ManagerDetailComponent)
-      }
+      },
+      // ========== PROFIL ADMINISTRATEUR RH ==========
+  {
+  path: 'profil',
+  loadComponent: () => import('./features/admin/profil/AdminProfilComponent')
+    .then(m => m.AdminProfilComponent),
+  canActivate: [roleGuard],
+  data: { roles: ['ADMIN_RH', 'admin_rh', 'rh', 'admin'] }  // élargi
+}
     ]
   },
 
@@ -133,9 +143,17 @@ export const routes: Routes = [
         path: 'indicateurs',
         loadComponent: () => import('./features/manager/page/indicateurs/indicateurs.component')
           .then(m => m.IndicateursComponent)
+      },
+    {
+        path: 'profil',
+        loadComponent: () => import('./features/manager/page/profil/manager-profil.component')
+          .then(m => m.ManagerProfilComponent),
+        canActivate: [roleGuard],
+        data: { roles: ['manager'] }
       }
     ]
   },
+  
 
   // ==================== ROUTES EMPLOYEE ====================
   {

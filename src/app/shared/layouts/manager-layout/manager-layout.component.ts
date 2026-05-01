@@ -1,82 +1,154 @@
-import { Component, OnInit } from '@angular/core';
+// features/manager/layout/manager-layout.component.ts
+import { Component, OnInit, Renderer2, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, RouterOutlet } from '@angular/router';
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatDividerModule } from '@angular/material/divider';
+import { RouterModule, RouterOutlet, Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { KeycloakInitService } from '../../../core/services/keycloak-init.service';
+import { PictureService } from '../../../core/services/picture.service';
+import { ManagerProfileService } from '../../../core/services/manager-profile.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-manager-layout',
   standalone: true,
-  imports: [
-    CommonModule,
-    RouterModule,
-    RouterOutlet,
-    MatSidenavModule,
-    MatToolbarModule,
-    MatListModule,
-    MatIconModule,
-    MatButtonModule,
-    MatMenuModule,
-    MatDividerModule
-  ],
+  imports: [CommonModule, RouterModule, RouterOutlet],
   templateUrl: './manager-layout.component.html',
-  styleUrls: ['./manager-layout.component.css']
+  styleUrls: ['./manager-layout.component.scss']
 })
-export class ManagerLayoutComponent implements OnInit {
+export class ManagerLayoutComponent implements OnInit, OnDestroy {
   isSidebarOpen = true;
   currentYear = new Date().getFullYear();
-  
+  userRole = 'manager';
+  userNom = '';
+  userPrenom = '';
+  userEmail = '';
+  /** URL avec timestamp anti-cache, prête à l'affichage */
+  userPhotoUrl: string | null = null;
+  darkMode = false;
+  private pictureSubscription: Subscription | null = null;
+
   menuItems = [
-    { path: '/manager/dashboard', icon: 'dashboard', label: 'Dashboard' },
-    { path: '/manager/equipe', icon: 'people', label: 'Mon équipe' },
-    { path: '/manager/conges', icon: 'event', label: 'Demandes de congé' },
-    { path: '/manager/stats', icon: 'analytics', label: 'Statistiques' }
+    { path: '/manager/dashboard', icon: '◪', label: 'Dashboard' },
+    { path: '/manager/equipe',    icon: '◌', label: 'Mon équipe' },
+    { path: '/manager/conges',    icon: '◍', label: 'Demandes de congé' },
+    { path: '/manager/indicateurs', icon: '◕', label: 'Indicateurs' },
+    { path: '/manager/profil',    icon: '👤', label: 'Mon profil' }
   ];
 
   constructor(
     private authService: AuthService,
-    private keycloakService: KeycloakInitService
+    public router: Router,
+    private keycloakService: KeycloakInitService,
+    private renderer: Renderer2,
+    private pictureService: PictureService,
+    private managerProfileService: ManagerProfileService,
+    private cdr: ChangeDetectorRef
   ) {}
 
-  ngOnInit() {}
+  ngOnInit(): void {
+    const roles = this.keycloakService.getUserRoles();
+    if (roles.includes('admin')) {
+      this.router.navigate(['/admin/dashboard']);
+      return;
+    }
+    this.loadUserInfo();
+    this.loadFullProfile();
+    this.loadThemePreference();
+    this.subscribeToPicture();
+  }
 
-  toggleSidebar() {
+  ngOnDestroy(): void {
+    this.pictureSubscription?.unsubscribe();
+  }
+
+  loadUserInfo(): void {
+    const user = this.authService.getCurrentUser();
+    if (user) {
+      this.userNom    = user.nom    || '';
+      this.userPrenom = user.prenom || '';
+      this.userEmail  = user.email  || '';
+      this.userRole   = user.role   || 'manager';
+    }
+  }
+
+  private loadFullProfile(): void {
+    this.managerProfileService.getProfile().subscribe({
+      next: (response) => {
+        if (response.success && response.data) {
+          if (response.data.nom)    this.userNom    = response.data.nom;
+          if (response.data.prenom) this.userPrenom = response.data.prenom;
+          if (response.data.email)  this.userEmail  = response.data.email;
+          if (response.data.role)   this.userRole   = response.data.role;
+          // Envoie l'URL brute — le subscriber ajoutera le timestamp
+          this.pictureService.setPicture(response.data.photoUrl || null);
+        }
+      },
+      error: (err) => console.error('Erreur chargement profil complet', err)
+    });
+  }
+
+  subscribeToPicture(): void {
+    this.pictureSubscription = this.pictureService.picture$.subscribe(rawUrl => {
+      // Timestamp ajouté ici, une seule fois
+      this.userPhotoUrl = PictureService.buildDisplayUrl(rawUrl);
+      this.cdr.detectChanges();
+    });
+  }
+
+  toggleSidebar(): void {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
-  logout() {
+  logout(): void {
     this.keycloakService.logout();
   }
 
   getUserName(): string {
-    const user = this.authService.getCurrentUser();
-    if (user?.prenom && user?.nom) {
-      return `${user.prenom} ${user.nom}`.trim();
-    }
-    return 'Manager';
+    return this.userPrenom && this.userNom
+      ? `${this.userPrenom} ${this.userNom}`
+      : 'Manager';
   }
 
   getUserInitials(): string {
-    const user = this.authService.getCurrentUser();
-    if (user?.prenom && user?.nom) {
-      return `${user.prenom.charAt(0)}${user.nom.charAt(0)}`.toUpperCase();
-    }
-    return 'MG';
+    return this.userPrenom && this.userNom
+      ? `${this.userPrenom.charAt(0)}${this.userNom.charAt(0)}`.toUpperCase()
+      : 'MG';
   }
 
   getCurrentPageTitle(): string {
-    const path = window.location.pathname;
-    if (path.includes('/src/app/features/manager/dashboard-manager')) return 'Dashboard Manager';
-    if (path.includes('/src/app/features/manager/equipe')) return 'Mon équipe';
-    if (path.includes('/src/app/features/manager/conges')) return 'Demandes de congé';
-    if (path.includes('/src/app/features/manager/stats')) return 'Statistiques';
-    return 'Espace Manager';
+    const path = this.router.url;
+    const titles: Record<string, string> = {
+      '/manager/dashboard':   'Tableau de bord',
+      '/manager/equipe':      'Mon équipe',
+      '/manager/conges':      'Demandes de congé',
+      '/manager/indicateurs': 'Indicateurs',
+      '/manager/profil':      'Mon profil'
+    };
+    return titles[path] || 'Espace Manager';
+  }
+
+  toggleTheme(): void {
+    this.darkMode = !this.darkMode;
+    if (this.darkMode) {
+      this.renderer.addClass(document.body, 'dark-theme');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      this.renderer.removeClass(document.body, 'dark-theme');
+      localStorage.setItem('theme', 'light');
+    }
+  }
+
+  private loadThemePreference(): void {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      this.darkMode = true;
+      this.renderer.addClass(document.body, 'dark-theme');
+    } else {
+      this.renderer.removeClass(document.body, 'dark-theme');
+    }
+  }
+
+  isRouteActive(path: string): boolean {
+    return this.router.isActive(path, false);
   }
 }

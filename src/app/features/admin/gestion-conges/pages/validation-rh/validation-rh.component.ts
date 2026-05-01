@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -9,15 +9,18 @@ import { MatTableModule } from '@angular/material/table';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { AdminCongeService, TacheRh, StatsConges, DemandeRefusManager } from '../../../../../core/services/admin-conge.service';
-import { FullCalendarModule } from '@fullcalendar/angular';
+import { MatSelectModule } from '@angular/material/select';
+import { FullCalendarModule, FullCalendarComponent } from '@fullcalendar/angular';
 import dayGridPlugin from '@fullcalendar/daygrid';
+import multiMonthPlugin from '@fullcalendar/multimonth';
 import interactionPlugin from '@fullcalendar/interaction';
+import { EventInput } from '@fullcalendar/core';
+import { AdminCongeService, TacheRh, StatsConges, DemandeRefusManager, DemandeRefusDetails } from '../../../../../core/services/admin-conge.service';
 
 @Component({
   selector: 'app-validation-rh',
@@ -28,86 +31,109 @@ import interactionPlugin from '@fullcalendar/interaction';
     MatTableModule, MatChipsModule, MatSnackBarModule,
     MatProgressSpinnerModule, MatDialogModule,
     MatTooltipModule, MatTabsModule, MatBadgeModule,
-    FullCalendarModule,
-    MatFormFieldModule
+    FullCalendarModule, MatFormFieldModule, MatSelectModule
   ],
   templateUrl: './validation-rh.component.html',
   styleUrls: ['./validation-rh.component.scss']
 })
 export class ValidationRhComponent implements OnInit, OnDestroy {
-  
+
+  @ViewChild('calendar') calendarComponent!: FullCalendarComponent;
+
   taches: TacheRh[] = [];
   loadingTaches = false;
   refusManager: DemandeRefusManager[] = [];
   loadingRefus = false;
-  
-  selectedTabIndex = 0;
-  
-  // Modals
+  stats: StatsConges = { EN_ATTENTE: 0, APPROUVE: 0, REFUSE: 0 };
+
+  displayedColumns = ['employe', 'periode', 'jours', 'type', 'actions'];
+  displayedColumnsRefus = ['employe', 'manager', 'periode', 'motif', 'dateDecision'];
+
+  selectedYear = new Date().getFullYear();
+  selectedMonth = new Date().getMonth();
+  years: number[] = [];
+  months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+  calendarOptions: any = {
+    initialView: 'dayGridMonth',
+    locale: 'fr',
+    plugins: [dayGridPlugin, interactionPlugin, multiMonthPlugin],
+    events: [] as EventInput[],
+    height: 'auto',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,dayGridWeek,multiMonthYear'
+    },
+    buttonText: {
+      today: "Aujourd'hui",
+      month: 'Mois',
+      week: 'Semaine',
+      multiMonthYear: 'Année'
+    }
+  };
+
   showApproveModal = false;
   showRejectModal = false;
   selectedTache: TacheRh | null = null;
   commentaire = '';
   motifRefus = '';
   isSubmitting = false;
-  
-  stats: StatsConges = {
-    EN_ATTENTE: 0,
-    APPROUVE: 0,
-    REFUSE: 0
-  };
-  
+
+  showDetailsModal = false;
+  selectedDetails: any = null;
+
+  showRefusDetailsModal = false;
+  selectedRefusDetails: DemandeRefusDetails | null = null;
+  loadingRefusDetails = false;
+
   private refreshInterval: any;
   private readonly REFRESH_INTERVAL_MS = 15000;
-
-  // Colonnes du tableau (sans "statut", car non utilisé dans le template)
-  displayedColumns = ['employe', 'periode', 'jours', 'type', 'actions'];
-  displayedColumnsRefus = ['employe', 'manager', 'periode', 'motif', 'dateDecision'];
-
-  // Configuration FullCalendar (corrigée)
-  calendarOptions: any = {
-    initialView: 'dayGridMonth',
-    locale: 'fr',
-    plugins: [dayGridPlugin, interactionPlugin],
-    events: [],
-    height: 'auto',
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'dayGridMonth,dayGridWeek'
-    },
-    buttonText: {
-      today: 'Aujourd\'hui',
-      month: 'Mois',
-      week: 'Semaine'
-    }
-  };
 
   constructor(
     private adminCongeService: AdminCongeService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    this.loadTaches();
-    this.loadRefusManager();
-    this.loadStats();
+    this.generateYears();
+    this.loadAllData();
     this.startAutoRefresh();
-    this.loadCalendarEvents();
   }
 
   ngOnDestroy(): void {
     if (this.refreshInterval) clearInterval(this.refreshInterval);
   }
 
+  generateYears(): void {
+    const currentYear = new Date().getFullYear();
+    for (let i = currentYear - 3; i <= currentYear + 3; i++) {
+      this.years.push(i);
+    }
+  }
+
+  changeYearMonth(): void {
+    if (this.calendarComponent) {
+      const calendarApi = this.calendarComponent.getApi();
+      const date = new Date(this.selectedYear, this.selectedMonth, 1);
+      calendarApi.gotoDate(date);
+    }
+  }
+
+  loadAllData(): void {
+    this.loadTaches();
+    this.loadRefusManager();
+    this.loadStats();
+    this.loadCalendarEvents();
+  }
+
+  refreshAllData(): void {
+    this.loadAllData();
+  }
+
   startAutoRefresh(): void {
-    this.refreshInterval = setInterval(() => {
-      this.loadTaches(false);
-      this.loadRefusManager();
-      this.loadStats();
-      this.loadCalendarEvents();
-    }, this.REFRESH_INTERVAL_MS);
+    this.refreshInterval = setInterval(() => this.loadAllData(), this.REFRESH_INTERVAL_MS);
   }
 
   loadTaches(showLoading = true): void {
@@ -117,11 +143,11 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
         this.taches = data || [];
         this.stats.EN_ATTENTE = this.taches.length;
         this.loadingTaches = false;
+        this.cdr.detectChanges();
       },
-      error: (error) => {
+      error: () => {
         this.loadingTaches = false;
-        console.error('Erreur chargement tâches:', error);
-        this.showToast('Erreur de connexion au serveur', 'error');
+        this.showToast('Erreur chargement demandes', 'error');
       }
     });
   }
@@ -132,29 +158,94 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
       next: (data) => {
         this.refusManager = data || [];
         this.loadingRefus = false;
+        this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('Erreur chargement refus manager:', err);
+      error: () => {
         this.loadingRefus = false;
-        this.showToast('Erreur chargement des refus manager', 'error');
+        this.showToast('Erreur chargement refus manager', 'error');
       }
     });
   }
 
   loadStats(): void {
     this.adminCongeService.getStats().subscribe({
-      next: (data) => { if (data) this.stats = data; },
-      error: (err) => console.error('Erreur chargement stats:', err)
+      next: (data) => { if (data) this.stats = data; this.cdr.detectChanges(); },
+      error: () => console.error('Erreur stats')
     });
   }
 
   loadCalendarEvents(): void {
-    // À implémenter : charger les événements depuis le service
-    // L'API doit retourner des objets avec title, start, end, color, etc.
-    // Exemple :
-    // this.adminCongeService.getAllConges().subscribe(events => {
-    //   this.calendarOptions = { ...this.calendarOptions, events };
-    // });
+    this.adminCongeService.getAllCongesForCalendar().subscribe({
+      next: (events: EventInput[]) => {
+        if (this.calendarComponent) {
+          const calendarApi = this.calendarComponent.getApi();
+          calendarApi.removeAllEventSources();
+          calendarApi.addEventSource(events);
+        } else {
+          this.calendarOptions = { ...this.calendarOptions, events };
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => this.showToast('Erreur chargement calendrier', 'error')
+    });
+  }
+
+  openRefusDetails(refus: DemandeRefusManager): void {
+    if (!refus || !refus.id) {
+      this.showToast('Identifiant de demande manquant', 'error');
+      return;
+    }
+
+    this.loadingRefusDetails = true;
+    this.showRefusDetailsModal = true;
+    this.selectedRefusDetails = null;
+    this.cdr.detectChanges();  // force affichage du spinner
+
+    this.adminCongeService.getDemandeRefusDetails(refus.id).subscribe({
+      next: (details: DemandeRefusDetails) => {
+        this.selectedRefusDetails = details;
+        this.loadingRefusDetails = false;
+        this.cdr.detectChanges();  // met à jour l'affichage
+      },
+      error: (err) => {
+        console.error('Erreur détail refus', err);
+        this.showToast('Impossible de charger les détails', 'error');
+        this.loadingRefusDetails = false;
+        this.closeRefusDetails();
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  closeRefusDetails(): void {
+    this.showRefusDetailsModal = false;
+    this.selectedRefusDetails = null;
+    this.loadingRefusDetails = false;
+    this.cdr.detectChanges();
+  }
+
+  private parseDate(dateStr: string | undefined): Date | null {
+    if (!dateStr) return null;
+    let d = new Date(dateStr);
+    if (isNaN(d.getTime()) && dateStr.includes(' ')) {
+      d = new Date(dateStr.replace(' ', 'T'));
+    }
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  formatFullDate(dateStr: string | undefined): string {
+    const d = this.parseDate(dateStr);
+    if (!d) return '';
+    return d.toLocaleString('fr-FR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+
+  formatDate(dateStr: string | undefined): string {
+    const d = this.parseDate(dateStr);
+    if (!d) return '';
+    return d.toLocaleDateString('fr-FR');
   }
 
   openApproveModal(tache: TacheRh): void {
@@ -173,8 +264,6 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     this.showApproveModal = false;
     this.showRejectModal = false;
     this.selectedTache = null;
-    this.commentaire = '';
-    this.motifRefus = '';
   }
 
   confirmApprove(): void {
@@ -183,17 +272,13 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
     this.adminCongeService.approuverDemande(this.selectedTache.demandeId, this.commentaire).subscribe({
       next: () => {
         this.isSubmitting = false;
-        this.showToast('✅ Demande approuvée avec succès', 'success');
+        this.showToast('✅ Demande approuvée', 'success');
         this.closeModals();
-        this.loadTaches();
-        this.loadRefusManager();
-        this.loadStats();
-        this.loadCalendarEvents();
+        this.loadAllData();
       },
-      error: (error) => {
+      error: () => {
         this.isSubmitting = false;
-        const message = error.error?.message || 'Erreur lors de l\'approbation';
-        this.showToast(message, 'error');
+        this.showToast('Erreur approbation', 'error');
       }
     });
   }
@@ -201,118 +286,74 @@ export class ValidationRhComponent implements OnInit, OnDestroy {
   confirmReject(): void {
     if (!this.selectedTache || this.isSubmitting) return;
     if (!this.motifRefus.trim()) {
-      this.showToast('Veuillez saisir un motif de refus', 'error');
+      this.showToast('Motif obligatoire', 'error');
       return;
     }
     this.isSubmitting = true;
     this.adminCongeService.refuserDemande(this.selectedTache.demandeId, this.motifRefus).subscribe({
       next: () => {
         this.isSubmitting = false;
-        this.showToast('❌ Demande refusée avec succès', 'success');
+        this.showToast('❌ Demande refusée', 'success');
         this.closeModals();
-        this.loadTaches();
-        this.loadRefusManager();
-        this.loadStats();
-        this.loadCalendarEvents();
+        this.loadAllData();
       },
-      error: (error) => {
+      error: () => {
         this.isSubmitting = false;
-        const message = error.error?.message || 'Erreur lors du refus';
-        this.showToast(message, 'error');
+        this.showToast('Erreur refus', 'error');
       }
     });
   }
 
-  getStatutClass(statut: string): string {
-    switch (statut) {
-      case 'APPROUVE': return 'statut-approuve';
-      case 'EN_ATTENTE': return 'statut-attente';
-      case 'REFUSE': return 'statut-refuse';
-      case 'ANNULE': return 'statut-annule';
-      default: return '';
-    }
+  openDetails(tache: any): void {
+    this.selectedDetails = tache;
+    this.showDetailsModal = true;
   }
 
-  getStatutLabel(statut: string): string {
-    switch (statut) {
-      case 'APPROUVE': return '✅ Approuvé';
-      case 'EN_ATTENTE': return '⏳ En attente';
-      case 'REFUSE': return '❌ Refusé';
-      case 'ANNULE': return '🗑️ Annulé';
-      default: return statut;
-    }
+  closeDetails(): void {
+    this.showDetailsModal = false;
+    this.selectedDetails = null;
   }
 
   getTypeLabel(type?: string): string {
-    switch (type) {
-      case 'ANNUEL': return 'Annuel';
-      case 'MALADIE': return 'Maladie';
-      case 'SANS_SOLDE': return 'Sans solde';
-      case 'MATERNITE': return 'Maternité';
-      case 'PATERNITE': return 'Paternité';
-      default: return type || 'Non spécifié';
-    }
+    const map: Record<string, string> = {
+      ANNUEL: 'Annuel', MALADIE: 'Maladie', SANS_SOLDE: 'Sans solde',
+      MATERNITE: 'Maternité', PATERNITE: 'Paternité'
+    };
+    return map[type || ''] || 'Non spécifié';
   }
 
   getTypeColor(type?: string): string {
-    switch (type) {
-      case 'ANNUEL': return '#1976d2';
-      case 'MALADIE': return '#dc3545';
-      case 'SANS_SOLDE': return '#ffc107';
-      case 'MATERNITE': return '#28a745';
-      case 'PATERNITE': return '#28a745';
-      default: return '#6c757d';
-    }
-  }
-
-  formatDate(dateStr: string | undefined): string {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR');
+    const map: Record<string, string> = {
+      ANNUEL: '#1976d2', MALADIE: '#dc3545', SANS_SOLDE: '#ffc107',
+      MATERNITE: '#28a745', PATERNITE: '#28a745'
+    };
+    return map[type || ''] || '#6c757d';
   }
 
   getAvatarColor(dept?: string): string {
     const colors: Record<string, string> = {
-      RH: '#8b5cf6',
-      Technique: '#0891b2',
-      Commercial: '#d97706',
-      Finance: '#059669',
-      Marketing: '#db2777',
-      Direction: '#7c3aed',
-      Logistique: '#4f46e5'
+      RH: '#8b5cf6', Technique: '#0891b2', Commercial: '#d97706',
+      Finance: '#059669', Marketing: '#db2777', Direction: '#7c3aed', Logistique: '#4f46e5'
     };
     return colors[dept || ''] || '#6366f1';
+  }
+
+  getStatutLabel(statut: string): string {
+    const map: Record<string, string> = {
+      APPROUVE: '✅ Approuvé', EN_ATTENTE: '⏳ En attente',
+      REFUSE: '❌ Refusé', ANNULE: '🗑️ Annulé'
+    };
+    return map[statut] || statut;
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {
     this.snackBar.open(message, 'Fermer', {
       duration: 4000,
       panelClass: type === 'success' ? 'snackbar-success' : 'snackbar-error',
-      horizontalPosition: 'right',
-      verticalPosition: 'top'
+      horizontalPosition: 'right'
     });
   }
 
-  // Détails modal
-  selectedDetails: any = null;
-  showDetailsModal = false;
-
-  openDetails(tache: any) {
-    this.selectedDetails = tache;
-    this.showDetailsModal = true;
-  }
-
-  closeDetails() {
-    this.showDetailsModal = false;
-    this.selectedDetails = null;
-  }
-
-  // TrackBy pour optimisation
-  trackByTaskId(index: number, item: TacheRh): number {
-    return item.demandeId ?? index;
-  }
-
-  trackByRefusId(index: number, item: DemandeRefusManager): number {
-    return item.demandeId ?? index;
-  }
+  trackByTaskId(index: number, item: TacheRh): number { return item.demandeId ?? index; }
+  trackByRefusId(index: number, item: DemandeRefusManager): number { return item.id ?? index; }
 }
