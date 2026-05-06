@@ -2,8 +2,9 @@ package com.codeWithProject.ecom.service;
 
 import com.codeWithProject.ecom.service.dto.AdminProfileDTO;
 import com.codeWithProject.ecom.service.dto.AdminProfileUpdateDTO;
-import com.codeWithProject.ecom.service.dto.ChangePasswordDTO;
+import com.codeWithProject.ecom.service.dto.ChangePasswordRequest;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 public interface AdminProfileService {
 
@@ -33,4 +34,16 @@ public interface AdminProfileService {
      * @param email email de l'admin
      */
     void deletePhoto(String email);
+
+
+      /**
+     * Change le mot de passe de l'admin
+     */
+
+
+
+
+
+
+      void changePassword(Jwt jwt, ChangePasswordRequest dto);
 }

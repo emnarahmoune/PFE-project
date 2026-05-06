@@ -201,13 +201,20 @@ public Optional<CompetenceDTO> findById(Long id) {
 
     // 🔥 LISTE EMPLOYES
     List<EmployeDTO> employes = c.getEmployes().stream().map(e -> {
-        EmployeDTO emp = new EmployeDTO();
-        emp.setId(e.getId());
-        emp.setNom(e.getNom());
-        emp.setPrenom(e.getPrenom());
-        emp.setPoste(e.getPoste());
-        return emp;
-    }).toList();
+    EmployeDTO emp = new EmployeDTO();
+
+    emp.setId(e.getId());
+    emp.setNom(e.getNom());
+    emp.setPrenom(e.getPrenom());
+    emp.setEmail(e.getEmail());
+    emp.setPoste(e.getPoste());
+    emp.setDepartement(e.getDepartement());
+
+    // ✅ IMPORTANT POUR AFFICHER LA PHOTO
+    emp.setPhotoUrl(e.getPhotoUrl());
+
+    return emp;
+}).toList();
 
     dto.setEmployes(employes);
 

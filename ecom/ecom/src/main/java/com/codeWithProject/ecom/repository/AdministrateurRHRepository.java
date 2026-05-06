@@ -1,6 +1,8 @@
 package com.codeWithProject.ecom.repository;
 
 import com.codeWithProject.ecom.entity.AdministrateurRH;
+import com.codeWithProject.ecom.entity.DemandeConge;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,11 +10,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
+
 import java.util.Optional;
 
 @Repository
 public interface AdministrateurRHRepository extends JpaRepository<AdministrateurRH, Long> {
 
+
+
+    Optional<AdministrateurRH> findByEmailIgnoreCase(String email);
     // ===== RECHERCHES PAR IDENTIFIANTS =====
     Optional<AdministrateurRH> findByMatricule(String matricule);
     Optional<AdministrateurRH> findByEmail(String email);
@@ -33,6 +39,22 @@ public interface AdministrateurRHRepository extends JpaRepository<Administrateur
     default boolean existsByEmployeId(Long employeId) {
         return existsById(employeId);
     }
+
+
+
+    @Query("""
+    SELECT d
+    FROM DemandeConge d
+    LEFT JOIN FETCH d.employe e
+    LEFT JOIN FETCH d.manager m
+    LEFT JOIN FETCH d.adminRh a
+    ORDER BY d.dateDemande DESC
+""")
+List<DemandeConge> findAllForAdminHistorique();
+
+
+
+
 
     // ===== RECHERCHES PAR NOM/PRENOM =====
     @Query("SELECT a FROM AdministrateurRH a WHERE LOWER(a.nom) LIKE LOWER(CONCAT('%', :nom, '%'))")
@@ -75,4 +97,14 @@ public interface AdministrateurRHRepository extends JpaRepository<Administrateur
     // ===== VÉRIFICATIONS =====
     @Query("SELECT COUNT(a) > 0 FROM AdministrateurRH a WHERE a.email = :email")
     boolean isEmailAdministrateur(@Param("email") String email);
+
+
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+@Query(value = "INSERT IGNORE INTO administrateurs_rh (id) VALUES (:id)", nativeQuery = true)
+void insertAdminRhRow(@Param("id") Long id);
+
+@Modifying(clearAutomatically = true, flushAutomatically = true)
+@Query(value = "DELETE FROM administrateurs_rh WHERE id = :id", nativeQuery = true)
+void deleteAdminRhRow(@Param("id") Long id);
 }

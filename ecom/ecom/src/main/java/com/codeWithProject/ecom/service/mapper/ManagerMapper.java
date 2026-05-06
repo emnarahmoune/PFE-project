@@ -58,7 +58,7 @@ public class ManagerMapper {
         dto.setNomComplet(entity.getNomComplet());
         dto.setAnciennete(entity.getAnciennete());
         dto.setAncienneteManager(entity.getAncienneteManager());
-        dto.setStatutCompte(entity.getStatutCompte());
+        dto.setStatutCompte(entity.getStatut());
         dto.setPeutSeConnecter(entity.peutSeConnecter());
 
         return dto;
@@ -83,8 +83,6 @@ public class ManagerMapper {
         entity.setActif(dto.getActif() != null ? dto.getActif() : true);
         entity.setRole(dto.getRole() != null ? dto.getRole() : "manager");
         entity.setDateNomination(dto.getDateNomination());
-        entity.setTypeEmploye(com.codeWithProject.ecom.entity.Employe.TYPE_MANAGER);
-
         return entity;
     }
 }

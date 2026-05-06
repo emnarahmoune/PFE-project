@@ -1,30 +1,23 @@
 package com.codeWithProject.ecom.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
+@Table(name = "formation_competence")
+@Getter
+@Setter
 public class FormationCompetence {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "formation_id", nullable = false)
     private Long formationId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "competence_id", nullable = false)
     private Competence competence;
-
-    // getters
-    public Long getId() { return id; }
-
-    public Long getFormationId() { return formationId; }
-
-    public Competence getCompetence() { return competence; }
-
-    // setters
-    public void setId(Long id) { this.id = id; }
-
-    public void setFormationId(Long formationId) { this.formationId = formationId; }
-
-    public void setCompetence(Competence competence) { this.competence = competence; }
 }

@@ -23,6 +23,8 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,12 +34,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 @RestController
 @RequestMapping("/api/employes")
 @RequiredArgsConstructor
@@ -111,22 +112,30 @@ public class EmployeController {
         );
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<EmployeDTO>> getEmployeById(@PathVariable Long id) {
-        EmployeDTO dto = employeService.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employé introuvable"));
+  @GetMapping("/{id}")
+public ResponseEntity<ApiResponse<EmployeDTO>> getEmployeById(@PathVariable Long id) {
+    EmployeDTO dto = employeService.findById(id)
+            .orElseThrow(() -> new RuntimeException("Employé introuvable"));
 
-        dto.setFormations(employeService.getFormationsByEmployeId(id));
+    dto.setFormations(employeService.getFormationsByEmployeId(id));
+    dto.setConges(employeService.getCongesByEmployeId(id));
+    dto.setEvaluations(employeService.getEvaluationsByEmployeId(id));
 
-        return ResponseEntity.ok(ApiResponse.success(dto, "OK"));
-    }
+    return ResponseEntity.ok(ApiResponse.success(dto, "OK"));
+}
 
-    @GetMapping("/matricule/{matricule}")
-    public ResponseEntity<ApiResponse<EmployeDTO>> getEmployeByMatricule(@PathVariable String matricule) {
-        return employeService.findByMatricule(matricule)
-                .map(emp -> ResponseEntity.ok(ApiResponse.success(emp, "Employé trouvé")))
-                .orElse(ResponseEntity.notFound().build());
-    }
+ @GetMapping("/matricule/{matricule}")
+public ResponseEntity<?> getByMatricule(@PathVariable String matricule) {
+    return employeRepository.findByMatricule(matricule)
+            .map(employe -> ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "data", employe
+            )))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "success", false,
+                    "message", "Employé introuvable"
+            )));
+}
 
     @GetMapping("/departement/{departement}")
     public ResponseEntity<ApiResponse<List<EmployeDTO>>> getEmployesByDepartement(
@@ -201,13 +210,18 @@ public class EmployeController {
 
     // ===== CRUD =====
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<EmployeDTO>> createEmploye(
-            @Valid @RequestBody EmployeDTO dto
-    ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(employeService.create(dto), "Employé créé"));
+   @PostMapping
+public ResponseEntity<ApiResponse<EmployeDTO>> createEmploye(
+        @Valid @RequestBody EmployeDTO dto
+) {
+
+    if (dto.getRole() == null) {
+        dto.setRole("USER"); // 🔥 sécurité
     }
+
+    return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.created(employeService.create(dto), "Employé créé"));
+}
 
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<EmployeDTO>> updateEmploye(
@@ -278,6 +292,45 @@ public class EmployeController {
                 ApiResponse.success(updated, "Manager assigné")
         );
     }
+
+
+    @PostMapping("/mon-profil/photo")
+public ResponseEntity<ApiResponse<Map<String, String>>> uploadMaPhoto(
+        Authentication authentication,
+        @RequestParam("file") MultipartFile file
+) throws IOException {
+    String email = extractEmailFromAuthentication(authentication);
+
+    if (email == null || email.isBlank()) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+    }
+
+    String photoUrl = employeService.uploadPhotoProfilByEmail(email, file);
+
+    Map<String, String> data = new HashMap<>();
+    data.put("photoUrl", photoUrl);
+
+    return ResponseEntity.ok(
+            ApiResponse.success(data, "Photo mise à jour")
+    );
+}
+
+@DeleteMapping("/mon-profil/photo")
+public ResponseEntity<ApiResponse<Void>> deleteMaPhoto(Authentication authentication) {
+    String email = extractEmailFromAuthentication(authentication);
+
+    if (email == null || email.isBlank()) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
+    }
+
+    employeService.deletePhotoProfilByEmail(email);
+
+    return ResponseEntity.ok(
+            ApiResponse.success(null, "Photo supprimée")
+    );
+}
 
     /*
      * Ancienne route conservée :
@@ -377,7 +430,7 @@ public class EmployeController {
     // ===== ESPACE EMPLOYÉ CONNECTÉ =====
 
     @GetMapping("/mon-profil")
-    public ResponseEntity<ApiResponse<EmployeDTO>> getMonProfil(Authentication authentication) {
+public ResponseEntity<ApiResponse<EmployeDTO>> getMonProfil(Authentication authentication){
         String email = extractEmailFromAuthentication(authentication);
 
         if (email == null) {
@@ -471,24 +524,17 @@ public ResponseEntity<ApiResponse<EmployeDTO>> updateMonProfilPut(
 }
 
 
-    @PostMapping("/change-password")
-    public ResponseEntity<ApiResponse<Void>> changePassword(
-            Authentication authentication,
-            @Valid @RequestBody ChangePasswordRequest request
-    ) {
-        String email = extractEmailFromAuthentication(authentication);
+   @PostMapping("/change-password")
+public ResponseEntity<ApiResponse<Void>> changePassword(
+        @AuthenticationPrincipal Jwt jwt,
+        @Valid @RequestBody ChangePasswordRequest dto
+) {
+    employeService.changePassword(jwt, dto);
 
-        if (email == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Non authentifié"));
-        }
-
-        employeService.changePasswordByEmail(email, request);
-
-        return ResponseEntity.ok(
-                ApiResponse.success(null, "Mot de passe changé")
-        );
-    }
+    return ResponseEntity.ok(
+            ApiResponse.success(null, "Mot de passe modifié")
+    );
+}
 
     @PatchMapping("/change-email")
     public ResponseEntity<ApiResponse<EmployeDTO>> changeEmail(
@@ -667,4 +713,8 @@ public ResponseEntity<ApiResponse<EmployeDTO>> updateMonProfilPut(
             default -> 1;
         };
     }
+
+
+
+
 }

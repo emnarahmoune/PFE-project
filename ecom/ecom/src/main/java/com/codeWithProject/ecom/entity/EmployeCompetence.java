@@ -71,12 +71,12 @@ public class EmployeCompetence {
 
 
     // ===== RELATIONS =====
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "employe_id", nullable = false)
     @ToString.Exclude
     private Employe employe;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "competence_id", nullable = false)
     @ToString.Exclude
     private Competence competence;

@@ -3,10 +3,13 @@ package com.codeWithProject.ecom.service.dto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import camundajar.impl.scala.annotation.meta.getter;
 
 @Data
 @Builder
@@ -79,4 +82,16 @@ public class EmployeDTO {
     // 🔥 NOUVEAU
 private List<CompetenceEmployeDTO> competences;
 private List<FormationEmployeDTO> formations;
+
+
+private String employePhotoProfil;
+private String photoUrl;
+
+
+private List<HistoriqueCongeDTO> conges;
+private List<EvaluationDTO> evaluations;
+
+
+
+
 }

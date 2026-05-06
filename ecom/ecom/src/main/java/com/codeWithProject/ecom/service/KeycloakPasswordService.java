@@ -28,11 +28,12 @@ public class KeycloakPasswordService {
     @Value("${keycloak.frontend-client-id}")
     private String frontendClientId;
 
-    @Value("${keycloak.backend-client-id}")
-    private String backendClientId;
+    // ✅ CORRIGÉ (on utilise admin config)
+    @Value("${keycloak.admin.client-id}")
+    private String clientId;
 
-    @Value("${keycloak.backend-client-secret}")
-    private String backendClientSecret;
+    @Value("${keycloak.admin.client-secret}")
+    private String clientSecret;
 
     public void changePassword(String email, String oldPassword, String newPassword) {
         verifyOldPassword(email, oldPassword);
@@ -41,6 +42,8 @@ public class KeycloakPasswordService {
         String userId = findUserIdByEmail(adminToken, email);
 
         resetPassword(adminToken, userId, newPassword);
+
+        logoutUser(adminToken, userId);
     }
 
     private void verifyOldPassword(String email, String oldPassword) {
@@ -66,8 +69,8 @@ public class KeycloakPasswordService {
         String url = keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/token";
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-        body.add("client_id", backendClientId);
-        body.add("client_secret", backendClientSecret);
+        body.add("client_id", clientId); // ✅ corrigé
+        body.add("client_secret", clientSecret); // ✅ corrigé
         body.add("grant_type", "client_credentials");
 
         HttpHeaders headers = new HttpHeaders();
@@ -138,4 +141,18 @@ public class KeycloakPasswordService {
                 Void.class
         );
     }
+
+    private void logoutUser(String adminToken, String userId) {
+    String url = keycloakUrl + "/admin/realms/" + realm + "/users/" + userId + "/logout";
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(adminToken);
+
+    restTemplate.exchange(
+        url,
+        HttpMethod.POST,
+        new HttpEntity<>(headers),
+        Void.class
+    );
+}
 }

@@ -4,28 +4,133 @@ import com.codeWithProject.ecom.entity.Evaluation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
 
-    // Récupérer toutes les évaluations d'un employé, triées par date décroissante
-    List<Evaluation> findByEmployeIdOrderByDateEvaluationDesc(Long employeId);
+    // =========================
+    // EMPLOYÉ
+    // =========================
 
-    // Dernière évaluation d'un employé
-    Optional<Evaluation> findTopByEmployeIdOrderByDateEvaluationDesc(Long employeId);
+    List<Evaluation> findByEmploye_IdOrderByDateEvaluationDesc(Long employeId);
 
-    // Évaluations sur une période
-    List<Evaluation> findByEmployeIdAndDateEvaluationBetween(Long employeId, LocalDate debut, LocalDate fin);
+    Optional<Evaluation> findTopByEmploye_IdOrderByDateEvaluationDesc(Long employeId);
 
-    // Moyenne des notes sur une année donnée (utilisée dans le calcul du score turnover)
-    @Query("SELECT AVG(e.note) FROM Evaluation e WHERE e.employe.id = :employeId AND YEAR(e.dateEvaluation) = :annee")
-    Double moyenneEvaluationAnnuelle(@Param("employeId") Long employeId, @Param("annee") int annee);
+    List<Evaluation> findByEmploye_IdAndDateEvaluationBetween(
+            Long employeId,
+            LocalDate debut,
+            LocalDate fin
+    );
 
-    // Évaluations pour un manager (les employés dont il est le manager)
-    @Query("SELECT e FROM Evaluation e WHERE e.employe.manager.id = :managerId ORDER BY e.dateEvaluation DESC")
-    List<Evaluation> findByManagerId(@Param("managerId") Long managerId);
+    // =========================
+    // MANAGER
+    // =========================
+
+    /**
+     * Évaluations créées par un manager.
+     */
+    List<Evaluation> findByEvaluateur_IdOrderByDateEvaluationDesc(Long evaluateurId);
+
+    /**
+     * Évaluations des employés appartenant à l'équipe du manager.
+     */
+    List<Evaluation> findByEmploye_Manager_IdOrderByDateEvaluationDesc(Long managerId);
+
+    // =========================
+    // STATS
+    // =========================
+
+    @Query("""
+           SELECT AVG(e.note)
+           FROM Evaluation e
+           WHERE e.employe.id = :employeId
+             AND e.dateEvaluation BETWEEN :debut AND :fin
+           """)
+    Double moyenneEvaluationSurPeriode(
+            @Param("employeId") Long employeId,
+            @Param("debut") LocalDate debut,
+            @Param("fin") LocalDate fin
+    );
+
+    @Query("""
+           SELECT AVG(e.note)
+           FROM Evaluation e
+           WHERE e.employe.id = :employeId
+           """)
+    Double moyenneGlobaleEmploye(@Param("employeId") Long employeId);
+
+    @Query("""
+           SELECT AVG(e.note)
+           FROM Evaluation e
+           WHERE e.employe.manager.id = :managerId
+           """)
+    Double moyenneEquipeManager(@Param("managerId") Long managerId);
+
+    @Query("""
+           SELECT AVG(e.note)
+           FROM Evaluation e
+           """)
+    Double moyenneGlobale();
+
+    @Query("""
+           SELECT AVG(e.objectifsAtteints)
+           FROM Evaluation e
+           WHERE e.objectifsAtteints IS NOT NULL
+           """)
+    Double moyenneObjectifsGlobale();
+
+    @Query("""
+           SELECT AVG(e.objectifsAtteints)
+           FROM Evaluation e
+           WHERE e.employe.manager.id = :managerId
+             AND e.objectifsAtteints IS NOT NULL
+           """)
+    Double moyenneObjectifsManager(@Param("managerId") Long managerId);
+
+    @Query("""
+           SELECT AVG(e.objectifsAtteints)
+           FROM Evaluation e
+           WHERE e.employe.id = :employeId
+             AND e.objectifsAtteints IS NOT NULL
+           """)
+    Double moyenneObjectifsEmploye(@Param("employeId") Long employeId);
+
+    @Query("""
+           SELECT COUNT(e)
+           FROM Evaluation e
+           WHERE e.note >= :noteMin
+           """)
+    Long countByNoteGreaterThanOrEqual(@Param("noteMin") Double noteMin);
+
+    @Query("""
+           SELECT COUNT(e)
+           FROM Evaluation e
+           WHERE e.note < :noteMax
+           """)
+    Long countByNoteLessThan(@Param("noteMax") Double noteMax);
+
+    @Query("""
+           SELECT COUNT(e)
+           FROM Evaluation e
+           WHERE e.employe.manager.id = :managerId
+             AND e.note >= :noteMin
+           """)
+    Long countManagerByNoteGreaterThanOrEqual(
+            @Param("managerId") Long managerId,
+            @Param("noteMin") Double noteMin
+    );
+
+    @Query("""
+           SELECT COUNT(e)
+           FROM Evaluation e
+           WHERE e.employe.manager.id = :managerId
+             AND e.note < :noteMax
+           """)
+    Long countManagerByNoteLessThan(
+            @Param("managerId") Long managerId,
+            @Param("noteMax") Double noteMax
+    );
 }

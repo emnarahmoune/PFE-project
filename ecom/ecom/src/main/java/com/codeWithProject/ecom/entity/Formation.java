@@ -4,11 +4,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.ArrayList;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.Set;
+import java.util.HashSet;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
 @Table(name = "formations")
@@ -41,42 +40,49 @@ public class Formation {
     @Column(name = "date_creation")
     private LocalDateTime dateCreation;
 
- 
     @Column(name = "url_youtube")
     private String urlVideo;
 
     @PrePersist
     public void prePersist() {
         this.dateCreation = LocalDateTime.now();
-
         if (this.actif == null) {
             this.actif = true;
         }
     }
 
-
+    // =========================
+    // 🎥 VIDEOS
+    // =========================
     @OneToMany(
         mappedBy = "formation",
         cascade = CascadeType.ALL,
-        orphanRemoval = true
-)
-private List<FormationVideo> videos = new ArrayList<>();
+        orphanRemoval = true,
+        fetch = FetchType.LAZY
+    )
+    @JsonIgnore
+    private Set<FormationVideo> videos = new HashSet<>();
 
-@OneToMany(
+    // =========================
+    // 📄 SUPPORTS
+    // =========================
+    @OneToMany(
         mappedBy = "formation",
         cascade = CascadeType.ALL,
-        orphanRemoval = true
-)
-private List<FormationSupport> supports = new ArrayList<>();
+        orphanRemoval = true,
+        fetch = FetchType.LAZY
+    )
+    @JsonIgnore
+    private Set<FormationSupport> supports = new HashSet<>();
 
-@ManyToMany
-private List<Employe> employes;
+    // =========================
+    // 👥 EMPLOYES
+    // =========================
+    @ManyToMany
+    @JsonIgnore
+    private Set<Employe> employes = new HashSet<>();
 
-public List<Employe> getEmployes() {
-    return employes;
-}
-
-public void setEmployes(List<Employe> employes) {
-    this.employes = employes;
-}
+    public void setEmployes(Set<Employe> employes) {
+        this.employes = employes;
+    }
 }

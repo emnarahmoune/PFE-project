@@ -8,5 +8,5 @@ import java.util.List;
 public interface FormationCompetenceRepository
         extends JpaRepository<FormationCompetence, Long> {
 
-    List<FormationCompetence> findByCompetence_Id(Long competenceId);
+List<FormationCompetence> findByCompetence_IdIn(List<Long> competenceIds);
 }

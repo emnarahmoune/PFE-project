@@ -24,31 +24,7 @@ public class KeycloakPasswordController {
 
     private final KeycloakAdminService keycloakAdminService;
 
-    @PostMapping("/change-password")
-    @Operation(summary = "Change le mot de passe de l'administrateur RH via Keycloak")
-    public ResponseEntity<ApiResponse<Void>> changePassword(
-            @AuthenticationPrincipal Jwt jwt,
-            @Valid @RequestBody ChangePasswordDTO dto) {
-
-        String email = extractEmail(jwt);
-        log.info("POST /api/admin/profile/change-password - admin : {}", email);
-
-        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Le nouveau mot de passe et sa confirmation ne correspondent pas"));
-        }
-
-        String userId = jwt.getSubject();
-
-        try {
-            keycloakAdminService.resetPassword(userId, dto.getNewPassword());
-            return ResponseEntity.ok(ApiResponse.success(null, "Mot de passe modifié avec succès dans Keycloak"));
-        } catch (Exception e) {
-            log.error("Erreur changement mot de passe Keycloak", e);
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
-        }
-    }
-
+   
     private String extractEmail(Jwt jwt) {
         if (jwt == null) return null;
         String email = jwt.getClaimAsString("email");

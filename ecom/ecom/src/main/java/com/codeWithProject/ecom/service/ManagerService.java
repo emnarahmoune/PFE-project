@@ -7,6 +7,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import com.codeWithProject.ecom.service.dto.CalendarEventDTO;
+
+import java.util.List;
 
 /**
  * Interface de service pour la gestion des managers
@@ -132,4 +135,7 @@ public interface ManagerService {
         // Par défaut, on fait un soft delete
         desactiver(id);
     }
+
+
+    List<CalendarEventDTO> getCalendarEvents(String managerEmail);
 }

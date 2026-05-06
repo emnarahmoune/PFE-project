@@ -1,11 +1,7 @@
 package com.codeWithProject.ecom.service.mapper;
 
-import com.codeWithProject.ecom.entity.Competence;
-import com.codeWithProject.ecom.entity.DemandeConge;
-import com.codeWithProject.ecom.entity.Employe;
-import com.codeWithProject.ecom.service.dto.CompetenceEmployeDTO;
-import com.codeWithProject.ecom.service.dto.EmployeDTO;
-import com.codeWithProject.ecom.service.dto.FormationEmployeDTO;
+import com.codeWithProject.ecom.entity.*;
+import com.codeWithProject.ecom.service.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -16,13 +12,10 @@ import java.util.stream.Collectors;
 public class EmployeMapper {
 
     public EmployeDTO toDto(Employe entity) {
-        if (entity == null) {
-            return null;
-        }
+        if (entity == null) return null;
 
         EmployeDTO dto = new EmployeDTO();
 
-        // ===== BASIQUE =====
         dto.setId(entity.getId());
         dto.setMatricule(entity.getMatricule());
         dto.setNom(entity.getNom());
@@ -36,30 +29,26 @@ public class EmployeMapper {
         dto.setStatut(entity.getStatut());
         dto.setDepartement(entity.getDepartement());
         dto.setSoldeConges(entity.getSoldeConges());
-
-        // Champs optionnels si présents dans ton DTO
         dto.setActif(entity.getActif());
         dto.setRole(entity.getRole());
-        dto.setTypeEmploye(entity.getTypeEmploye());
 
-        // ===== STATS =====
+        // ✅ IMPORTANT POUR AFFICHER LA PHOTO APRÈS ACTUALISATION
+        dto.setPhotoUrl(entity.getPhotoUrl());
+
         dto.setAnciennete(entity.getAnciennete());
         dto.setSalaireAnnuel(entity.getSalaireAnnuel());
 
-        // ===== SERVICE =====
         if (entity.getService() != null) {
             dto.setServiceId(entity.getService().getId());
             dto.setServiceCode(entity.getService().getCodeService());
             dto.setServiceLibelle(entity.getService().getLibelle());
         }
 
-        // ===== MANAGER =====
         if (entity.getManager() != null) {
             dto.setManagerId(entity.getManager().getId());
             dto.setManagerNom(entity.getManager().getNomComplet());
         }
 
-        // ===== FORMATIONS AVEC PROGRESSION =====
         if (entity.getEmployeFormations() != null) {
             dto.setNombreFormations(entity.getEmployeFormations().size());
 
@@ -72,13 +61,11 @@ public class EmployeMapper {
                                     .titre(ef.getFormation().getTitre())
                                     .progression(ef.getProgression())
                                     .statut(ef.getStatut())
-                                    .build()
-                            )
+                                    .build())
                             .collect(Collectors.toList())
             );
         }
 
-        // ===== COMPÉTENCES =====
         if (entity.getCompetences() != null) {
             dto.setNombreCompetences(entity.getCompetences().size());
 
@@ -90,7 +77,6 @@ public class EmployeMapper {
             );
         }
 
-        // ===== DEMANDES CONGÉ =====
         if (entity.getDemandesConge() != null) {
             dto.setNombreDemandesConge(entity.getDemandesConge().size());
 
@@ -106,11 +92,9 @@ public class EmployeMapper {
     }
 
     public Employe toEntity(EmployeDTO dto) {
-        if (dto == null) {
-            return null;
-        }
+        if (dto == null) return null;
 
-        return Employe.builder()
+        Employe employe = Employe.builder()
                 .id(dto.getId())
                 .matricule(dto.getMatricule())
                 .nom(dto.getNom())
@@ -125,17 +109,22 @@ public class EmployeMapper {
                 .departement(dto.getDepartement())
                 .soldeConges(dto.getSoldeConges() != null ? dto.getSoldeConges() : 25)
                 .actif(dto.getActif() != null ? dto.getActif() : true)
-                .role(dto.getRole())
-                .typeEmploye(dto.getTypeEmploye())
                 .build();
+
+        if (dto.getRole() != null && !dto.getRole().isBlank()) {
+            employe.setRole(dto.getRole().toUpperCase());
+        }
+
+        // ✅ IMPORTANT SI TU CONVERTIS DTO -> ENTITY
+        employe.setPhotoUrl(dto.getPhotoUrl());
+
+        return employe;
     }
 
     private CompetenceEmployeDTO mapCompetenceToDto(Competence competence) {
         CompetenceEmployeDTO dto = new CompetenceEmployeDTO();
-
         dto.setNom(competence.getNom());
         dto.setNiveau("INTERMEDIAIRE");
-
         return dto;
     }
 }

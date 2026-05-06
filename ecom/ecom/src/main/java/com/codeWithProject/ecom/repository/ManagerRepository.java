@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.Modifying;
 
 @Repository
 public interface ManagerRepository extends JpaRepository<Manager, Long> {
@@ -27,6 +28,8 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
         return findByMatricule(matricule);
     }
 
+
+    Optional<Manager> findByEmailIgnoreCase(String email);
     // ===== RECHERCHES PAR DÉPARTEMENT =====
     List<Manager> findByDepartement(String departement);
     List<Manager> findByDepartementContainingIgnoreCase(String departement);
@@ -130,4 +133,26 @@ public interface ManagerRepository extends JpaRepository<Manager, Long> {
     List<Object[]> getStatsManagers();
 
     Optional<Manager> findFirstByOrderByIdAsc();
+
+
+
+@Modifying(clearAutomatically = true, flushAutomatically = true)
+@Query(
+        value = """
+                INSERT INTO managers (id, date_nomination)
+                VALUES (:id, CURRENT_DATE)
+                ON DUPLICATE KEY UPDATE
+                    date_nomination = COALESCE(date_nomination, CURRENT_DATE)
+                """,
+        nativeQuery = true
+)
+void upsertManagerRow(@Param("id") Long id);
+
+@Modifying(clearAutomatically = true, flushAutomatically = true)
+@Query(value = "DELETE FROM managers WHERE id = :id", nativeQuery = true)
+void deleteManagerRow(@Param("id") Long id);
+
+
+
+
 }

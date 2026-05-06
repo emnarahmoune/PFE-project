@@ -25,7 +25,7 @@ public class ManagerProfileDTO {
     @Size(max = 100)
     private String prenom;
 
-    private String photoUrl;   // ← bien présent
+    private String photoUrl;
 
     @NotBlank(message = "L'email est obligatoire")
     @Email
@@ -52,4 +52,7 @@ public class ManagerProfileDTO {
     private Long ancienneteManager;
     private Integer nombreEmployesGeres;
     private String nomComplet;
+
+    // ✅ Ajouté pour afficher "3 jours", "2 mois", "1 an et 4 mois"
+    private String ancienneteManagerLabel;
 }

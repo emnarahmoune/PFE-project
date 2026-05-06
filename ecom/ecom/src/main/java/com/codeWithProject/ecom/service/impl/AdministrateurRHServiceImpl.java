@@ -144,7 +144,6 @@ public class AdministrateurRHServiceImpl implements AdministrateurRHService {
         admin.setCompteVerrouille(employe.getCompteVerrouille());
         admin.setDateVerrouillage(employe.getDateVerrouillage());
         admin.setRole("ADMIN_RH");
-        admin.setTypeEmploye(Employe.TYPE_ADMIN_RH);
         admin.setManager(employe.getManager());
         admin.setService(employe.getService());
         // Les collections (competences, formations, demandesConge) sont conservées

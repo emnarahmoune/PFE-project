@@ -24,7 +24,7 @@ public class FormationSupport {
 
     private int ordre;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "formation_id")
     @JsonIgnore
     private Formation formation;

@@ -44,6 +44,14 @@ public class DemandeCongeMapper {
             dto.setAdminRhNom(entity.getAdminRh().getNom() + " " + entity.getAdminRh().getPrenom());
         }
 
+        if (entity.getEmploye() != null) {
+    dto.setEmployeId(entity.getEmploye().getId());
+    dto.setEmployeNom(entity.getEmploye().getNom());
+    dto.setEmployePrenom(entity.getEmploye().getPrenom());
+    dto.setEmployeEmail(entity.getEmploye().getEmail());
+    dto.setEmployePhotoProfil(entity.getEmploye().getPhotoUrl());
+}
+
         return dto;
     }
 

@@ -7,10 +7,10 @@ import com.codeWithProject.ecom.service.dto.EmployeDTO;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,533 +23,486 @@ public class FormationServiceImpl implements FormationService {
     private final FormationCompetenceRepository formationCompetenceRepository;
     private final EmployeRepository employeRepository;
 
-    // 🔥 CREATE
- // 🔥 CREATE
-@Override
-public Formation create(Formation formation) {
+    // =========================
+    // CREATE
+    // =========================
+    @Override
+    public Formation create(Formation formation) {
 
-    if (formation.getActif() == null) {
-        formation.setActif(true);
-    }
+        if (formation.getActif() == null) {
+            formation.setActif(true);
+        }
 
-    if (formation.getVideos() != null) {
-        for (int i = 0; i < formation.getVideos().size(); i++) {
-            FormationVideo video = formation.getVideos().get(i);
+        if (formation.getVideos() != null) {
+            int i = 1;
 
-            video.setFormation(formation);
+            for (FormationVideo video : formation.getVideos()) {
+                video.setFormation(formation);
 
-            if (video.getOrdre() == 0) {
-                video.setOrdre(i + 1);
+                if (video.getOrdre() == 0) {
+                    video.setOrdre(i++);
+                }
             }
         }
-    }
 
-    if (formation.getSupports() != null) {
-        for (int i = 0; i < formation.getSupports().size(); i++) {
-            FormationSupport support = formation.getSupports().get(i);
+        if (formation.getSupports() != null) {
+            int i = 1;
 
-            support.setFormation(formation);
+            for (FormationSupport support : formation.getSupports()) {
+                support.setFormation(formation);
 
-            if (support.getOrdre() == 0) {
-                support.setOrdre(i + 1);
+                if (support.getOrdre() == 0) {
+                    support.setOrdre(i++);
+                }
             }
         }
+
+        return formationRepository.save(formation);
     }
 
-    return formationRepository.save(formation);
-}
+    // =========================
+    // GET ALL
+    // =========================
+    @Override
+    public List<Map<String, Object>> getAll() {
 
-    // 🔍 GET ALL
- @Override
-public List<Map<String, Object>> getAll() {
+        List<Formation> formations = formationRepository.findAllWithDetails();
+        long totalEmployes = employeRepository.count();
 
-    List<Formation> formations = formationRepository.findAll();
+        List<Map<String, Object>> result = new ArrayList<>();
 
-    long totalEmployes = employeRepository.count();
+        for (Formation f : formations) {
 
-    return formations.stream().map(f -> {
+            int nbParticipants = employeFormationRepository.countByFormationId(f.getId());
 
-        int nbParticipants =
-            employeFormationRepository.countByFormationId(f.getId());
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", f.getId());
+            map.put("titre", f.getTitre());
+            map.put("description", f.getDescription());
+            map.put("domaine", f.getDomaine());
+            map.put("dureeHeures", f.getDureeHeures());
+            map.put("actif", f.getActif());
+            map.put("nombreParticipants", nbParticipants);
+            map.put("totalEmployes", totalEmployes);
 
-        Map<String, Object> map = new HashMap<>();
-
-        map.put("id", f.getId());
-        map.put("titre", f.getTitre());
-        map.put("description", f.getDescription());
-        map.put("domaine", f.getDomaine());
-        map.put("dureeHeures", f.getDureeHeures());
-        map.put("actif", f.getActif());
-
-        // 🔥 IMPORTANT
-        map.put("nombreParticipants", nbParticipants);
-        map.put("totalEmployes", totalEmployes);
-
-        return map;
-
-    }).toList();
-}
-
-    // 🔍 GET BY ID
-public Map<String, Object> getByIdComplete(Long id) {
-    Formation formation = formationRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Formation introuvable"));
-
-    Map<String, Object> response = new HashMap<>();
-
-    response.put("id", formation.getId());
-    response.put("titre", formation.getTitre());
-    response.put("description", formation.getDescription());
-    response.put("domaine", formation.getDomaine());
-    response.put("dureeHeures", formation.getDureeHeures());
-    response.put("actif", formation.getActif());
-
-    List<Map<String, Object>> videos = new ArrayList<>();
-
-    if (formation.getVideos() != null) {
-        formation.getVideos()
-                .stream()
-                .sorted(Comparator.comparingInt(FormationVideo::getOrdre))
-                .forEach(v -> {
-                    Map<String, Object> item = new HashMap<>();
-                    item.put("id", v.getId());
-                    item.put("titre", v.getTitre());
-                    item.put("urlYoutube", v.getUrlYoutube());
-                    item.put("ordre", v.getOrdre());
-                    videos.add(item);
-                });
-    }
-
-    response.put("videos", videos);
-
-    List<Map<String, Object>> supports = new ArrayList<>();
-
-    if (formation.getSupports() != null) {
-        formation.getSupports()
-                .stream()
-                .sorted(Comparator.comparingInt(FormationSupport::getOrdre))
-                .forEach(s -> {
-                    Map<String, Object> item = new HashMap<>();
-                    item.put("id", s.getId());
-                    item.put("titre", s.getTitre());
-                    item.put("fichierUrl", s.getFichierUrl());
-                    item.put("ordre", s.getOrdre());
-                    supports.add(item);
-                });
-    }
-
-    response.put("supports", supports);
-
-    return response;
-}
-
-
-    // 🔄 UPDATE// 🔄 UPDATE
-@Override
-public Formation update(Long id, Formation f) {
-    Formation formation = getById(id);
-
-    formation.setTitre(f.getTitre());
-    formation.setDescription(f.getDescription());
-    formation.setDomaine(f.getDomaine());
-    formation.setDureeHeures(f.getDureeHeures());
-
-    if (f.getActif() != null) {
-        formation.setActif(f.getActif());
-    }
-
-    // Remplacer les vidéos
-    formation.getVideos().clear();
-
-    if (f.getVideos() != null) {
-        for (int i = 0; i < f.getVideos().size(); i++) {
-            FormationVideo video = f.getVideos().get(i);
-
-            video.setId(null);
-            video.setFormation(formation);
-
-            if (video.getOrdre() == 0) {
-                video.setOrdre(i + 1);
-            }
-
-            formation.getVideos().add(video);
+            result.add(map);
         }
+
+        return result;
     }
 
-    // Remplacer les supports PDF
-    formation.getSupports().clear();
+    // =========================
+    // GET BY ID COMPLET
+    // =========================
+    @Override
+    @Transactional
+    public Map<String, Object> getByIdComplete(Long id) {
 
-    if (f.getSupports() != null) {
-        for (int i = 0; i < f.getSupports().size(); i++) {
-            FormationSupport support = f.getSupports().get(i);
+        Formation formation = formationRepository.findByIdWithDetails(id);
 
-            support.setId(null);
-            support.setFormation(formation);
-
-            if (support.getOrdre() == 0) {
-                support.setOrdre(i + 1);
-            }
-
-            formation.getSupports().add(support);
+        if (formation == null) {
+            throw new RuntimeException("Formation introuvable");
         }
+
+        Map<String, Object> response = new HashMap<>();
+
+        response.put("id", formation.getId());
+        response.put("titre", formation.getTitre());
+        response.put("description", formation.getDescription());
+        response.put("domaine", formation.getDomaine());
+        response.put("dureeHeures", formation.getDureeHeures());
+        response.put("actif", formation.getActif());
+
+        List<Map<String, Object>> videos = new ArrayList<>();
+
+        if (formation.getVideos() != null) {
+            for (FormationVideo v : formation.getVideos()) {
+
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", v.getId());
+                item.put("titre", v.getTitre());
+                item.put("urlYoutube", v.getUrlYoutube());
+                item.put("ordre", v.getOrdre());
+
+                videos.add(item);
+            }
+        }
+
+        response.put("videos", videos);
+
+        List<Map<String, Object>> supports = new ArrayList<>();
+
+        if (formation.getSupports() != null) {
+            for (FormationSupport s : formation.getSupports()) {
+
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", s.getId());
+                item.put("titre", s.getTitre());
+                item.put("fichierUrl", s.getFichierUrl());
+                item.put("ordre", s.getOrdre());
+
+                supports.add(item);
+            }
+        }
+
+        response.put("supports", supports);
+
+        return response;
     }
 
-    return formationRepository.save(formation);
-}
+    // =========================
+    // GET BY ID SIMPLE
+    // =========================
+    @Override
+    public Formation getById(Long id) {
+        return formationRepository.findByIdWithDetails(id);
+    }
 
+    // =========================
+    // UPDATE
+    // =========================
+    @Override
+    public Formation update(Long id, Formation f) {
 
-@Override
-public List<EmployeDTO> getParticipants(Long formationId) {
+        Formation formation = formationRepository.findByIdWithDetails(id);
 
-    List<EmployeFormation> list = employeFormationRepository.findByFormation_Id(formationId);
+        if (formation == null) {
+            throw new RuntimeException("Formation introuvable");
+        }
 
-    return list.stream()
-        .map(ef -> ef.getEmploye())
-        .map(e -> EmployeDTO.builder()
-            .id(e.getId())
-            .nom(e.getNom())
-            .prenom(e.getPrenom())
-            .email(e.getEmail())
-            .poste(e.getPoste())
-            .departement(e.getDepartement())
-            .build()
-        )
-        .toList();
-}
+        formation.setTitre(f.getTitre());
+        formation.setDescription(f.getDescription());
+        formation.setDomaine(f.getDomaine());
+        formation.setDureeHeures(f.getDureeHeures());
 
-    // ❌ DELETE
+        if (f.getActif() != null) {
+            formation.setActif(f.getActif());
+        }
+
+        formation.getVideos().clear();
+
+        if (f.getVideos() != null) {
+            for (FormationVideo v : f.getVideos()) {
+                v.setId(null);
+                v.setFormation(formation);
+                formation.getVideos().add(v);
+            }
+        }
+
+        formation.getSupports().clear();
+
+        if (f.getSupports() != null) {
+            for (FormationSupport s : f.getSupports()) {
+                s.setId(null);
+                s.setFormation(formation);
+                formation.getSupports().add(s);
+            }
+        }
+
+        return formationRepository.save(formation);
+    }
+
+    // =========================
+    // DELETE
+    // =========================
     @Override
     public void delete(Long id) {
         formationRepository.deleteById(id);
     }
 
-    // 🔍 FILTER
+    // =========================
+    // ACTIVER / DESACTIVER
+    // =========================
     @Override
-    public List<Formation> getByDomaine(String domaine) {
-        return formationRepository.findByDomaine(domaine);
+    public void activer(Long id) {
+        Formation f = formationRepository.findByIdWithDetails(id);
+
+        if (f == null) {
+            throw new RuntimeException("Formation introuvable");
+        }
+
+        f.setActif(true);
+        formationRepository.save(f);
     }
 
+    @Override
+    public void desactiver(Long id) {
+        Formation f = formationRepository.findByIdWithDetails(id);
+
+        if (f == null) {
+            throw new RuntimeException("Formation introuvable");
+        }
+
+        f.setActif(false);
+        formationRepository.save(f);
+    }
+
+    // =========================
+    // FORMATIONS ACTIVES
+    // =========================
     @Override
     public List<Formation> getActives() {
         return formationRepository.findByActifTrue();
     }
 
-    // 🧠 RECOMMANDATION PAR GAP (niveau)
-
+    // =========================
+    // GET PARTICIPANTS
+    // =========================
     @Override
-public List<Formation> recommander(Long employeId) {
+    public List<EmployeDTO> getParticipants(Long formationId) {
 
-    // 🔹 récupérer employé
-    Employe emp = employeRepository.findById(employeId)
-            .orElseThrow();
-
-    String poste = emp.getPoste();
-
-    List<EmployeCompetence> userSkills =
-            employeCompetenceRepository.findByEmployeId(employeId);
-
-    List<PosteCompetence> jobSkills =
-            posteCompetenceRepository.findByPoste(poste);
-
-    Map<Long, Integer> niveauxUser = new HashMap<>();
-
-    for (EmployeCompetence c : userSkills) {
-        niveauxUser.put(c.getCompetence().getId(), c.getNiveau());
+        return employeFormationRepository.findByFormation_Id(formationId)
+                .stream()
+                .map(ef -> toEmployeDTO(ef.getEmploye()))
+                .filter(Objects::nonNull)
+                .toList();
     }
 
-    Map<Long, Integer> gaps = new HashMap<>();
+    // =========================
+    // GET BY ID AVEC EMPLOYES
+    // =========================
+    @Override
+    public Map<String, Object> getByIdWithEmployes(Long id) {
 
-    for (PosteCompetence pc : jobSkills) {
+        Map<String, Object> response = new HashMap<>(getByIdComplete(id));
 
-        int niveauUser = niveauxUser.getOrDefault(
-                pc.getCompetence().getId(), 0);
+        List<EmployeDTO> participants = employeFormationRepository
+                .findByFormation_Id(id)
+                .stream()
+                .map(ef -> toEmployeDTO(ef.getEmploye()))
+                .filter(Objects::nonNull)
+                .toList();
 
-        int gap = pc.getNiveauRequis() - niveauUser;
+        response.put("employes", participants);
+        response.put("nombreParticipants", participants.size());
 
-        if (gap > 0) {
-            gaps.put(pc.getCompetence().getId(), gap);
-        }
+        return response;
     }
 
-    Map<Formation, Integer> scores = new HashMap<>();
-
-    for (Map.Entry<Long, Integer> entry : gaps.entrySet()) {
-
-        Long competenceId = entry.getKey();
-        int gap = entry.getValue();
-
-        List<FormationCompetence> list =
-                formationCompetenceRepository.findByCompetence_Id(competenceId);
-
-        for (FormationCompetence fc : list) {
-
-            Formation f = formationRepository
-                    .findById(fc.getFormationId())
-                    .orElse(null);
-
-            if (f == null) continue;
-
-            scores.put(
-                f,
-                scores.getOrDefault(f, 0) + gap
-            );
-        }
+    // =========================
+    // FILTER DOMAINE
+    // =========================
+    @Override
+    public List<Formation> getByDomaine(String domaine) {
+        return formationRepository.findByDomaine(domaine);
     }
 
-    return scores.entrySet()
-            .stream()
-            .sorted((a, b) -> b.getValue() - a.getValue())
-            .map(Map.Entry::getKey)
-            .limit(3)
-            .toList();
-}
-
-    // 🔹 MES FORMATIONS
+    // =========================
+    // FORMATIONS PAR EMPLOYE
+    // =========================
     @Override
     public List<Formation> getFormationsByEmploye(Long employeId) {
-
         return employeFormationRepository.findByEmployeId(employeId)
                 .stream()
-                .map(ef -> ef.getFormation())
+                .map(EmployeFormation::getFormation)
+                .filter(Objects::nonNull)
                 .toList();
     }
 
-    // 🔥 RECO (sans IA)
-    public List<Formation> getRecommendations(Long employeId) {
+    // =========================
+    // RECO IA = APPEL FLASK /recommend
+    // =========================
+    @Override
+    public List<Formation> getRecommendationsAI(Long employeId) {
 
-        Employe emp = employeRepository.findById(employeId)
-                .orElseThrow();
+        Employe employe = employeRepository.findById(employeId)
+                .orElseThrow(() -> new RuntimeException("Employé introuvable avec id: " + employeId));
 
-       List<Formation> reco = recommander(employeId);
+        List<EmployeCompetence> competencesEmploye =
+                employeCompetenceRepository.findByEmploye_Id(employeId);
 
-        List<Long> dejaInscrit = employeFormationRepository.findByEmployeId(employeId)
-                .stream()
-                .map(ef -> ef.getFormation().getId())
-                .toList();
+        Map<String, Integer> userSkills = new HashMap<>();
 
-        return reco.stream()
-                .filter(f -> !dejaInscrit.contains(f.getId()))
-                .toList();
-    }
-
-    // 🤖 RECOMMANDATION IA (Flask)
- @Override
-public List<Formation> getRecommendationsAI(Long employeId) {
-
-    // 🔹 récupérer employé
-    Employe emp = employeRepository.findById(employeId)
-            .orElseThrow();
-
-    // 🔹 récupérer formations non suivies
-    List<Formation> formations =
-            formationRepository.findFormationsNonSuivies(employeId);
-
-    if (formations.isEmpty()) {
-        return new ArrayList<>();
-    }
-
-    // 🔹 compétences utilisateur
-    List<EmployeCompetence> userSkillsList =
-            employeCompetenceRepository.findByEmployeId(employeId);
-
-    Map<String, Integer> userSkills = new HashMap<>();
-
-    for (EmployeCompetence ec : userSkillsList) {
-
-        if (ec.getCompetence() != null && ec.getCompetence().getNom() != null) {
-
-            userSkills.put(
-    ec.getCompetence().getNom().toLowerCase(),
-    convertNiveau(ec.getNiveau())
-);
-        }
-    }
-
-    // 🔹 compétences requises poste
-    List<PosteCompetence> jobSkillsList =
-            posteCompetenceRepository.findByPoste(emp.getPoste());
-
-    Map<String, Integer> requiredSkills = new HashMap<>();
-
-    for (PosteCompetence pc : jobSkillsList) {
-
-        if (pc.getCompetence() != null && pc.getCompetence().getNom() != null) {
-
-           try {
-   requiredSkills.put(
-    pc.getCompetence().getNom().toLowerCase(),
-    pc.getNiveauRequis()
-);
-} catch (Exception e) {
-    System.out.println("❌ ERREUR conversion niveau: " + pc.getNiveauRequis());
-}
-        }
-    }
-
-    // 🔥 DEBUG
-    System.out.println("POSTE = " + emp.getPoste());
-    System.out.println("USER SKILLS = " + userSkills);
-    System.out.println("REQUIRED SKILLS = " + requiredSkills);
-
-    // 🔥 sécurité si aucun mapping poste
-    if (requiredSkills.isEmpty()) {
-        System.out.println("⚠️ Aucune compétence trouvée pour ce poste !");
-        return formations.stream().limit(3).toList();
-    }
-
-    // 🔹 liste noms formations
-    List<String> formationNames = formations.stream()
-            .map(f -> f.getTitre().toLowerCase())
-            .toList();
-
-    // 🔹 appel Flask
-    Map<String, Object> body = new HashMap<>();
-    body.put("userSkills", userSkills);
-    body.put("requiredSkills", requiredSkills);
-    body.put("formations", formationNames);
-    body.put("formationsSuivies", new ArrayList<>());
-
-    RestTemplate restTemplate = new RestTemplate();
-
-Object rawResponse = restTemplate.postForObject(
-    "http://localhost:5000/recommend",
-    body,
-    Object.class
-);
-
-if (!(rawResponse instanceof List<?> list)) {
-    return formations.stream().limit(3).toList();
-}
-
-List<Map<String, Object>> response = (List<Map<String, Object>>) list;
-    try {
-        response = restTemplate.postForObject(
-                "http://localhost:5000/recommend",
-                body,
-                List.class
-        );
-    } catch (Exception e) {
-        System.out.println("❌ ERREUR FLASK: " + e.getMessage());
-        return formations.stream().limit(3).toList();
-    }
-
-    // 🔥 sécurité réponse
-    if (response == null || response.isEmpty()) {
-        return formations.stream().limit(3).toList();
-    }
-
-    // 🔹 récupérer noms recommandés
-    List<String> recommendedNames = response.stream()
-            .map(r -> ((String) r.get("formation")).toLowerCase())
-            .toList();
-
-    // 🔹 filtrer formations
-    return formations.stream()
-            .filter(f -> recommendedNames.contains(f.getTitre().toLowerCase()))
-            .toList();
-}
-
-
-
-private int convertNiveau(String niveau) {
-    if (niveau == null) return 0;
-
-    return switch (niveau.toUpperCase()) {
-        case "DEBUTANT" -> 1;
-        case "INTERMEDIAIRE" -> 2;
-        case "AVANCE" -> 3;
-        case "EXPERT" -> 4;
-        default -> 0;
-    };
-}
-
-
-@Override
-public List<Formation> getRecommendationsBySkills(Long employeId) {
-
-    // 🔹 compétences utilisateur
-    List<EmployeCompetence> userSkills =
-            employeCompetenceRepository.findByEmployeId(employeId);
-
-    // 🔹 formations non suivies
-    List<Formation> formations =
-            formationRepository.findFormationsNonSuivies(employeId);
-
-    Map<Formation, Integer> scores = new HashMap<>();
-
-    for (EmployeCompetence ec : userSkills) {
-
-        String skill = ec.getCompetence().getNom().toLowerCase();
-        int niveauUser = convertNiveau(ec.getNiveau());
-
-        // 🔥 gap = progression
-        int scoreBase = 5 - niveauUser; // plus faible = plus prioritaire
-
-        for (Formation f : formations) {
-
-            if (f.getTitre().toLowerCase().contains(skill)) {
-
-                scores.put(
-                    f,
-                    scores.getOrDefault(f, 0) + scoreBase
+        for (EmployeCompetence ec : competencesEmploye) {
+            if (ec.getCompetence() != null && ec.getCompetence().getNom() != null) {
+                userSkills.put(
+                        ec.getCompetence().getNom(),
+                        convertLevelToInt(ec.getNiveau())
                 );
             }
         }
+
+        Map<String, Integer> requiredSkills = new HashMap<>();
+
+        if (employe.getPoste() != null && !employe.getPoste().isBlank()) {
+
+            String poste = employe.getPoste().trim();
+
+            List<PosteCompetence> competencesPoste =
+                    posteCompetenceRepository.findByPosteIgnoreCase(poste);
+
+            if (competencesPoste == null || competencesPoste.isEmpty()) {
+                competencesPoste = posteCompetenceRepository.findByPosteContainingIgnoreCase(poste);
+            }
+
+            if (competencesPoste != null) {
+                for (PosteCompetence pc : competencesPoste) {
+                    if (pc.getCompetence() != null && pc.getCompetence().getNom() != null) {
+                        requiredSkills.put(
+                                pc.getCompetence().getNom(),
+                                convertLevelToInt(pc.getNiveauRequis())
+                        );
+                    }
+                }
+            }
+        }
+
+        List<Formation> formationsNonSuivies =
+                formationRepository.findFormationsNonSuivies(employeId);
+
+        if (formationsNonSuivies == null || formationsNonSuivies.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> formationTitles = formationsNonSuivies.stream()
+                .map(Formation::getTitre)
+                .filter(Objects::nonNull)
+                .toList();
+
+        List<String> formationsSuivies = employeFormationRepository.findByEmployeId(employeId)
+                .stream()
+                .map(EmployeFormation::getFormation)
+                .filter(Objects::nonNull)
+                .map(Formation::getTitre)
+                .filter(Objects::nonNull)
+                .toList();
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("userSkills", userSkills);
+        payload.put("requiredSkills", requiredSkills);
+        payload.put("formations", formationTitles);
+        payload.put("formationsSuivies", formationsSuivies);
+
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> response = restTemplate.postForObject(
+                    "http://localhost:5000/recommend",
+                    payload,
+                    List.class
+            );
+
+           if (response == null || response.isEmpty()) {
+    return List.of();
+}
+            List<String> recommendedTitles = response.stream()
+                    .map(item -> item.get("formation"))
+                    .filter(Objects::nonNull)
+                    .map(Object::toString)
+                    .toList();
+
+            return formationsNonSuivies.stream()
+                    .filter(f -> recommendedTitles.contains(f.getTitre()))
+                    .limit(3)
+                    .toList();
+
+        } catch (Exception e) {
+    e.printStackTrace();
+    return List.of();
+}
     }
 
-    return scores.entrySet()
-            .stream()
-            .sorted((a, b) -> b.getValue() - a.getValue())
-            .map(Map.Entry::getKey)
-            .limit(3)
-            .toList();
-}
+    // =========================
+    // RECO PAR COMPETENCES
+    // =========================
+    @Override
+    public List<Formation> getRecommendationsBySkills(Long employeId) {
 
-@Override
-public Map<String, Object> getByIdWithEmployes(Long id) {
+        List<EmployeCompetence> competencesEmploye =
+                employeCompetenceRepository.findByEmploye_Id(employeId);
 
-    Map<String, Object> response = new HashMap<>(getByIdComplete(id));
+        if (competencesEmploye == null || competencesEmploye.isEmpty()) {
+            return List.of();
+        }
 
-    List<EmployeDTO> participants = employeFormationRepository
-            .findByFormation_Id(id)
-            .stream()
-            .map(ef -> {
-                Employe e = ef.getEmploye();
+        List<Long> competenceIds = competencesEmploye.stream()
+                .filter(ec -> ec.getCompetence() != null)
+                .map(ec -> ec.getCompetence().getId())
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
 
-                return EmployeDTO.builder()
-                        .id(e.getId())
-                        .nom(e.getNom())
-                        .prenom(e.getPrenom())
-                        .email(e.getEmail())
-                        .poste(e.getPoste())
-                        .departement(e.getDepartement())
-                        .build();
-            })
-            .toList();
+        if (competenceIds.isEmpty()) {
+            return List.of();
+        }
 
-    response.put("employes", participants);
-    response.put("nombreParticipants", participants.size());
+        return formationRepository.findRecommendedByCompetenceIds(employeId, competenceIds)
+                .stream()
+                .limit(3)
+                .toList();
+    }
 
-    return response;
-}
+    // =========================
+    // RECOMMANDATION SIMPLE
+    // =========================
+    @Override
+    public List<Formation> getRecommendations(Long employeId) {
+        return getRecommendationsBySkills(employeId);
+    }
 
-@Override
-public void activer(Long id) {
-    Formation f = formationRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Formation introuvable"));
+    // =========================
+    // RECOMMANDATION PRINCIPALE
+    // =========================
+    @Override
+    public List<Formation> recommander(Long employeId) {
+        return getRecommendationsBySkills(employeId);
+    }
 
-    f.setActif(true);
-    formationRepository.save(f);
-}
+    // =========================
+    // HELPERS
+    // =========================
+    private EmployeDTO toEmployeDTO(Employe e) {
+        if (e == null) {
+            return null;
+        }
 
-@Override
-public void desactiver(Long id) {
-    Formation f = formationRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Formation introuvable"));
+        String photo = e.getPhotoUrl();
 
-    f.setActif(false);
-    formationRepository.save(f);
-}
+        return EmployeDTO.builder()
+        .id(e.getId())
+        .matricule(e.getMatricule())
+        .nom(e.getNom())
+        .prenom(e.getPrenom())
+        .email(e.getEmail())
+        .telephone(e.getTelephone())
+        .poste(e.getPoste())
+        .departement(e.getDepartement())
+        .statut(e.getStatut())
+        .dateEmbauche(e.getDateEmbauche())
+        .soldeConges(e.getSoldeConges())
 
+        .photoUrl(photo)
+        .employePhotoProfil(photo)
 
+        .build();
+    }
+
+    private int convertLevelToInt(String niveau) {
+        if (niveau == null || niveau.isBlank()) {
+            return 0;
+        }
+
+        return switch (niveau.trim().toUpperCase()) {
+            case "DEBUTANT" -> 1;
+            case "INTERMEDIAIRE" -> 2;
+            case "AVANCE" -> 3;
+            case "EXPERT" -> 4;
+            default -> {
+                try {
+                    yield Integer.parseInt(niveau.trim());
+                } catch (Exception e) {
+                    yield 0;
+                }
+            }
+        };
+    }
+
+    private int convertLevelToInt(Integer niveau) {
+        if (niveau == null) {
+            return 0;
+        }
+
+        return niveau;
+    }
 }

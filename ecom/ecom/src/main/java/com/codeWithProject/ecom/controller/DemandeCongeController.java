@@ -335,18 +335,46 @@ public class DemandeCongeController {
         log.info("GET /api/conges/refus-manager");
         return ResponseEntity.ok(demandeCongeService.getDemandesRefuseesParManager());
     }
-    // ===== NOUVEAU : Récupérer les congés d'un employé (pour manager ou admin RH) =====
-    @GetMapping("/employe/{employeId}")
-    @Operation(summary = "Récupère les congés d'un employé (réservé au manager de cet employé ou admin RH)")
-    @PreAuthorize("hasRole('manager') or hasRole('ADMIN_RH')")
-    public ResponseEntity<ApiResponse<List<DemandeCongeDTO>>> getCongesByEmployeForManager(
-            @PathVariable Long employeId,
-            @AuthenticationPrincipal Jwt jwt) {
-        log.info("GET /api/conges/employe/{}", employeId);
-        String email = jwt.getClaimAsString("email");
-        if (email == null) email = jwt.getClaimAsString("preferred_username");
-        if (email == null) email = jwt.getSubject();
-        List<DemandeCongeDTO> conges = demandeCongeService.getCongesByEmployeIdForManager(employeId, email);
-        return ResponseEntity.ok(ApiResponse.success(conges, "Historique des congés récupéré"));
+// ===== NOUVEAU : Récupérer les congés d'un employé (pour manager ou admin RH) =====
+@GetMapping("/employe/{employeId}")
+@Operation(summary = "Récupère les congés d'un employé réservé au manager de cet employé ou admin RH")
+@PreAuthorize("hasAnyAuthority('ROLE_MANAGER', 'ROLE_ADMIN_RH', 'MANAGER', 'ADMIN_RH', 'manager', 'admin_rh')")
+public ResponseEntity<ApiResponse<List<DemandeCongeDTO>>> getCongesByEmployeForManager(
+        @PathVariable Long employeId,
+        @AuthenticationPrincipal Jwt jwt) {
+
+    log.info("GET /api/conges/employe/{}", employeId);
+
+    String email = extractEmail(jwt);
+
+    if (email == null || email.isBlank()) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié"));
     }
+
+    List<DemandeCongeDTO> conges =
+            demandeCongeService.getCongesByEmployeIdForManager(employeId, email);
+
+    return ResponseEntity.ok(
+            ApiResponse.success(conges, "Historique des congés récupéré")
+    );
+}
+
+private String extractEmail(Jwt jwt) {
+    if (jwt == null) {
+        return null;
+    }
+
+    String email = jwt.getClaimAsString("email");
+
+    if (email == null || email.isBlank()) {
+        email = jwt.getClaimAsString("preferred_username");
+    }
+
+    if (email == null || email.isBlank()) {
+        email = jwt.getSubject();
+    }
+
+    return email;
+}
 }

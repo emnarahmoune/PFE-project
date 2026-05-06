@@ -22,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.codeWithProject.ecom.service.WorkflowService;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -41,6 +41,7 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
     private final DemandeCongeMapper mapper;
     private final RuntimeService runtimeService;
     private final TaskService taskService;
+    private final WorkflowService workflowService;
 
     private static final Set<DayOfWeek> WEEKEND = Set.of(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY);
     private static final Set<LocalDate> JOURS_FERIES = new HashSet<>();
@@ -298,55 +299,85 @@ public class DemandeCongeServiceImpl implements DemandeCongeService {
     }
 
     // ========== CRÉATION (avec workflow) ==========
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public DemandeCongeDTO createForAuthenticatedUser(DemandeCongeDTO dto, String email) {
-        Employe employe = getEmployeByEmail(email);
-        dto.setEmployeId(employe.getId());
+@Override
+@Transactional(rollbackFor = Exception.class)
+public DemandeCongeDTO createForAuthenticatedUser(DemandeCongeDTO dto, String email) {
+    Employe employe = getEmployeByEmail(email);
+    dto.setEmployeId(employe.getId());
 
-        if (dto.getDateDebut() == null || dto.getDateFin() == null)
-            throw new BusinessException("Les dates de début et de fin sont obligatoires");
-        if (dto.getDateDebut().isAfter(dto.getDateFin()))
-            throw new BusinessException("La date de début doit être antérieure à la date de fin");
-        if (dto.getDateDebut().isBefore(LocalDate.now()))
-            throw new BusinessException("La date de début ne peut pas être dans le passé");
-
-        // ✅ Suppression de la vérification de solde – le workflow gère le refus automatique
-
-        if (checkConflitDates(employe.getId(), dto.getDateDebut(), dto.getDateFin(), null))
-            throw new BusinessException("Une demande de congé existe déjà sur cette période");
-
-        DemandeConge demande = mapper.toEntity(dto);
-        demande.setEmploye(employe);
-        demande.soumettre();
-
-        DemandeConge saved = demandeCongeRepository.saveAndFlush(demande);
-
-        try {
-            Map<String, Object> workflowVariables = new HashMap<>();
-            workflowVariables.put("employeId", String.valueOf(employe.getId()));
-            workflowVariables.put("montantConge", saved.getJoursOuvres());
-            workflowVariables.put("nbJours", saved.getJoursOuvres());
-            workflowVariables.put("demandeId", saved.getId());
-            workflowVariables.put("typeConge", saved.getType());
-            workflowVariables.put("dateDebut", saved.getDateDebut().toString());
-            workflowVariables.put("dateFin", saved.getDateFin().toString());
-            workflowVariables.put("managerEmail", getManagerEmailFromEmploye(employe));
-            workflowVariables.put("adminEmail", getAdminRHEmail());
-            workflowVariables.put("urgente", saved.getUrgente());
-
-            var processInstance = runtimeService.startProcessInstanceByKey("LeaveRequestProcess", workflowVariables);
-            saved.setProcessInstanceId(processInstance.getId());
-            List<Task> tasks = taskService.createTaskQuery().processInstanceId(processInstance.getId()).list();
-            if (!tasks.isEmpty()) saved.setCurrentTaskId(tasks.get(0).getId());
-            saved = demandeCongeRepository.save(saved);
-        } catch (Exception e) {
-            log.error("Erreur workflow Camunda: {}", e.getMessage(), e);
-            throw new BusinessException("Erreur technique lors du traitement de la demande: " + e.getMessage());
-        }
-        return mapper.toDto(saved);
+    if (dto.getDateDebut() == null || dto.getDateFin() == null) {
+        throw new BusinessException("Les dates de début et de fin sont obligatoires");
     }
 
+    if (dto.getDateDebut().isAfter(dto.getDateFin())) {
+        throw new BusinessException("La date de début doit être antérieure à la date de fin");
+    }
+
+    if (dto.getDateDebut().isBefore(LocalDate.now())) {
+        throw new BusinessException("La date de début ne peut pas être dans le passé");
+    }
+
+    if (checkConflitDates(employe.getId(), dto.getDateDebut(), dto.getDateFin(), null)) {
+        throw new BusinessException("Une demande de congé existe déjà sur cette période");
+    }
+
+    DemandeConge demande = mapper.toEntity(dto);
+    demande.setEmploye(employe);
+    demande.soumettre();
+
+    DemandeConge saved = demandeCongeRepository.saveAndFlush(demande);
+
+    try {
+        Map<String, Object> workflowVariables = new HashMap<>();
+        workflowVariables.put("employeId", String.valueOf(employe.getId()));
+        workflowVariables.put("montantConge", saved.getJoursOuvres());
+        workflowVariables.put("nbJours", saved.getJoursOuvres());
+        workflowVariables.put("demandeId", saved.getId());
+        workflowVariables.put("typeConge", saved.getType());
+        workflowVariables.put("dateDebut", saved.getDateDebut().toString());
+        workflowVariables.put("dateFin", saved.getDateFin().toString());
+        workflowVariables.put("managerEmail", getManagerEmailFromEmploye(employe));
+        workflowVariables.put("adminEmail", getAdminRHEmail());
+        workflowVariables.put("adminRHEmail", getAdminRHEmail());
+        workflowVariables.put("urgente", Boolean.TRUE.equals(saved.getUrgente()));
+
+        var processInstance = runtimeService.startProcessInstanceByKey(
+                "LeaveRequestProcess",
+                workflowVariables
+        );
+
+        saved.setProcessInstanceId(processInstance.getId());
+
+        Task activeTask = taskService.createTaskQuery()
+                .processInstanceId(processInstance.getId())
+                .active()
+                .singleResult();
+
+        if (activeTask != null) {
+            saved.setCurrentTaskId(activeTask.getId());
+        }
+
+        saved = demandeCongeRepository.saveAndFlush(saved);
+
+        /*
+         * Règle:
+         * - Employé normal: reste chez manager.
+         * - Manager/Admin/Admin RH: passage automatique vers RH.
+         */
+        workflowService.envoyerDirectementVersRhSiManagerOuAdmin(saved, employe);
+
+        Long savedId = saved.getId();
+
+        saved = demandeCongeRepository.findById(savedId)
+                .orElseThrow(() -> new BusinessException("Demande introuvable après création: " + savedId));
+
+    } catch (Exception e) {
+        log.error("Erreur workflow Camunda: {}", e.getMessage(), e);
+        throw new BusinessException("Erreur technique lors du traitement de la demande: " + e.getMessage());
+    }
+
+    return mapper.toDto(saved);
+}
     @Override
     @Transactional(readOnly = true)
     public List<DemandeCongeDTO> findByEmployeEmail(String email) {

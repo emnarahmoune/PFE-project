@@ -1,5 +1,6 @@
 package com.codeWithProject.ecom.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.*;
@@ -46,11 +47,11 @@ public class EmployeFormation {
 
 @ManyToOne(fetch = FetchType.EAGER)
 @JoinColumn(name = "employe_id")
-@JsonIgnoreProperties("employeFormations")
+@JsonIgnore // ✅ PLUS SIMPLE ET SÛR
 private Employe employe;
 
 @ManyToOne(fetch = FetchType.EAGER)
 @JoinColumn(name = "formation_id")
-@JsonIgnoreProperties("employeFormations")
+@JsonIgnore // ✅ IMPORTANT
 private Formation formation;
 }

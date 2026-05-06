@@ -1,11 +1,11 @@
-package com.codeWithProject.ecom.service.dto;
+// package com.codeWithProject.ecom.service.dto;
 
-import lombok.Data;
+// import lombok.Data;
 
-@Data
-public class RecommendationDTO {
+// @Data
+// public class RecommendationDTO {
 
-    private Long id;
-    private String titre;
-    private Double score;
-}
+//     private Long id;
+//     private String titre;
+//     private Double score;
+// }

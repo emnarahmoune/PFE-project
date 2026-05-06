@@ -62,12 +62,15 @@ public class SecurityConfig {
 
                         // Auth / synchronisation
                         .requestMatchers("/api/auth/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/uploads/**").permitAll()
+                        .requestMatchers("/api/photos/**").permitAll()
 
                         // Profil employé connecté
                         .requestMatchers(HttpMethod.GET, "/api/employes/mon-profil").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/employes/mon-profil").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/employes/mon-profil").authenticated()
-
+                        .requestMatchers(HttpMethod.POST, "/api/employes/mon-profil/photo").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/employes/mon-profil/photo").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/employes/mon-solde-conges").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/employes/mes-competences").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/employes/mes-formations").authenticated()

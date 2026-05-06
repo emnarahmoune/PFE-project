@@ -1,4 +1,3 @@
-// service/impl/PhotoServiceImpl.java
 package com.codeWithProject.ecom.service.impl;
 
 import com.codeWithProject.ecom.entity.Employe;
@@ -31,39 +30,57 @@ public class PhotoServiceImpl implements PhotoService {
     @Override
     @Transactional
     public String uploadPhoto(Long userId, MultipartFile file) {
+        if (userId == null) {
+            throw new RuntimeException("ID utilisateur obligatoire pour upload photo");
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("Fichier photo vide ou manquant");
+        }
+
         Employe employe = employeRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé", userId));
 
         try {
-            // Créer le dossier si inexistant
             Path uploadPath = Paths.get(storagePath);
+
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
 
-            // Générer un nom unique
             String originalFilename = file.getOriginalFilename();
-            String extension = originalFilename != null && originalFilename.contains(".")
-                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                    : ".jpg";
+
+            String extension = ".jpg";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+            }
+
+            if (!extension.equals(".jpg")
+                    && !extension.equals(".jpeg")
+                    && !extension.equals(".png")
+                    && !extension.equals(".gif")
+                    && !extension.equals(".webp")) {
+                throw new RuntimeException("Format image non supporté");
+            }
+
             String newFileName = UUID.randomUUID() + extension;
             Path filePath = uploadPath.resolve(newFileName);
 
-            // Sauvegarder le fichier
             Files.write(filePath, file.getBytes());
 
-            // Supprimer l'ancienne photo si existante
-            if (employe.getPhotoUrl() != null) {
+            if (employe.getPhotoUrl() != null && !employe.getPhotoUrl().isBlank()) {
                 deleteOldPhoto(employe.getPhotoUrl());
             }
 
-            // Mettre à jour l'employé
-            String relativeUrl = "/api/photos/" + newFileName; // URL accessible
+            String relativeUrl = "/api/photos/" + newFileName;
+
             employe.setPhotoUrl(relativeUrl);
             employeRepository.save(employe);
 
-            log.info("Photo uploadée pour l'utilisateur {} : {}", userId, relativeUrl);
+            log.info("Photo uploadée pour userId={} : {}", userId, relativeUrl);
+
             return relativeUrl;
+
         } catch (IOException e) {
             log.error("Erreur lors de l'upload de la photo", e);
             throw new RuntimeException("Impossible de sauvegarder la photo", e);
@@ -73,9 +90,19 @@ public class PhotoServiceImpl implements PhotoService {
     @Override
     public byte[] getPhoto(String photoUrl) {
         try {
+            if (photoUrl == null || photoUrl.isBlank()) {
+                return null;
+            }
+
             String fileName = photoUrl.substring(photoUrl.lastIndexOf("/") + 1);
             Path filePath = Paths.get(storagePath).resolve(fileName);
+
+            if (!Files.exists(filePath)) {
+                return null;
+            }
+
             return Files.readAllBytes(filePath);
+
         } catch (IOException e) {
             log.error("Erreur lecture photo", e);
             return null;
@@ -85,9 +112,14 @@ public class PhotoServiceImpl implements PhotoService {
     @Override
     @Transactional
     public void deletePhoto(Long userId) {
+        if (userId == null) {
+            throw new RuntimeException("ID utilisateur obligatoire pour suppression photo");
+        }
+
         Employe employe = employeRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé", userId));
-        if (employe.getPhotoUrl() != null) {
+
+        if (employe.getPhotoUrl() != null && !employe.getPhotoUrl().isBlank()) {
             deleteOldPhoto(employe.getPhotoUrl());
             employe.setPhotoUrl(null);
             employeRepository.save(employe);

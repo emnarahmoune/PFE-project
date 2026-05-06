@@ -1,10 +1,14 @@
 package com.codeWithProject.ecom.service;
 
+import com.codeWithProject.ecom.service.dto.ChangePasswordRequest;
 import com.codeWithProject.ecom.service.dto.ManagerProfileDTO;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 public interface ManagerProfileService {
 
-    ManagerProfileDTO getProfile(String email);
+    ManagerProfileDTO getProfile(Jwt jwt);
 
-    ManagerProfileDTO updateProfile(String email, ManagerProfileDTO dto);
+    ManagerProfileDTO updateProfile(Jwt jwt, ManagerProfileDTO dto);
+
+    void changePassword(Jwt jwt, ChangePasswordRequest dto);
 }

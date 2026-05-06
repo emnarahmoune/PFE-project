@@ -16,6 +16,9 @@ public class UpdateProfilRequest {
     private String adresse;
     private String photo;
 
+    private String prenom;
+    private String nom;
+
     // ── Informations professionnelles ─────────────
     private String poste;
     private String departement;

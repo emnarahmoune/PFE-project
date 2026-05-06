@@ -6,6 +6,7 @@ import com.codeWithProject.ecom.entity.EmployeCompetence;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -25,19 +26,12 @@ Optional<Employe> findByEmailIgnoreCase(@Param("email") String email);
 
 
     // ===== RECHERCHES PAR TYPE =====
-    @Query("SELECT e FROM Employe e WHERE e.role = 'MANAGER'")
-    List<Employe> findAllManagers();
+    List<Employe> findByRoleIn(List<String> roles);
 
     List<Employe> findByRole(String role);
     
     @Query("SELECT e FROM Employe e WHERE e.role = 'ADMIN_RH'")
     List<Employe> findAllAdminRH();
-
-
-    
-
-    // ===== RECHERCHES PAR MANAGER =====
-    List<Employe> findByManagerId(Long managerId);
    
    
     @Query("SELECT e FROM Employe e WHERE e.manager IS NULL AND e.role = 'EMPLOYE'")
@@ -127,14 +121,47 @@ Optional<Employe> findByEmailIgnoreCase(@Param("email") String email);
     List<Employe> findByManagerIsNull();
 
 
+    
+
+
+ @Modifying(clearAutomatically = true, flushAutomatically = true)
+@Query(
+        value = """
+                UPDATE employes
+                SET role = :role,
+                    type_employe = :typeEmploye
+                WHERE id = :id
+                """,
+        nativeQuery = true
+)
+void updateRoleAndTypeEmploye(
+        @Param("id") Long id,
+        @Param("role") String role,
+        @Param("typeEmploye") String typeEmploye
+);
+
     @Query("SELECT COUNT(e) FROM Employe e")
     int countAllEmployes();
 
+    List<Employe> findByManager_Email(String email);
 
+
+    @Query("SELECT e FROM Employe e WHERE e.manager.id = :managerId")
+List<Employe> findByManagerId(@Param("managerId") Long managerId);
+
+    List<Employe> findByRoleIgnoreCase(String role);
+
+    @Query("SELECT e FROM Employe e WHERE e.manager.id = :managerId AND e.statut = 'ACTIF'")
+    List<Employe> findActifsByManagerId(@Param("managerId") Long managerId);
 
 
     
 
-    @Query("SELECT e FROM Employe e WHERE e.manager.id = :managerId AND e.statut = 'ACTIF'")
-    List<Employe> findActifsByManagerId(@Param("managerId") Long managerId);
+@Query("""
+    SELECT e
+    FROM Employe e
+    WHERE UPPER(e.role) = 'MANAGER'
+""")
+List<Employe> findAllManagers();
+
 }

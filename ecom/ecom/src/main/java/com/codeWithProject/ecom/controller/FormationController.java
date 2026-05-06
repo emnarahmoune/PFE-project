@@ -135,7 +135,6 @@ public ResponseEntity<Map<String, Object>> getDetails(@PathVariable Long id) {
 }
 
 
-
 @PutMapping("/{id}/activer")
 public void activer(@PathVariable Long id) {
     formationService.activer(id);

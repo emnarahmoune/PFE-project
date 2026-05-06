@@ -4,296 +4,342 @@ import com.codeWithProject.ecom.controller.dto.ApiResponse;
 import com.codeWithProject.ecom.entity.Employe;
 import com.codeWithProject.ecom.repository.DemandeCongeRepository;
 import com.codeWithProject.ecom.repository.EmployeRepository;
-import com.codeWithProject.ecom.service.DemandeCongeService;
+import com.codeWithProject.ecom.service.KeycloakAdminService;
+import com.codeWithProject.ecom.service.ManagerProfileService;
 import com.codeWithProject.ecom.service.ManagerService;
+import com.codeWithProject.ecom.service.PhotoService;
 import com.codeWithProject.ecom.service.WorkflowService;
 import com.codeWithProject.ecom.service.dto.CalendarEventDTO;
-import com.codeWithProject.ecom.service.dto.ManagerDTO;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.codeWithProject.ecom.service.dto.ChangePasswordRequest;
+import com.codeWithProject.ecom.service.dto.ManagerProfileDTO;
+import com.codeWithProject.ecom.service.dto.PhotoUploadResponse;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
+
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/managers")
+@RequestMapping("/api/manager")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Managers", description = "API de gestion des managers")
+@PreAuthorize("hasRole('MANAGER')")
 public class ManagerController {
 
-    private final ManagerService managerService;
     private final WorkflowService workflowService;
-    private final DemandeCongeRepository demandeCongeRepository;
     private final EmployeRepository employeRepository;
-    private final DemandeCongeService demandeCongeService;
+    private final DemandeCongeRepository demandeCongeRepository;
+    private final ManagerProfileService managerProfileService;
+    private final KeycloakAdminService keycloakAdminService;
+    private final PhotoService photoService;
+    private final ManagerService managerService;
 
-    @GetMapping
-    @Operation(summary = "Liste tous les managers")
-    public ResponseEntity<ApiResponse<List<ManagerDTO>>> getAllManagers() {
-        log.info("GET /api/managers");
-        List<ManagerDTO> managers = managerService.findAll();
-        return ResponseEntity.ok(ApiResponse.success(managers, "Managers récupérés avec succès"));
-    }
+    // ================= PROFILE =================
 
-    @GetMapping("/paged")
-    @Operation(summary = "Liste paginée des managers")
-    public ResponseEntity<ApiResponse<Page<ManagerDTO>>> getAllManagersPaged(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "nom") String sortBy,
-            @RequestParam(defaultValue = "asc") String direction) {
-
-        log.info("GET /api/managers/paged - page: {}, size: {}", page, size);
-        Sort sort = direction.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        Page<ManagerDTO> managers = managerService.findAll(pageable);
-        return ResponseEntity.ok(ApiResponse.success(managers, "Managers récupérés avec succès"));
-    }
-
-    @GetMapping("/{id}")
-    @Operation(summary = "Récupère un manager par son ID")
-    public ResponseEntity<ApiResponse<ManagerDTO>> getManagerById(@PathVariable Long id) {
-        log.info("GET /api/managers/{}", id);
-        return managerService.findById(id)
-                .map(manager -> ResponseEntity.ok(ApiResponse.success(manager, "Manager trouvé")))
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/employe/{employeId}")
-    @Operation(summary = "Récupère un manager par l'ID de l'employé associé")
-    public ResponseEntity<ApiResponse<ManagerDTO>> getManagerByEmployeId(@PathVariable Long employeId) {
-        log.info("GET /api/managers/employe/{}", employeId);
-        return managerService.findByEmployeId(employeId)
-                .map(manager -> ResponseEntity.ok(ApiResponse.success(manager, "Manager trouvé")))
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/departement/{departement}")
-    @Operation(summary = "Récupère les managers par département")
-    public ResponseEntity<ApiResponse<List<ManagerDTO>>> getManagersByDepartement(@PathVariable String departement) {
-        log.info("GET /api/managers/departement/{}", departement);
-        List<ManagerDTO> managers = managerService.findByDepartement(departement);
-        return ResponseEntity.ok(ApiResponse.success(managers, "Managers par département récupérés"));
-    }
-
-    @GetMapping("/actifs")
-    @Operation(summary = "Récupère les managers actifs")
-    public ResponseEntity<ApiResponse<List<ManagerDTO>>> getManagersActifs() {
-        log.info("GET /api/managers/actifs");
-        List<ManagerDTO> actifs = managerService.findManagersActifs();
-        return ResponseEntity.ok(ApiResponse.success(actifs, "Managers actifs récupérés"));
-    }
-
-    @GetMapping("/sans-equipe")
-    @Operation(summary = "Récupère les managers sans équipe")
-    public ResponseEntity<ApiResponse<List<ManagerDTO>>> getManagersSansEquipe() {
-        log.info("GET /api/managers/sans-equipe");
-        List<ManagerDTO> sansEquipe = managerService.findManagersSansEquipe();
-        return ResponseEntity.ok(ApiResponse.success(sansEquipe, "Managers sans équipe récupérés"));
-    }
-
-    @PostMapping
-    @Operation(summary = "Crée un nouveau manager")
-    public ResponseEntity<ApiResponse<ManagerDTO>> createManager(@Valid @RequestBody ManagerDTO dto) {
-        log.info("POST /api/managers - Création manager pour département: {}", dto.getDepartement());
-        ManagerDTO created = managerService.create(dto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(created, "Manager créé avec succès"));
-    }
-
-    @PutMapping("/{id}")
-    @Operation(summary = "Met à jour un manager")
-    public ResponseEntity<ApiResponse<ManagerDTO>> updateManager(@PathVariable Long id, @Valid @RequestBody ManagerDTO dto) {
-        log.info("PUT /api/managers/{}", id);
-        ManagerDTO updated = managerService.update(id, dto);
-        return ResponseEntity.ok(ApiResponse.success(updated, "Manager mis à jour avec succès"));
-    }
-
-    @PatchMapping("/{id}/activer")
-    @Operation(summary = "Active un manager")
-    public ResponseEntity<ApiResponse<ManagerDTO>> activerManager(@PathVariable Long id) {
-        log.info("PATCH /api/managers/{}/activer", id);
-        ManagerDTO active = managerService.activer(id);
-        return ResponseEntity.ok(ApiResponse.success(active, "Manager activé avec succès"));
-    }
-
-    @PatchMapping("/{id}/desactiver")
-    @Operation(summary = "Désactive un manager")
-    public ResponseEntity<ApiResponse<ManagerDTO>> desactiverManager(@PathVariable Long id) {
-        log.info("PATCH /api/managers/{}/desactiver", id);
-        ManagerDTO desactive = managerService.desactiver(id);
-        return ResponseEntity.ok(ApiResponse.success(desactive, "Manager désactivé avec succès"));
-    }
-
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Supprime un manager")
-    public ResponseEntity<ApiResponse<Void>> deleteManager(@PathVariable Long id) {
-        log.info("DELETE /api/managers/{}", id);
-        managerService.delete(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Manager supprimé avec succès"));
-    }
-
-    @PostMapping("/{managerId}/employes/{employeId}")
-    @Operation(summary = "Ajoute un employé à l'équipe du manager")
-    public ResponseEntity<ApiResponse<ManagerDTO>> ajouterEmploye(@PathVariable Long managerId, @PathVariable Long employeId) {
-        log.info("POST /api/managers/{}/employes/{}", managerId, employeId);
-        ManagerDTO updated = managerService.ajouterEmploye(managerId, employeId);
-        return ResponseEntity.ok(ApiResponse.success(updated, "Employé ajouté à l'équipe avec succès"));
-    }
-
-    @DeleteMapping("/{managerId}/employes/{employeId}")
-    @Operation(summary = "Retire un employé de l'équipe du manager")
-    public ResponseEntity<ApiResponse<ManagerDTO>> retirerEmploye(@PathVariable Long managerId, @PathVariable Long employeId) {
-        log.info("DELETE /api/managers/{}/employes/{}", managerId, employeId);
-        ManagerDTO updated = managerService.retirerEmploye(managerId, employeId);
-        return ResponseEntity.ok(ApiResponse.success(updated, "Employé retiré de l'équipe avec succès"));
-    }
-
-    @GetMapping("/{id}/rapport-equipe")
-    @Operation(summary = "Génère un rapport d'équipe pour un manager")
-    public ResponseEntity<ApiResponse<String>> getRapportEquipe(@PathVariable Long id) {
-        log.info("GET /api/managers/{}/rapport-equipe", id);
-        String rapport = managerService.genererRapportEquipe(id);
-        return ResponseEntity.ok(ApiResponse.success(rapport, "Rapport d'équipe généré"));
-    }
-
-    @GetMapping("/stats/globales")
-    @Operation(summary = "Récupère les statistiques globales des managers")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getManagersStats() {
-        log.info("GET /api/managers/stats/globales");
-        Map<String, Object> stats = managerService.getManagersStats();
-        return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques des managers récupérées"));
-    }
-
-    @GetMapping("/stats/departement")
-    @Operation(summary = "Compte les managers par département")
-    public ResponseEntity<ApiResponse<Map<String, Long>>> countByDepartement() {
-        log.info("GET /api/managers/stats/departement");
-        Map<String, Long> stats = managerService.countByDepartement();
-        return ResponseEntity.ok(ApiResponse.success(stats, "Managers par département comptés"));
-    }
-
-    @GetMapping("/stats/anciennete-moyenne")
-    @Operation(summary = "Calcule l'ancienneté moyenne des managers")
-    public ResponseEntity<ApiResponse<Double>> getAncienneteMoyenne() {
-        log.info("GET /api/managers/stats/anciennete-moyenne");
-        Double moyenne = managerService.calculerAncienneteMoyenne();
-        return ResponseEntity.ok(ApiResponse.success(moyenne, "Ancienneté moyenne calculée"));
-    }
-
-    @GetMapping("/search")
-    @Operation(summary = "Recherche des managers par mot-clé")
-    public ResponseEntity<ApiResponse<List<ManagerDTO>>> searchManagers(@RequestParam String keyword) {
-        log.info("GET /api/managers/search?keyword={}", keyword);
-        List<ManagerDTO> result = managerService.search(keyword);
-        return ResponseEntity.ok(ApiResponse.success(result, "Résultats de la recherche"));
-    }
-
-    // ===== WORKFLOW MANAGER =====
-
-    @GetMapping("/mon-equipe")
-    @Operation(summary = "Récupère l'équipe du manager connecté")
-    @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<List<Employe>>> getMonEquipe(@AuthenticationPrincipal Jwt jwt) {
+    @GetMapping("/profile")
+    public ResponseEntity<ApiResponse<ManagerProfileDTO>> getProfile(@AuthenticationPrincipal Jwt jwt) {
         String email = extractEmail(jwt);
-        log.info("Manager {} récupère son équipe", email);
-        List<Employe> equipe = employeRepository.findByManagerEmail(email);
-        return ResponseEntity.ok(ApiResponse.success(equipe, "Équipe récupérée avec succès"));
+
+        log.info("GET PROFILE - {}", email);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        managerProfileService.getProfile(jwt),
+                        "Profil récupéré"
+                )
+        );
     }
 
-    @GetMapping("/demandes-conge")
-    @Operation(summary = "Récupère les demandes de congé de l'équipe")
-    @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getDemandesConge(@AuthenticationPrincipal Jwt jwt) {
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<ManagerProfileDTO>> updateProfile(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestBody ManagerProfileDTO dto
+    ) {
         String email = extractEmail(jwt);
-        log.info("Manager {} récupère les demandes de congé", email);
+
+        log.info("UPDATE PROFILE - {}", email);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        managerProfileService.updateProfile(jwt, dto),
+                        "Profil mis à jour"
+                )
+        );
+    }
+
+    // ================= CALENDRIER =================
+
+    @GetMapping("/calendar-events")
+    public ResponseEntity<ApiResponse<List<CalendarEventDTO>>> getCalendarEvents(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        String email = extractEmail(jwt);
+
+        List<CalendarEventDTO> events = managerService.getCalendarEvents(email);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(events, "Événements calendrier récupérés avec succès")
+        );
+    }
+
+    // ================= PASSWORD =================
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody ChangePasswordRequest dto
+    ) {
+        String email = extractEmail(jwt);
+
+        log.info("CHANGE PASSWORD MANAGER - {}", email);
+
+        try {
+            managerProfileService.changePassword(jwt, dto);
+
+            return ResponseEntity.ok(
+                    ApiResponse.success(null, "Mot de passe modifié")
+            );
+
+        } catch (Exception e) {
+            log.error("Erreur changement mot de passe manager", e);
+
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    // ================= PHOTO =================
+
+    @PostMapping(value = "/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<PhotoUploadResponse>> uploadPhoto(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam("file") MultipartFile file
+    ) {
+        String email = extractEmail(jwt);
+
+        log.info("UPLOAD PHOTO - {}", email);
+
+        ManagerProfileDTO profile = managerProfileService.getProfile(jwt);
+
+        String photoUrl = photoService.uploadPhoto(profile.getId(), file);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        PhotoUploadResponse.builder()
+                                .photoUrl(photoUrl)
+                                .message("Photo uploadée")
+                                .build(),
+                        "Photo uploadée"
+                )
+        );
+    }
+
+    @DeleteMapping("/photo")
+    public ResponseEntity<ApiResponse<Void>> deletePhoto(@AuthenticationPrincipal Jwt jwt) {
+        ManagerProfileDTO profile = managerProfileService.getProfile(jwt);
+
+        photoService.deletePhoto(profile.getId());
+
+        return ResponseEntity.ok(
+                ApiResponse.success(null, "Photo supprimée")
+        );
+    }
+
+    // ================= STATS =================
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getStats(@AuthenticationPrincipal Jwt jwt) {
+        String email = extractEmail(jwt);
+
+        Employe manager = employeRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new RuntimeException("Manager introuvable"));
+
+        List<Employe> equipe = employeRepository.findByManagerId(manager.getId());
+
         List<Map<String, Object>> tasks = workflowService.getManagerTasks(email);
-        return ResponseEntity.ok(ApiResponse.success(tasks, "Demandes récupérées avec succès"));
-    }
+        int congesEnAttente = tasks != null ? tasks.size() : 0;
 
-    @GetMapping("/stats-dashboard")
-    @Operation(summary = "Récupère les statistiques pour le dashboard manager")
-    @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats(@AuthenticationPrincipal Jwt jwt) {
-        String email = extractEmail(jwt);
-        log.info("Manager {} récupère ses statistiques", email);
+        long totalEmployes = equipe.size();
+
+        long employesActifs = equipe.stream()
+                .filter(e -> Boolean.TRUE.equals(e.getActif()))
+                .count();
+
+        double tauxPresence = totalEmployes == 0
+                ? 100.0
+                : (employesActifs * 100.0) / totalEmployes;
 
         Map<String, Object> stats = new HashMap<>();
+
+        stats.put("totalEmployes", totalEmployes);
+        stats.put("employesActifs", employesActifs);
+        stats.put("congesEnAttente", congesEnAttente);
+        stats.put("tauxPresence", Math.round(tauxPresence));
+
+        stats.put("nbEmployes", totalEmployes);
+        stats.put("demandesEnAttente", congesEnAttente);
+        stats.put("demandesApprouvees", demandeCongeRepository.countByStatut("APPROUVE"));
+        stats.put("demandesRefusees", demandeCongeRepository.countByStatut("REFUSE"));
+
+        log.info("STATS MANAGER {} => total={}, actifs={}, attente={}",
+                email, totalEmployes, employesActifs, congesEnAttente);
+
+        return ResponseEntity.ok(
+                ApiResponse.success(stats, "Statistiques manager récupérées")
+        );
+    }
+
+    // ================= CONGES =================
+
+    @GetMapping("/conges")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getConges(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        String email = extractEmail(jwt);
+
+        log.info("GET /api/manager/conges - manager : {}", email);
+
         List<Map<String, Object>> tasks = workflowService.getManagerTasks(email);
-        stats.put("demandesEnAttente", tasks.size());
 
-        List<Employe> equipe = employeRepository.findByManagerEmail(email);
-        stats.put("nbEmployes", equipe.size());
+        enrichTasksWithEmployeePhotos(tasks);
 
-        long demandesApprouvees = demandeCongeRepository.countByStatut("APPROUVE");
-        long demandesRefusees = demandeCongeRepository.countByStatut("REFUSE");
+        log.info("NB TASKS MANAGER = {}", tasks != null ? tasks.size() : 0);
 
-        stats.put("demandesApprouvees", demandesApprouvees);
-        stats.put("demandesRefusees", demandesRefusees);
+        return ResponseEntity.ok(
+                ApiResponse.success(tasks, "Congés manager récupérés")
+        );
+    }
 
-        if (demandesApprouvees + demandesRefusees > 0) {
-            double tauxApprobation = (double) demandesApprouvees / (demandesApprouvees + demandesRefusees) * 100;
-            stats.put("tauxApprobation", Math.round(tauxApprobation));
-        } else {
-            stats.put("tauxApprobation", 0);
+    // ================= HELPERS PHOTO =================
+
+    private void enrichTasksWithEmployeePhotos(List<Map<String, Object>> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return;
         }
 
-        return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques récupérées avec succès"));
+        for (Map<String, Object> task : tasks) {
+            if (task == null) {
+                continue;
+            }
+
+            Employe employe = findEmployeFromTask(task);
+
+            if (employe == null) {
+                task.putIfAbsent("photoUrl", null);
+                task.putIfAbsent("employePhotoProfil", null);
+                task.putIfAbsent("employePhotoUrl", null);
+                continue;
+            }
+
+            String photo = employe.getPhotoUrl();
+
+            task.put("photoUrl", photo);
+            task.put("employePhotoProfil", photo);
+            task.put("employePhotoUrl", photo);
+
+            task.putIfAbsent("employeId", employe.getId());
+            task.putIfAbsent("employeNom", employe.getNom());
+            task.putIfAbsent("employePrenom", employe.getPrenom());
+            task.putIfAbsent("employeEmail", employe.getEmail());
+        }
     }
 
-    @PostMapping("/approuver-demande")
-    @Operation(summary = "Approuve une demande de congé")
-    @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<String>> approuverDemande(@RequestBody Map<String, Object> decision, @AuthenticationPrincipal Jwt jwt) {
-        String email = extractEmail(jwt);
-        String taskId = (String) decision.get("taskId");
-        String commentaire = (String) decision.get("commentaire");
-        log.info("Manager {} approuve la tâche {}", email, taskId);
-        workflowService.processManagerDecision(taskId, true, commentaire, email);
-        return ResponseEntity.ok(ApiResponse.success("Demande approuvée avec succès"));
+    private Employe findEmployeFromTask(Map<String, Object> task) {
+        Long employeId = extractLong(task.get("employeId"));
+
+        if (employeId == null) {
+            employeId = extractLong(task.get("employeeId"));
+        }
+
+        if (employeId == null) {
+            employeId = extractLong(task.get("idEmploye"));
+        }
+
+        if (employeId != null) {
+            Optional<Employe> byId = employeRepository.findById(employeId);
+
+            if (byId.isPresent()) {
+                return byId.get();
+            }
+        }
+
+        String email = extractString(task.get("employeEmail"));
+
+        if (email == null || email.isBlank()) {
+            email = extractString(task.get("employeeEmail"));
+        }
+
+        if (email == null || email.isBlank()) {
+            email = extractString(task.get("email"));
+        }
+
+        if (email != null && !email.isBlank()) {
+            return employeRepository.findByEmailIgnoreCase(email.trim())
+                    .orElse(null);
+        }
+
+        return null;
     }
 
-    @PostMapping("/refuser-demande")
-    @Operation(summary = "Refuse une demande de congé")
-    @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
-    public ResponseEntity<ApiResponse<String>> refuserDemande(@RequestBody Map<String, Object> decision, @AuthenticationPrincipal Jwt jwt) {
-        String email = extractEmail(jwt);
-        String taskId = (String) decision.get("taskId");
-        String motif = (String) decision.get("motif");
-        log.info("Manager {} refuse la tâche {} avec motif: {}", email, taskId, motif);
-        workflowService.processManagerDecision(taskId, false, motif, email);
-        return ResponseEntity.ok(ApiResponse.success("Demande refusée avec succès"));
+    private Long extractLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof Long longValue) {
+            return longValue;
+        }
+
+        if (value instanceof Integer integerValue) {
+            return integerValue.longValue();
+        }
+
+        if (value instanceof Number numberValue) {
+            return numberValue.longValue();
+        }
+
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String extractString(Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        return String.valueOf(value);
     }
 
     private String extractEmail(Jwt jwt) {
-        if (jwt == null) return null;
+        if (jwt == null) {
+            return null;
+        }
+
         String email = jwt.getClaimAsString("email");
-        if (email == null) email = jwt.getClaimAsString("preferred_username");
-        if (email == null) email = jwt.getSubject();
-        return email;
-    }
-    @GetMapping("/calendar-events")
-    @Operation(summary = "Récupère les événements calendrier des employés de l'équipe du manager connecté")
-    @PreAuthorize("hasRole('manager') or hasRole('MANAGER')")
-    public ResponseEntity<List<CalendarEventDTO>> getCalendarEventsForManager(@AuthenticationPrincipal Jwt jwt) {
-        String email = extractEmail(jwt);
-        log.info("GET /api/managers/calendar-events pour manager : {}", email);
-        List<CalendarEventDTO> events = demandeCongeService.getCalendarEventsForManager(email);
-        return ResponseEntity.ok(events);
+
+        if (email == null || email.isBlank()) {
+            email = jwt.getClaimAsString("preferred_username");
+        }
+
+        if (email == null || email.isBlank()) {
+            email = jwt.getSubject();
+        }
+
+        return email != null ? email.trim().toLowerCase() : null;
     }
 }

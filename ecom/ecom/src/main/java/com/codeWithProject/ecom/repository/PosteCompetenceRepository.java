@@ -6,7 +6,9 @@ import java.util.List;
 public interface PosteCompetenceRepository
         extends JpaRepository<PosteCompetence, Long> {
 
-    List<PosteCompetence> findByPoste(String poste);
-} 
+List<PosteCompetence> findByPosteIgnoreCase(String poste);
+    List<PosteCompetence> findByPosteContainingIgnoreCase(String poste);
+
+}
     
 

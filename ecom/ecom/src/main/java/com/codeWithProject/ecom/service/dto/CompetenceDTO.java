@@ -22,6 +22,8 @@ public class CompetenceDTO {
 
 
 
+private String photoUrl;
+private String employePhotoProfil;
     public String getNom() { return nom; }
     public void setNom(String nom) { this.nom = nom; }
 
@@ -30,4 +32,6 @@ public class CompetenceDTO {
 private List<EmployeDTO> employes;
 private Long competenceId;
 private Integer niveau;
+
+
 }

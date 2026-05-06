@@ -15,6 +15,7 @@ List<EmployeFormationProgress>
 findByEmployeIdAndVideo_Formation_IdAndCompletedTrue(Long empId, Long formationId);
 List<EmployeFormationProgress> findByFormationId(Long formationId);
 
+boolean existsByEmployeIdAndVideo(Long employeId, FormationVideo video);
 
 
 }

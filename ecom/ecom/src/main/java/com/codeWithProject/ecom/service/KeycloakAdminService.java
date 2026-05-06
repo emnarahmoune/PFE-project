@@ -7,5 +7,7 @@ public interface KeycloakAdminService {
      * @param userId l'identifiant Keycloak de l'utilisateur
      * @param newPassword nouveau mot de passe
      */
-    void resetPassword(String userId, String newPassword);
+    boolean verifyPassword(String usernameOrEmail, String rawPassword);
+    void resetPassword(String keycloakUserId, String newPassword);
+
 }

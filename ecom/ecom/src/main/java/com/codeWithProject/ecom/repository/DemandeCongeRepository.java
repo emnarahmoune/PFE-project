@@ -73,6 +73,7 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
     List<DemandeConge> findByProcessInstanceIdIsNull();
     @Query("SELECT d FROM DemandeConge d WHERE d.statut = 'EN_ATTENTE' AND d.joursOuvres > 10 ORDER BY d.dateDemande ASC")
     List<DemandeConge> findDemandesEnAttentePlusDe10Jours();
+
     @Query("SELECT d FROM DemandeConge d WHERE d.statut = 'EN_ATTENTE' AND d.joursOuvres <= 10 ORDER BY d.dateDemande ASC")
     List<DemandeConge> findDemandesEnAttenteMoinsDe10Jours();
     @Query("SELECT d.currentTaskId FROM DemandeConge d WHERE d.processInstanceId = :processInstanceId")
@@ -97,15 +98,30 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
             "WHERE d.statut IN ('APPROUVE', 'EN_ATTENTE_RH', 'REFUSE_MANAGER', 'REFUSE')")
     List<CalendarEventDTO> findAllForCalendar();
 
-    @Query("SELECT new com.codeWithProject.ecom.service.dto.DemandeRefusManagerDTO(" +
-            "d.id, e.prenom, e.nom, e.departement, CONCAT(m.prenom, ' ', m.nom), " +
-            "d.dateDebut, d.dateFin, d.motifRefus) " +
-            "FROM DemandeConge d " +
-            "JOIN d.employe e " +
-            "LEFT JOIN d.manager m " +
-            "WHERE d.statut = 'REFUSE_MANAGER' " +
-            "ORDER BY d.dateDecision DESC")
-    List<DemandeRefusManagerDTO> findDemandesRefuseesParManager();
+  @Query("""
+    SELECT new com.codeWithProject.ecom.service.dto.DemandeRefusManagerDTO(
+        d.id,
+        e.id,
+        e.prenom,
+        e.nom,
+        e.email,
+        e.departement,
+        CONCAT(COALESCE(m.prenom, ''), ' ', COALESCE(m.nom, '')),
+        d.dateDebut,
+        d.dateFin,
+        d.motifRefus,
+        d.statut,
+        d.dateDecision,
+        e.photoUrl
+    )
+    FROM DemandeConge d
+    JOIN d.employe e
+    LEFT JOIN d.manager m
+    WHERE d.statut = 'REFUSE_MANAGER'
+       OR d.statut = 'REFUSE_PAR_MANAGER'
+    ORDER BY d.dateDecision DESC
+""")
+List<DemandeRefusManagerDTO> findDemandesRefuseesParManager();
     // Dans DemandeCongeRepository.java
     @Query("SELECT COALESCE(SUM(d.joursOuvres), 0) FROM DemandeConge d " +
             "WHERE d.employe.id = :employeId AND d.statut = 'APPROUVE' " +
@@ -122,6 +138,8 @@ public interface DemandeCongeRepository extends JpaRepository<DemandeConge, Long
     int sumJoursAbsence(@Param("employeId") Long employeId, @Param("annee") int annee);
 
 
+
+    List<DemandeConge> findByEmploye_IdOrderByDateDemandeDesc(Long employeId);
 
 
     @Query("SELECT new com.codeWithProject.ecom.service.dto.DemandeRefusDetailsDTO(" +

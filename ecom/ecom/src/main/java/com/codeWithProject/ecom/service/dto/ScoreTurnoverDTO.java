@@ -25,6 +25,8 @@ public class ScoreTurnoverDTO {
     private String versionModele;
     private String actionRecommandee;
 
+private String employeEmail;
+private String employePhotoUrl;
     // Scores individuels
     private Double scoreAnciennete;
     private Double scoreSalaire;

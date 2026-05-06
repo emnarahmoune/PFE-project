@@ -18,4 +18,9 @@ public class CompetenceEmployeDTO {
     private Boolean certifie;
     private LocalDate dateAcquisition;
     private LocalDate dateExpiration;
+    private Long competenceId;
+    private String description;
+    private String photoUrl;
+private String employePhotoProfil;
+
 }

@@ -31,6 +31,13 @@ private int totalEmployes;
     // Statistiques
     private List<Long> participantIds;
 
+
+    private Long employeId;
+private String employeNom;
+private String employePrenom;
+private String employeEmail;
+private String employePhotoUrl;
+
     // Pour l'affichage
     private String resume;
 

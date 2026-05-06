@@ -19,4 +19,6 @@ public class FormationEmployeDTO {
     private String statut;
     private Integer noteEvaluation;
     private Integer progression;
+    private String photoUrl;
+private String employePhotoProfil;
 }

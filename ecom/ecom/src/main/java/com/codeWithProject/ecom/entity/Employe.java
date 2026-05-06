@@ -5,6 +5,9 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import camundajar.impl.scala.annotation.meta.getter;
+
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 
@@ -16,6 +19,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "employes")
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = "type_employe")
+@DiscriminatorValue("EMPLOYE")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -38,7 +44,6 @@ public class Employe {
     private Double salaire;
     private String adresse;
     private String statut = "ACTIF";
-    private String photoUrl;
     private String departement;
 
     private Integer soldeConges = 25;
@@ -52,9 +57,62 @@ public class Employe {
     private Boolean compteVerrouille = false;
     private LocalDateTime dateVerrouillage;
 
+
+private String employePhotoProfil;
+private String employePhotoUrl;
     private String role;
 
-    // ===== RELATIONS =====
+    // 🔥 CONSTANTES
+    public static final String TYPE_ADMIN_RH = "ADMIN_RH";
+    public static final String TYPE_MANAGER = "MANAGER";
+    public static final String TYPE_EMPLOYE = "EMPLOYE";
+
+    @Column(name = "photo_url")
+    private String photoUrl;
+
+
+public String getPhotoUrl() {
+    return photoUrl;
+}
+
+public void setPhotoUrl(String photoUrl) {
+    this.photoUrl = photoUrl;
+}
+
+
+public void ajouterConges(Integer jours) {
+    if (jours == null || jours <= 0) {
+        return;
+    }
+
+    if (this.soldeConges == null) {
+        this.soldeConges = 0;
+    }
+
+    this.soldeConges += jours;
+}
+
+public void deduireConges(Integer jours) {
+    if (jours == null || jours <= 0) {
+        return;
+    }
+
+    if (this.soldeConges == null) {
+        this.soldeConges = 0;
+    }
+
+    if (this.soldeConges < jours) {
+        throw new IllegalStateException(
+                "Solde insuffisant — Disponible : " + this.soldeConges + ", demandé : " + jours
+        );
+    }
+
+    this.soldeConges -= jours;
+}
+ 
+    // =========================
+    // RELATIONS
+    // =========================
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "manager_id")
@@ -66,9 +124,14 @@ public class Employe {
     @JoinColumn(name = "service_id")
     private Service service;
 
-    @OneToMany(mappedBy = "employe", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonIgnore
-    private List<DemandeConge> demandesConge = new ArrayList<>();
+    @OneToMany(
+    mappedBy = "employe",
+    cascade = CascadeType.ALL,
+    orphanRemoval = true,
+    targetEntity = DemandeConge.class
+)
+@JsonIgnore
+private List<DemandeConge> demandesConge = new ArrayList<>();
 
     @ManyToMany
     @JoinTable(
@@ -83,14 +146,16 @@ public class Employe {
     @JsonIgnore
     private List<EmployeFormation> employeFormations;
 
-    // ===== MÉTHODES MÉTIER =====
+    // =========================
+    // MÉTHODES MÉTIER
+    // =========================
 
     public boolean hasRole(String roleName) {
         return role != null && role.equalsIgnoreCase(roleName);
     }
 
     public boolean isManager() {
-        return "manager".equalsIgnoreCase(role);
+        return "MANAGER".equalsIgnoreCase(role);
     }
 
     public boolean isAdminRH() {
@@ -98,8 +163,12 @@ public class Employe {
     }
 
     public boolean isEmploye() {
-        return "user".equalsIgnoreCase(role);
+        return "USER".equalsIgnoreCase(role);
     }
+
+    // =========================
+    // CONNEXION
+    // =========================
 
     public boolean seConnecter(String email, String password) {
         if (!this.actif) throw new IllegalStateException("Compte désactivé");
@@ -135,36 +204,13 @@ public class Employe {
         this.tentativesEchec = 0;
     }
 
-    public void activer() {
-        this.actif = true;
-    }
-
-    public void desactiver() {
-        this.actif = false;
-    }
-
-    public void ajouterConges(int jours) {
-        this.soldeConges += jours;
-    }
-
-    public void deduireConges(int jours) {
-        if (this.soldeConges < jours) throw new IllegalStateException("Solde insuffisant");
-        this.soldeConges -= jours;
-    }
-
-    public void soumettreDemandeConge(DemandeConge demande) {
-        this.demandesConge.add(demande);
-        demande.setEmploye(this);
-    }
+    // =========================
+    // UTILITAIRES
+    // =========================
 
     @Transient
     public String getNomComplet() {
         return prenom + " " + nom;
-    }
-
-    @Transient
-    public Integer getSoldeCongesSafe() {
-        return soldeConges != null ? soldeConges : 0;
     }
 
     @Transient
@@ -174,18 +220,13 @@ public class Employe {
     }
 
     @Transient
-    public String getStatutCompte() {
-        if (Boolean.TRUE.equals(compteVerrouille)) return "🔒 Verrouillé";
-        if (!Boolean.TRUE.equals(actif)) return "❌ Inactif";
-        return "✅ Actif";
-    }
-
-    @Transient
     public Double getSalaireAnnuel() {
         return salaire == null ? 0.0 : salaire * 12;
     }
 
-    // ===== HOOKS =====
+    // =========================
+    // HOOKS
+    // =========================
 
     @PrePersist
     @PreUpdate
@@ -193,4 +234,16 @@ public class Employe {
         if (dateCreation == null) dateCreation = LocalDate.now();
         if (email != null) email = email.trim().toLowerCase();
     }
+
+
+    public LocalDate getDateEmbauche() {
+    return dateEmbauche;
+}
+
+public void setDateEmbauche(LocalDate dateEmbauche) {
+    this.dateEmbauche = dateEmbauche;
+}
+
+
+   
 }

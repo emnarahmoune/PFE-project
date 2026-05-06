@@ -35,6 +35,10 @@ public class DemandeCongeDTO {
     private String employeNom;
     private String employePrenom;
 
+    private String employePhotoUrl;
+private String employePhotoProfil;
+    private String employeEmail;
+
 
     private Integer joursUrgenceNonCouverts;
     // Informations manager

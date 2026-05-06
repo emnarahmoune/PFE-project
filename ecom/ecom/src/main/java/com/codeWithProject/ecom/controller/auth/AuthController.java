@@ -1,10 +1,8 @@
 package com.codeWithProject.ecom.controller.auth;
 
-import com.codeWithProject.ecom.entity.AdministrateurRH;
 import com.codeWithProject.ecom.entity.Employe;
-import com.codeWithProject.ecom.entity.Manager;
 import com.codeWithProject.ecom.repository.EmployeRepository;
-import jakarta.persistence.EntityManager;
+import com.codeWithProject.ecom.service.RoleProvisioningService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -24,9 +22,8 @@ import java.util.*;
 public class AuthController {
 
     private final EmployeRepository employeRepository;
-    private final EntityManager entityManager;
+    private final RoleProvisioningService roleProvisioningService;
 
-    // ✅ IMPORTANT : POST (et pas GET)
     @PostMapping("/sync")
     @Transactional
     public ResponseEntity<Map<String, Object>> syncUser(@AuthenticationPrincipal Jwt jwt) {
@@ -37,44 +34,38 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("error", "Non authentifié"));
         }
 
-        // 🔹 1. EMAIL
         String email = jwt.getClaimAsString("email");
 
-// 🔥 fallback si email absent
-if (email == null || email.isEmpty()) {
-    email = jwt.getClaimAsString("preferred_username");
-}
+        if (email == null || email.isBlank()) {
+            email = jwt.getClaimAsString("preferred_username");
+        }
 
-if (email == null || email.isEmpty()) {
-    throw new RuntimeException("Email introuvable dans le token");
-}
-email = email.trim().toLowerCase();
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Email introuvable dans le token");
+        }
 
+        email = email.trim().toLowerCase();
 
-        // 🔹 2. INFOS KEYCLOAK
         String prenom = jwt.getClaimAsString("given_name");
         String nom = jwt.getClaimAsString("family_name");
 
-        if (prenom == null) prenom = email.split("@")[0];
-        if (nom == null) nom = prenom.toUpperCase();
-
-        // 🔹 3. ROLES
-        List<String> roles = extractRoles(jwt);
-        String roleSpring;
-
-        if (roles.contains("ADMIN_RH") || roles.contains("ADMIN")) {
-            roleSpring = "ADMIN_RH";
-        } else if (roles.contains("MANAGER")) {
-            roleSpring = "manager";
-        } else {
-            roleSpring = "user";
+        if (prenom == null || prenom.isBlank()) {
+            prenom = email.split("@")[0];
         }
 
-        // 🔹 4. CHECK EXISTING USER
-        Employe employe = employeRepository.findByEmail(email).orElse(null);
+        if (nom == null || nom.isBlank()) {
+            nom = prenom.toUpperCase();
+        }
+
+        List<String> roles = extractRoles(jwt);
+        String roleSpring = extractSpringRole(roles);
+
+        Employe employe = employeRepository.findByEmailIgnoreCase(email).orElse(null);
 
         if (employe == null) {
-            // ✅ CREATION
+
+            String normalizedRole = roleProvisioningService.normalizeRole(roleSpring);
+
             employe = Employe.builder()
                     .matricule(generateMatricule())
                     .nom(nom)
@@ -93,36 +84,37 @@ email = email.trim().toLowerCase();
                     .nombreConnexions(0)
                     .tentativesEchec(0)
                     .dateCreation(LocalDate.now())
-                    .role(roleSpring)
+                    .role(normalizedRole)
                     .build();
 
             employe = employeRepository.save(employe);
-            log.info("✅ Nouvel utilisateur créé");
+
+            log.info("✅ Nouvel utilisateur créé : email={}, role={}", email, normalizedRole);
 
         } else {
-            // ✅ UPDATE USER EXISTANT
 
-            // 🔥 CORRECTION IMPORTANTE (username manquant)
-            if (employe.getNom() == null || employe.getNom().isEmpty()) {
+            if (employe.getNom() == null || employe.getNom().isBlank()) {
                 employe.setNom(nom);
             }
 
-            if (employe.getPrenom() == null || employe.getPrenom().isEmpty()) {
+            if (employe.getPrenom() == null || employe.getPrenom().isBlank()) {
                 employe.setPrenom(prenom);
             }
 
-            // update role
-            if (!roleSpring.equals(employe.getRole())) {
-                employe.setRole(roleSpring);
+            /*
+             * 🔥 IMPORTANT :
+             * Ne jamais écraser un rôle déjà contrôlé en DB.
+             * On affecte le rôle Keycloak seulement si le rôle DB est vide.
+             */
+            if (employe.getRole() == null || employe.getRole().isBlank()) {
+                employe.setRole(roleProvisioningService.normalizeRole(roleSpring));
             }
 
-            // password fallback
-            if (employe.getPassword() == null) {
+            if (employe.getPassword() == null || employe.getPassword().isBlank()) {
                 employe.setPassword("keycloak-auth");
             }
         }
 
-        // 🔹 5. UPDATE CONNEXION
         employe.setDerniereConnexion(LocalDateTime.now());
         employe.setNombreConnexions(
                 Optional.ofNullable(employe.getNombreConnexions()).orElse(0) + 1
@@ -130,7 +122,9 @@ email = email.trim().toLowerCase();
 
         employe = employeRepository.save(employe);
 
-        // 🔹 6. RESPONSE
+        // ✅ synchronise automatiquement managers / administrateurs RH
+        roleProvisioningService.provisionRole(employe);
+
         Map<String, Object> response = new HashMap<>();
         response.put("id", employe.getId());
         response.put("email", employe.getEmail());
@@ -138,21 +132,46 @@ email = email.trim().toLowerCase();
         response.put("prenom", employe.getPrenom());
         response.put("role", employe.getRole());
 
-        log.info("✅ SYNC OK");
+        log.info("✅ SYNC OK : email={}, role={}", employe.getEmail(), employe.getRole());
 
         return ResponseEntity.ok(response);
     }
 
-    // 🔹 EXTRACTION ROLES KEYCLOAK
     private List<String> extractRoles(Jwt jwt) {
         Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+
         if (realmAccess != null && realmAccess.containsKey("roles")) {
-            return (List<String>) realmAccess.get("roles");
+            Object rolesObject = realmAccess.get("roles");
+
+            if (rolesObject instanceof List<?> list) {
+                return list.stream()
+                        .filter(Objects::nonNull)
+                        .map(Object::toString)
+                        .toList();
+            }
         }
+
         return List.of();
     }
 
-    // 🔹 GENERATE MATRICULE
+    private String extractSpringRole(List<String> roles) {
+        if (roles == null || roles.isEmpty()) {
+            return "USER";
+        }
+
+        for (String r : roles) {
+            if ("ADMIN_RH".equalsIgnoreCase(r) || "ADMIN".equalsIgnoreCase(r) || "RH".equalsIgnoreCase(r)) {
+                return "ADMIN_RH";
+            }
+
+            if ("MANAGER".equalsIgnoreCase(r)) {
+                return "MANAGER";
+            }
+        }
+
+        return "USER";
+    }
+
     private String generateMatricule() {
         return "EMP" + System.currentTimeMillis();
     }

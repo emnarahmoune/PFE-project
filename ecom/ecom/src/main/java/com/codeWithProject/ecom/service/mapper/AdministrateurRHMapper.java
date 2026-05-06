@@ -27,7 +27,7 @@ public class AdministrateurRHMapper {
         dto.setSoldeConges(entity.getSoldeConges());
         dto.setRole(entity.getRole());
         dto.setNomComplet(entity.getNomComplet());
-        dto.setStatutCompte(entity.getStatutCompte());
+        dto.setStatutCompte(entity.getStatut());
         dto.setPeutSeConnecter(entity.peutSeConnecter());
         dto.setAnciennete(entity.getAnciennete());
 

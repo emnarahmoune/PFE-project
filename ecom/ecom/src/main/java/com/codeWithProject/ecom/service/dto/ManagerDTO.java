@@ -36,6 +36,8 @@ public class ManagerDTO {
     private Integer soldeConges;
     private LocalDate dateEmbauche;          // ✅ AJOUTÉ (manquait)
 
+    private String photoUrl;
+private String employePhotoUrl;
     // ── Informations de connexion ─────────────────
     private Boolean actif;
     private LocalDateTime derniereConnexion;

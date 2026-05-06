@@ -1,38 +1,32 @@
 package com.codeWithProject.ecom.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-/**
- * Entité Competence - Catalogue des compétences
- * Conforme au diagramme de classes :
- *  - id          : Long
- *  - nom         : String
- *  - description : String
- *  - categorie   : String   (TECHNIQUE, SOFT_SKILL, LINGUISTIQUE…)
- */
 @Entity
-@Table(name = "competences",
+@Table(
+        name = "competences",
         indexes = {
-                @Index(name = "idx_competence_nom",       columnList = "nom"),
+                @Index(name = "idx_competence_nom", columnList = "nom"),
                 @Index(name = "idx_competence_categorie", columnList = "categorie")
         }
 )
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Competence {
-
-    /* ── Attributs du diagramme ──────────────────────────── */
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
+    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(name = "nom", nullable = false, unique = true, length = 150)
@@ -41,38 +35,58 @@ public class Competence {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    /** TECHNIQUE, SOFT_SKILL, LINGUISTIQUE, METHODOLOGIQUE… */
     @Column(name = "categorie", length = 50)
     private String categorie;
 
-
-    /* ── Relations ───────────────────────────────────────── */
-
+    @JsonIgnore
     @OneToMany(mappedBy = "competence", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @Builder.Default
     private List<EmployeCompetence> employeCompetences = new ArrayList<>();
 
-    /* ── Méthodes métier du diagramme ────────────────────── */
+    /*
+     * Garde cette relation seulement si l'entité Employe contient bien :
+     *
+     * @ManyToMany
+     * private List<Competence> competences;
+     *
+     * Si Employe ne contient pas ce champ, supprime ce bloc.
+     */
+    @JsonIgnore
+    @ManyToMany(mappedBy = "competences")
+    @ToString.Exclude
+    @Builder.Default
+    private List<Employe> employes = new ArrayList<>();
 
-    public void creer()    { /* délégué au service */ }
-    public void modifier() { /* délégué au service */ }
-    public void supprimer(){ /* délégué au service */ }
-    public void consulter(){ /* délégué au service */ }
+    public void creer() {
+        // délégué au service
+    }
 
-    /* ── Lifecycle ───────────────────────────────────────── */
+    public void modifier() {
+        // délégué au service
+    }
+
+    public void supprimer() {
+        // délégué au service
+    }
+
+    public void consulter() {
+        // délégué au service
+    }
 
     @PrePersist
     @PreUpdate
     protected void onPrePersistOrUpdate() {
-        if (this.nom       != null) this.nom       = this.nom.trim();
-        if (this.categorie != null) this.categorie = this.categorie.trim().toUpperCase();
-        if (this.nom == null || this.nom.isBlank())
+        if (this.nom != null) {
+            this.nom = this.nom.trim();
+        }
+
+        if (this.categorie != null) {
+            this.categorie = this.categorie.trim().toUpperCase();
+        }
+
+        if (this.nom == null || this.nom.isBlank()) {
             throw new IllegalStateException("Le nom de la compétence est obligatoire");
+        }
     }
-
-
-@ManyToMany(mappedBy = "competences")
-@JsonIgnoreProperties({"competences"}) // 🔥 coupe la boucle
-private List<Employe> employes;
 }
