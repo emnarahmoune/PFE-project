@@ -18,6 +18,7 @@
 
     <div class="bottom-grid">
 
+      <!-- ================= TOP COMPETENCES ================= -->
       <div class="panel">
         <div class="panel-head">
           <div>
@@ -30,7 +31,7 @@
           </a>
         </div>
 
-        <div class="comp-list" *ngIf="topCompetences.length > 0">
+        <div class="comp-list" *ngIf="topCompetences.length > 0; else noCompetences">
           <div class="comp-item" *ngFor="let c of topCompetences">
             <div class="comp-head">
               <span class="comp-name">{{ c.nom }}</span>
@@ -43,11 +44,14 @@
           </div>
         </div>
 
-        <div class="empty" *ngIf="topCompetences.length === 0">
-          Aucune donnée
-        </div>
+        <ng-template #noCompetences>
+          <div class="empty">
+            Aucune donnée
+          </div>
+        </ng-template>
       </div>
 
+      <!-- ================= CONGES ================= -->
       <div class="panel">
         <div class="panel-head">
           <div>
@@ -62,11 +66,18 @@
 
         <div class="chart-wrap">
           <div class="chart-icon">🏖️</div>
-          <p>Demandes de congé</p>
-          <small>{{ conges.length }} demande(s) chargée(s)</small>
+
+          <p>
+            {{ getCongesEnAttenteReel() }} demande(s) en attente
+          </p>
+
+          <small>
+            {{ conges.length }} demande(s) chargée(s)
+          </small>
         </div>
       </div>
 
+      <!-- ================= EQUIPE ================= -->
       <div class="panel">
         <div class="panel-head">
           <div>

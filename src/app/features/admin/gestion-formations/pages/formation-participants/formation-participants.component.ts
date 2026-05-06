@@ -6,13 +6,16 @@ import { FormationService } from '../../../../../core/services/formation.service
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 
+import { EmployeeAvatarComponent } from '../../../../../shared/layouts/components/employee-avatar/employee-avatar.component';
+
 @Component({
   selector: 'app-formation-participants',
   standalone: true,
   imports: [
     CommonModule,
     MatIconModule,
-    MatButtonModule
+    MatButtonModule,
+    EmployeeAvatarComponent
   ],
   templateUrl: './formation-participants.component.html',
   styleUrls: ['./formation-participants.component.scss']
@@ -64,22 +67,7 @@ export class FormationParticipantsComponent implements OnInit {
     });
   }
 
-  getInitial(participant: any): string {
-    const prenom = participant?.prenom || '';
-    const nom = participant?.nom || '';
-
-    if (prenom) {
-      return prenom.charAt(0).toUpperCase();
-    }
-
-    if (nom) {
-      return nom.charAt(0).toUpperCase();
-    }
-
-    return '?';
+  goBack(): void {
+    this.location.back();
   }
-
-goBack(): void {
-  this.location.back();
-}
 }

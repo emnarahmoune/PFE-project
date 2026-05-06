@@ -1,70 +1,157 @@
 <div class="conges-container">
-  <div class="header">
-    <a routerLink="/manager/employe/{{ employeId }}" class="back-link">
-      ← Retour au profil
-    </a>
-    <h2>📅 Historique des congés</h2>
-    <p *ngIf="employeNom">pour <strong>{{ employeNom }}</strong></p>
 
-    <!-- Badges indicateurs (ajout) -->
-    <div class="indicateurs-mini" *ngIf="!loading">
-      <div class="indicator" [class]="getAbsenteismeClass(absenteisme)">
-        <span class="icon">📉</span>
-        <span class="value">{{ absenteisme != null ? (absenteisme | number:'1.1-1') : '?' }}%</span>
-        <span class="label">Absentéisme</span>
-      </div>
-      <div class="indicator" [class]="getScoreClass(scoreTurnover)">
-        <span class="icon">⚠️</span>
-        <span class="value">{{ scoreTurnover ?? '?' }}</span>
-        <span class="label">Risque turnover</span>
+  <!-- HEADER -->
+  <section class="header">
+    <div class="header-main">
+      <button class="back-button" type="button" (click)="goBack()">
+        <span>←</span>
+        Revenir à la page précédente
+      </button>
+
+      <div class="title-row">
+        <div class="title-icon">📅</div>
+
+        <div>
+          <h2>Historique des congés</h2>
+
+          <p *ngIf="employeNom">
+            pour <strong>{{ employeNom }}</strong>
+          </p>
+
+          <p *ngIf="!employeNom">
+            Suivi des demandes de congé de l’employé sélectionné.
+          </p>
+
+          <div class="employee-meta" *ngIf="employePoste || employeDepartement">
+            <span *ngIf="employePoste">{{ employePoste }}</span>
+            <span *ngIf="employeDepartement">{{ employeDepartement }}</span>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
+    <div class="hero-count" *ngIf="!loading && !error">
+      <strong>{{ conges.length }}</strong>
+      <span>demande(s)</span>
+    </div>
+
+    <!-- INDICATEURS -->
+    <div class="indicateurs-mini" *ngIf="!loading && !error">
+      <div class="indicator" [ngClass]="getAbsenteismeClass(absenteisme)">
+        <span class="icon">📉</span>
+
+        <div>
+          <span class="value">
+            {{ absenteisme != null ? (absenteisme | number:'1.1-1') + '%' : '—' }}
+          </span>
+          <span class="label">Absentéisme</span>
+        </div>
+      </div>
+
+      <div class="indicator" [ngClass]="getScoreClass(scoreTurnover)">
+        <span class="icon">⚠️</span>
+
+        <div>
+          <span class="value">{{ scoreTurnover != null ? scoreTurnover : '—' }}</span>
+          <span class="label">Risque turnover</span>
+          <span class="sub-label" *ngIf="scoreTurnoverNiveau">Niveau : {{ scoreTurnoverNiveau }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOADING -->
   <div class="loader" *ngIf="loading">
     <div class="spinner"></div>
     <p>Chargement des demandes...</p>
   </div>
 
+  <!-- ERROR -->
   <div class="error-card" *ngIf="error && !loading">
     <span class="error-icon">⚠️</span>
     <h3>Impossible de charger les congés</h3>
     <p>Cet employé n'existe pas ou vous n'avez pas les droits.</p>
-    <a routerLink="/manager/equipe" class="back-link">← Retour à l'équipe</a>
+
+    <div class="error-actions">
+      <button class="back-button" type="button" (click)="goBack()">
+        ← Revenir
+      </button>
+
+      <a routerLink="/manager/equipe" class="back-link">
+        Retour à l'équipe
+      </a>
+    </div>
   </div>
 
-  <div class="conges-list" *ngIf="!loading && !error">
-    <div class="conge-card" *ngFor="let c of conges">
+  <!-- LISTE -->
+  <section class="conges-list" *ngIf="!loading && !error && conges.length > 0">
+
+    <article
+      class="conge-card"
+      *ngFor="let c of conges; trackBy: trackByCongeId">
+
       <div class="card-header">
-        <div class="type-badge" [class]="c.type.toLowerCase()">
+        <div class="type-badge" [ngClass]="getTypeClass(c.type)">
           {{ getTypeLabel(c.type) }}
         </div>
-        <div class="status-chip" [class]="getStatutClass(c.statut || '')">
-          {{ getStatutLabel(c.statut || '') }}
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="date-range">
-          <span class="date">{{ formatDate(c.dateDebut) }}</span>
-          <span class="arrow">→</span>
-          <span class="date">{{ formatDate(c.dateFin) }}</span>
-        </div>
-        <div class="info">
-          <span class="jours">{{ c.joursOuvres || 0 }} jour(s) ouvré(s)</span>
-          <span class="demande">Demandé le {{ formatDate(c.dateDemande) }}</span>
-        </div>
-        <div class="commentaire" *ngIf="c.commentaire">
-          <span class="label">Commentaire :</span> {{ c.commentaire }}
-        </div>
-        <div class="motif-refus" *ngIf="c.statut === 'REFUSE' && c.motifRefus">
-          <span class="label">Motif du refus :</span> {{ c.motifRefus }}
-        </div>
-      </div>
-    </div>
 
-    <div class="empty-state" *ngIf="conges.length === 0">
-      <span class="empty-icon">📭</span>
-      <p>Aucune demande de congé trouvée pour cet employé.</p>
-    </div>
+        <div class="status-chip" [ngClass]="getStatutClass(c.statut)">
+          {{ getStatutLabel(c.statut) }}
+        </div>
+      </div>
+
+      <div class="card-body">
+
+        <div class="date-range">
+          <div class="date-box">
+            <span>Début</span>
+            <strong>{{ formatDate(c.dateDebut) }}</strong>
+          </div>
+
+          <div class="arrow">→</div>
+
+          <div class="date-box">
+            <span>Fin</span>
+            <strong>{{ formatDate(c.dateFin) }}</strong>
+          </div>
+        </div>
+
+        <div class="info">
+          <div class="info-item">
+            <span>Durée</span>
+            <strong>{{ c.joursOuvres || 0 }} jour(s) ouvré(s)</strong>
+          </div>
+
+          <div class="info-item">
+            <span>Demandé le</span>
+            <strong>{{ formatDate(c.dateDemande) }}</strong>
+          </div>
+        </div>
+
+        <div class="commentaire" *ngIf="c.commentaire">
+          <span class="label">Commentaire</span>
+          <p>{{ c.commentaire }}</p>
+        </div>
+
+        <div class="motif-refus" *ngIf="c.statut === 'REFUSE' && c.motifRefus">
+          <span class="label">Motif du refus</span>
+          <p>{{ c.motifRefus }}</p>
+        </div>
+
+      </div>
+    </article>
+
+  </section>
+
+  <!-- EMPTY -->
+  <div class="empty-state" *ngIf="!loading && !error && conges.length === 0">
+    <span class="empty-icon">📭</span>
+    <h3>Aucune demande trouvée</h3>
+    <p>Aucune demande de congé n’a encore été enregistrée pour cet employé.</p>
+
+    <button class="back-button" type="button" (click)="goBack()">
+      ← Revenir
+    </button>
   </div>
+
 </div>

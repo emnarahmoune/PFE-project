@@ -37,15 +37,21 @@ export const employeeRoutes: Routes = [
       { path: 'competences', component: CompetencesComponent },
 
       
-
-{
+      {
   path: 'mes-conges/:id/modifier',
   loadComponent: () => import('../employee/pages/mes-conges/ModifierCongeComponent/ModifierCongeComponent')
     .then(m => m.ModifierCongeComponent)
+},
+ {
+  path: 'mes-evaluations',
+  loadComponent: () =>
+    import('./././pages/mes-evaluations/mes-evaluations')
+      .then(m => m.MesEvaluationsComponent)
 },
  
       // Redirection par défaut
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
     ]
-  }
+  },
+ 
 ];

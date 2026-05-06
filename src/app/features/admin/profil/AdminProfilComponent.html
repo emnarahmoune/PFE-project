@@ -29,9 +29,14 @@
         <!-- Section photo avec upload / suppression -->
         <div class="profile-avatar-wrapper">
           <!-- Affichage photo ou initiales -->
-          <div *ngIf="currentPhotoUrl; else noPhoto" class="profile-photo-container">
-            <img [src]="currentPhotoUrl" class="profile-photo" alt="Photo profil" (error)="onImageError()">
-          </div>
+ <div *ngIf="currentPhotoUrl; else noPhoto" class="profile-photo-container">
+  <img
+    [src]="getPhotoUrl(currentPhotoUrl)"
+    class="profile-photo"
+    alt="Photo profil"
+    (error)="onImageError()"
+  >
+</div>
           <ng-template #noPhoto>
             <div class="profile-avatar">{{ getUserInitials() }}</div>
           </ng-template>
@@ -49,9 +54,9 @@
             <mat-spinner diameter="20" *ngIf="uploadProgress"></mat-spinner>
             <span *ngIf="!uploadProgress">Confirmer</span>
           </button>
-          <button *ngIf="profileData.photoUrl" mat-stroked-button color="warn" (click)="deletePhoto()">
-            <mat-icon>delete</mat-icon> Supprimer
-          </button>
+          <button *ngIf="currentPhotoUrl || profileData.photoUrl" mat-stroked-button color="warn" (click)="deletePhoto()">
+  <mat-icon>delete</mat-icon> Supprimer
+</button>
         </div>
         <div *ngIf="photoPreview" class="photo-preview">
           <p>Aperçu :</p>

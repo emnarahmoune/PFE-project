@@ -1,10 +1,10 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+
 import { EmployeeCongeService } from '../../../services/employee-conge.service';
 import { DemandeConge, CongeResponse } from '../../../models/conge.model';
 import { AuthService } from '../../../../../core/services/auth.service';
-import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-detail-conge',
@@ -16,8 +16,10 @@ import { Location } from '@angular/common';
 export class DetailCongeComponent implements OnInit {
 
   demande: DemandeConge | null = null;
-  loading = false;
+
+  loading = true;
   error: string | null = null;
+
   isAdmin = false;
   isEmploye = false;
   canAnnuler = false;
@@ -35,100 +37,132 @@ export class DetailCongeComponent implements OnInit {
     this.loadDemande();
   }
 
-  checkUserRole(): void {
+  private checkUserRole(): void {
     const role = this.authService.getUserRole();
-    this.isAdmin = role === 'ADMIN_RH';
-    this.isEmploye = role === 'EMPLOYE';
+
+    this.isAdmin = role === 'ADMIN_RH' || role === 'ADMIN';
+    this.isEmploye = role === 'EMPLOYE' || role === 'EMPLOYEE';
   }
 
-  loadDemande(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (!id) {
-      this.error = 'ID de demande non trouvé';
+  private loadDemande(): void {
+    const idParam = this.route.snapshot.paramMap.get('id');
+    const id = Number(idParam);
+
+    if (!idParam || Number.isNaN(id)) {
+      this.loading = false;
+      this.error = 'ID de demande invalide.';
       return;
     }
 
     this.loading = true;
-    
+    this.error = null;
+
     if (this.isAdmin) {
-      this.loadDemandeForAdmin(Number(id));
+      this.loadDemandeForAdmin(id);
     } else {
-      this.loadDemandeForEmploye(Number(id));
+      this.loadDemandeForEmploye(id);
     }
   }
 
-  loadDemandeForAdmin(id: number): void {
+  private loadDemandeForAdmin(id: number): void {
     this.congeService.getAllDemandesAdmin().subscribe({
       next: (response: CongeResponse) => {
-        const demandes = response.data as DemandeConge[];
-        const demande = demandes?.find((d: DemandeConge) => d.id === id);
+        const demandes = Array.isArray(response?.data)
+          ? response.data as DemandeConge[]
+          : [];
+
+        const demande = demandes.find((d: DemandeConge) => Number(d.id) === id);
+
         if (demande) {
           this.demande = demande;
           this.checkCanAnnuler();
         } else {
-          this.error = 'Demande non trouvée';
+          this.error = 'Demande non trouvée.';
         }
+
         this.loading = false;
       },
       error: (err: any) => {
-        console.error('Erreur chargement demande:', err);
-        this.error = 'Erreur lors du chargement de la demande';
+        console.error('Erreur chargement demande admin:', err);
+        this.error = 'Erreur lors du chargement de la demande.';
         this.loading = false;
       }
     });
   }
 
-  loadDemandeForEmploye(id: number): void {
+  private loadDemandeForEmploye(id: number): void {
     this.congeService.getMesConges().subscribe({
       next: (response: CongeResponse) => {
-        const demandes = response.data as DemandeConge[];
-        const demande = demandes?.find((d: DemandeConge) => d.id === id);
+        const demandes = Array.isArray(response?.data)
+          ? response.data as DemandeConge[]
+          : [];
+
+        const demande = demandes.find((d: DemandeConge) => Number(d.id) === id);
+
         if (demande) {
           this.demande = demande;
           this.checkCanAnnuler();
         } else {
-          this.error = 'Demande non trouvée';
+          this.error = 'Demande non trouvée.';
         }
+
         this.loading = false;
       },
       error: (err: any) => {
-        console.error('Erreur chargement demande:', err);
-        this.error = 'Erreur lors du chargement de la demande';
+        console.error('Erreur chargement demande employé:', err);
+        this.error = 'Erreur lors du chargement de la demande.';
         this.loading = false;
       }
     });
   }
 
-  checkCanAnnuler(): void {
-    if (this.demande && this.isEmploye) {
-      this.canAnnuler = this.demande.statut === 'EN_ATTENTE';
-    }
+  private checkCanAnnuler(): void {
+    this.canAnnuler =
+      !!this.demande &&
+      this.isEmploye &&
+      this.demande.statut === 'EN_ATTENTE';
   }
 
   annulerDemande(): void {
-    if (!this.demande || !this.demande.id) return;
+    if (!this.demande?.id) return;
 
-    if (confirm('Êtes-vous sûr de vouloir annuler cette demande de congé ?')) {
-      this.loading = true;
-      this.congeService.annulerConge(this.demande.id).subscribe({
-        next: () => {
-          if (this.demande) {
-            this.demande.statut = 'ANNULE';
-            this.canAnnuler = false;
-          }
-          this.loading = false;
-          alert('Demande annulée avec succès');
-        },
-        error: (err: any) => {
-          console.error('Erreur annulation:', err);
-          this.error = err.error?.error || 'Erreur lors de l\'annulation';
-          this.loading = false;
+    const confirmed = confirm('Êtes-vous sûr de vouloir annuler cette demande de congé ?');
+
+    if (!confirmed) return;
+
+    this.loading = true;
+    this.error = null;
+
+    this.congeService.annulerConge(this.demande.id).subscribe({
+      next: () => {
+        if (this.demande) {
+          this.demande.statut = 'ANNULE';
         }
-      });
-    }
+
+        this.canAnnuler = false;
+        this.loading = false;
+
+        alert('Demande annulée avec succès.');
+      },
+      error: (err: any) => {
+        console.error('Erreur annulation:', err);
+
+        this.error =
+          err?.error?.error ||
+          err?.error?.message ||
+          'Erreur lors de l’annulation de la demande.';
+
+        this.loading = false;
+      }
+    });
   }
 
   goBack(): void {
+    if (window.history.length > 1) {
+      this.location.back();
+      return;
+    }
+
     if (this.isAdmin) {
       this.router.navigate(['/admin/conges']);
     } else {
@@ -137,71 +171,111 @@ export class DetailCongeComponent implements OnInit {
   }
 
   getStatutClass(): string {
-    if (!this.demande) return 'badge-secondary';
-    switch(this.demande.statut) {
-      case 'EN_ATTENTE': return 'badge-warning';
-      case 'APPROUVE': return 'badge-success';
-      case 'REFUSE': return 'badge-danger';
-      case 'ANNULE': return 'badge-secondary';
-      default: return 'badge-info';
+    if (!this.demande?.statut) return 'status-annule';
+
+    switch (this.demande.statut) {
+      case 'EN_ATTENTE':
+        return 'status-en_attente';
+
+      case 'APPROUVE':
+        return 'status-approuve';
+
+      case 'REFUSE':
+        return 'status-refuse';
+
+      case 'ANNULE':
+        return 'status-annule';
+
+      default:
+        return 'status-annule';
     }
   }
 
   getStatutLabel(): string {
-    if (!this.demande) return '';
-    switch(this.demande.statut) {
-      case 'EN_ATTENTE': return 'En attente';
-      case 'APPROUVE': return 'Approuvé';
-      case 'REFUSE': return 'Refusé';
-      case 'ANNULE': return 'Annulé';
-      default: return this.demande.statut || '';
+    if (!this.demande?.statut) return 'Non défini';
+
+    switch (this.demande.statut) {
+      case 'EN_ATTENTE':
+        return 'En attente';
+
+      case 'APPROUVE':
+        return 'Approuvé';
+
+      case 'REFUSE':
+        return 'Refusé';
+
+      case 'ANNULE':
+        return 'Annulé';
+
+      default:
+        return this.demande.statut;
     }
   }
 
   getTypeLabel(): string {
-    if (!this.demande) return '';
-    switch(this.demande.type) {
-      case 'ANNUEL': return 'Congés annuels';
-      case 'MALADIE': return 'Maladie';
-      case 'SANS_SOLDE': return 'Sans solde';
-      case 'MATERNITE': return 'Congé maternité';
-      case 'PATERNITE': return 'Congé paternité';
-      default: return this.demande.type || '';
+    if (!this.demande?.type) return 'Non défini';
+
+    switch (this.demande.type) {
+      case 'ANNUEL':
+        return 'Congés annuels';
+
+      case 'MALADIE':
+        return 'Maladie';
+
+      case 'SANS_SOLDE':
+        return 'Sans solde';
+
+      case 'MATERNITE':
+        return 'Congé maternité';
+
+      case 'PATERNITE':
+        return 'Congé paternité';
+
+      default:
+        return this.demande.type;
     }
   }
 
-  getFormattedDate(dateStr: string | Date | undefined | null): string {
-    if (!dateStr) return '';
-    try {
-      const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
-      if (isNaN(date.getTime())) return '';
-      return date.toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch (error) {
-      return '';
-    }
+  getFormattedDate(dateValue: string | Date | undefined | null): string {
+    if (!dateValue) return '-';
+
+    const date = dateValue instanceof Date
+      ? dateValue
+      : new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) return '-';
+
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   }
 
   getDuree(): string {
-    if (!this.demande || !this.demande.dateDebut || !this.demande.dateFin) return '';
-    try {
-      const debut = new Date(this.demande.dateDebut);
-      const fin = new Date(this.demande.dateFin);
-      if (isNaN(debut.getTime()) || isNaN(fin.getTime())) return '';
-      const diffTime = Math.abs(fin.getTime() - debut.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-      return `${diffDays} jour(s) (${this.demande.joursOuvres || diffDays} jour(s) ouvré(s))`;
-    } catch (error) {
-      return '';
+    if (!this.demande?.dateDebut || !this.demande?.dateFin) {
+      return '-';
     }
+
+    const debut = new Date(this.demande.dateDebut);
+    const fin = new Date(this.demande.dateFin);
+
+    if (Number.isNaN(debut.getTime()) || Number.isNaN(fin.getTime())) {
+      return '-';
+    }
+
+    const diffTime = Math.abs(fin.getTime() - debut.getTime());
+    const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const joursOuvres = this.demande.joursOuvres || totalDays;
+
+    return `${totalDays} jour(s) (${joursOuvres} ouvré(s))`;
   }
 
-  // ✅ CORRECTION: Ajouter la méthode getMotif()
   getMotif(): string {
-    if (!this.demande) return 'Aucun motif fourni';
-    return this.demande.commentaire || this.demande.motifRefus || 'Aucun motif fourni';
+    if (!this.demande) return 'Aucun motif fourni.';
+
+    const commentaire = this.demande.commentaire?.trim();
+
+    return commentaire || 'Aucun motif fourni.';
   }
 }

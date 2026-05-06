@@ -31,6 +31,9 @@ export interface TacheRh {
   employePrenom?: string;
   employeEmail?: string;
   employeDepartement?: string;
+  photoUrl?: string;
+employePhotoProfil?: string;
+employePhotoUrl?: string;
 }
 
 export interface StatsConges {
@@ -52,6 +55,9 @@ export interface DemandeRefusManager {
   employePrenom: string;
   employeDepartement: string;
   managerNom: string;
+  photoUrl?: string;
+employePhotoProfil?: string;
+employePhotoUrl?: string;
 }
 
 export interface DemandeRefusDetails {
@@ -70,6 +76,7 @@ export interface DemandeRefusDetails {
   dateDecisionManager: string;
   commentaireRH?: string;
   piecesJustificatives?: string[];
+  
 }
 
 @Injectable({ providedIn: 'root' })
@@ -110,6 +117,7 @@ export class AdminCongeService {
       { headers: this.getHeaders() }
     );
   }
+
 
   getAllCongesForCalendar(): Observable<EventInput[]> {
     return this.http.get<ApiResponse<EventInput[]>>(`${this.apiUrl}/calendar-events`, { headers: this.getHeaders() })

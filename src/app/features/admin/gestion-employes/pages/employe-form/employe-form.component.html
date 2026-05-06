@@ -122,11 +122,11 @@
           <span class="field-error" *ngIf="hasErr('dateEmbauche')">{{ getErr('dateEmbauche') }}</span>
         </div>
         <div class="field-group">
-          <label class="field-label" for="salaire">Salaire annuel (€) <span class="req">*</span></label>
-          <div class="input-wrap">
-            <span class="input-prefix">€</span>
-            <input id="salaire" class="field-input field-input--prefixed" type="number" min="0" max="1000000" step="100" formControlName="salaire" placeholder="45 000" [class.invalid]="hasErr('salaire')">
-          </div>
+<label class="field-label" for="salaire">Salaire annuel (DT) <span class="req">*</span></label>
+<div class="input-wrap">
+  <span class="input-prefix">DT</span>
+  <input id="salaire" class="field-input field-input--prefixed" type="number" min="0" max="1000000" step="100" formControlName="salaire" placeholder="45 000" [class.invalid]="hasErr('salaire')">
+</div>
           <span class="field-error" *ngIf="hasErr('salaire')">{{ getErr('salaire') }}</span>
         </div>
         <div class="field-group">
@@ -145,17 +145,33 @@
         <span class="section-desc">Rôle &amp; hiérarchie</span>
       </div>
       <div class="section-fields">
-        <div class="field-group">
-          <label class="field-label" for="role">Rôle <span class="req">*</span></label>
-          <select id="role" class="field-select" formControlName="role" [class.invalid]="hasErr('role')">
-            <option *ngFor="let r of rolesList" [value]="r.value">{{ r.label }}</option>
-          </select>
-          <span class="field-error" *ngIf="hasErr('role')">{{ getErr('role') }}</span>
-        </div>
+       <div class="field-group">
+  <label class="field-label" for="role">
+    Rôle <span class="req">*</span>
+  </label>
+
+ <select
+  id="role"
+  class="field-select"
+  formControlName="role"
+  [class.invalid]="hasErr('role')"
+>
+  <option value="" disabled>Choisir un rôle</option>
+
+  <option *ngFor="let r of rolesList" [value]="r.value">
+    {{ r.label }}
+  </option>
+</select>
+
+  
+  <span class="field-error" *ngIf="hasErr('role')">
+    {{ getErr('role') }}
+  </span>
+</div>
         <div class="field-group">
           <label class="field-label" for="managerId">Manager <span class="optional-badge">Optionnel</span></label>
           <select id="managerId" class="field-select" formControlName="managerId" [class.invalid]="hasErr('managerId')">
-            <option [ngValue]="null">— Aucun manager —</option>
+            <option [ngValue]="">— Aucun manager —</option>
             <option *ngFor="let m of managersList" [ngValue]="m.id">{{ m.nom }} {{ m.prenom }}</option>
           </select>
           <span class="field-error" *ngIf="hasErr('managerId')">{{ getErr('managerId') }}</span>

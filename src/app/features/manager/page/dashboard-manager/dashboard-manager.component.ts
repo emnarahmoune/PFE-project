@@ -116,58 +116,73 @@ export class DashboardManagerComponent implements OnInit {
     return months[new Date().getMonth()];
   }
 
-  loadData(): void {
-    this.loading = true;
-    this.errorMessage = '';
+loadData(): void {
+  this.loading = true;
+  this.errorMessage = '';
 
-    forkJoin({
-      statsResponse: this.managerService.getStats().pipe(
-        catchError((err) => {
-          console.error('Erreur stats:', err);
-          return of({ success: false, data: {} as ManagerStats });
-        })
-      ),
+  forkJoin({
+    statsResponse: this.managerService.getStats().pipe(
+      catchError((err) => {
+        console.error('Erreur stats:', err);
+        return of({});
+      })
+    ),
 
-      equipeResponse: this.managerService.getEquipe().pipe(
-        catchError((err) => {
-          console.error('Erreur équipe:', err);
-          return of({ success: false, data: [] as any[] });
-        })
-      ),
+    equipeResponse: this.managerService.getEquipe().pipe(
+      catchError((err) => {
+        console.error('Erreur équipe:', err);
+        return of([]);
+      })
+    ),
 
-      congesResponse: this.managerService.getConges().pipe(
-        catchError((err) => {
-          console.error('Erreur congés:', err);
-          return of({ success: false, data: [] as DemandeConge[] });
-        })
-      )
-    }).subscribe({
-      next: ({ statsResponse, equipeResponse, congesResponse }) => {
-        this.stats = statsResponse.success ? statsResponse.data : {} as ManagerStats;
-        this.equipe = equipeResponse.success ? equipeResponse.data || [] : [];
-        this.conges = congesResponse.success ? congesResponse.data || [] : [];
+    congesResponse: this.managerService.getConges().pipe(
+      catchError((err) => {
+        console.error('Erreur congés:', err);
+        return of([]);
+      })
+    )
+  }).subscribe({
+    next: ({ statsResponse, equipeResponse, congesResponse }) => {
 
-        if (!statsResponse.success || !equipeResponse.success || !congesResponse.success) {
-          this.errorMessage = 'Certaines données n’ont pas pu être chargées depuis le backend.';
-        }
+      this.stats = this.unwrapResponse<ManagerStats>(
+        statsResponse,
+        {} as ManagerStats
+      );
 
-        this.buildDashboardFromRealData();
-        this.loading = false;
-        this.refreshing = false;
-      },
+      this.equipe = this.unwrapResponse<any[]>(
+        equipeResponse,
+        []
+      );
 
-      error: (err) => {
-        console.error('Erreur dashboard manager:', err);
-        this.errorMessage = 'Erreur lors du chargement du dashboard.';
-        this.stats = {} as ManagerStats;
-        this.equipe = [];
-        this.conges = [];
-        this.buildDashboardFromRealData();
-        this.loading = false;
-        this.refreshing = false;
-      }
-    });
-  }
+      this.conges = this.unwrapResponse<DemandeConge[]>(
+        congesResponse,
+        []
+      );
+
+      console.log('RAW statsResponse = ', statsResponse);
+      console.log('RAW congesResponse = ', congesResponse);
+      console.log('STATS UTILISÉES = ', this.stats);
+      console.log('CONGES UTILISÉS = ', this.conges);
+      console.log('CONGES EN ATTENTE CALCULÉS = ', this.getCongesEnAttenteReel());
+
+      this.buildDashboardFromRealData();
+
+      this.loading = false;
+      this.refreshing = false;
+    },
+
+    error: (err) => {
+      console.error('Erreur dashboard manager:', err);
+      this.errorMessage = 'Erreur lors du chargement du dashboard.';
+      this.stats = {} as ManagerStats;
+      this.equipe = [];
+      this.conges = [];
+      this.buildDashboardFromRealData();
+      this.loading = false;
+      this.refreshing = false;
+    }
+  });
+}
 
   buildDashboardFromRealData(): void {
     this.updateStatCards();
@@ -242,6 +257,21 @@ export class DashboardManagerComponent implements OnInit {
     return 0;
   }
 
+
+  private unwrapResponse<T>(response: any, fallback: T): T {
+  if (!response) {
+    return fallback;
+  }
+
+  // Cas ApiResponse classique : { success: true, data: ... }
+  if (response.data !== undefined) {
+    return response.data as T;
+  }
+
+  // Cas réponse directe : [...]
+  return response as T;
+}
+
   getEmployesActifsReel(): number {
     if (Array.isArray(this.equipe) && this.equipe.length > 0) {
       return this.equipe.filter((employe: any) => {
@@ -265,16 +295,29 @@ export class DashboardManagerComponent implements OnInit {
     return 0;
   }
 
-  getCongesEnAttenteReel(): number {
-    if (!Array.isArray(this.conges)) {
-      return 0;
-    }
+ getCongesEnAttenteReel(): number {
+  const statsAny = this.stats as any;
 
-    return this.conges.filter((conge: any) => {
-      const statut = String(conge.statut || conge.status || '').toUpperCase();
-      return statut === 'EN_ATTENTE' || statut === 'PENDING';
-    }).length;
+  // ✅ priorité aux valeurs backend
+  if (typeof statsAny.congesEnAttente === 'number') {
+    return statsAny.congesEnAttente;
   }
+
+  if (typeof statsAny.demandesEnAttente === 'number') {
+    return statsAny.demandesEnAttente;
+  }
+
+  if (typeof statsAny.pendingLeaves === 'number') {
+    return statsAny.pendingLeaves;
+  }
+
+  // ✅ fallback : /api/manager/conges retourne déjà les tâches en attente
+  if (Array.isArray(this.conges) && this.conges.length > 0) {
+    return this.conges.length;
+  }
+
+  return 0;
+}
 
   getCongesApprouvesReel(): number {
     if (!Array.isArray(this.conges)) {

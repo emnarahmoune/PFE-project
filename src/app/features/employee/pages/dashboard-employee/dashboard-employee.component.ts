@@ -19,6 +19,7 @@ export class DashboardEmployeeComponent implements OnInit {
 
   recommendations: any[] = [];
 
+
   constructor(
     private authService: AuthService,
     private formationService: FormationService

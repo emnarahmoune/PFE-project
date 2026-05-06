@@ -7,5 +7,5 @@ export const employesRoutes: Routes = [
   { path: '', component: EmployeListComponent },
   { path: 'nouveau', component: EmployeFormComponent },
   { path: ':id', component: EmployeDetailComponent },
-  { path: ':id/edit', component: EmployeFormComponent }
+  { path: ':id/edit', component: EmployeFormComponent },
 ];

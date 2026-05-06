@@ -1,75 +1,140 @@
-<div class="equipe-container">
-  <div class="page-header">
-    <div class="header-text">
-      <h2>👥 Mon équipe</h2>
-      <p class="subtitle">{{ filteredEmployes.length }} collaborateur(s)</p>
-    </div>
-    <div class="header-actions">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input 
-          type="text" 
-          placeholder="Rechercher un employé..." 
-          [(ngModel)]="searchTerm" 
-          (input)="filterEmployes()" 
-        />
-      </div>
-      <select class="sort-select" [(ngModel)]="sortBy" (change)="sortEmployes()">
-        <option value="nom">Trier par nom</option>
-        <option value="poste">Trier par poste</option>
-        <option value="departement">Trier par département</option>
-      </select>
-    </div>
-  </div>
+<div class="equipe-page">
 
-  <!-- Skeleton loader -->
+  <section class="page-hero">
+    <div class="hero-left">
+      <div class="hero-icon">
+        <span>👥</span>
+      </div>
+
+      <div>
+        <h1>Mon équipe</h1>
+        <p>Suivez vos collaborateurs, leurs indicateurs RH et les signaux de risque.</p>
+      </div>
+    </div>
+
+    <div class="hero-count">
+      <strong>{{ filteredEmployes.length }}</strong>
+      <span>collaborateur(s)</span>
+    </div>
+  </section>
+
+  <section class="toolbar-card">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+
+      <input
+        type="text"
+        placeholder="Rechercher par nom, poste, département ou email..."
+        [(ngModel)]="searchTerm"
+        (input)="filterEmployes()">
+    </div>
+
+    <select class="sort-select" [(ngModel)]="sortBy" (change)="sortEmployes()">
+      <option *ngFor="let option of sortOptions" [value]="option.value">
+        {{ option.label }}
+      </option>
+    </select>
+  </section>
+
   <div *ngIf="loading" class="skeleton-grid">
-    <div class="skeleton-card" *ngFor="let i of [1,2,3,4]">
-      <div class="skeleton-line circle"></div>
-      <div class="skeleton-line short"></div>
+    <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6]">
+      <div class="skeleton-top">
+        <div class="skeleton-avatar"></div>
+        <div class="skeleton-badge"></div>
+      </div>
+
+      <div class="skeleton-line title"></div>
       <div class="skeleton-line medium"></div>
-      <div class="skeleton-line"></div>
+
+      <div class="skeleton-metrics">
+        <div></div>
+        <div></div>
+      </div>
+
       <div class="skeleton-line short"></div>
     </div>
   </div>
 
-  <!-- Grille des cartes -->
-  <div *ngIf="!loading" class="cards-grid">
-    <div *ngFor="let emp of filteredEmployes" class="employe-card" [routerLink]="['/manager/employe', emp.id]">
+  <section *ngIf="!loading && filteredEmployes.length > 0" class="cards-grid">
+
+    <article
+      *ngFor="let emp of filteredEmployes; trackBy: trackByEmployeId"
+      class="employee-card"
+      [routerLink]="['/manager/employe', emp.id]">
+
       <div class="card-header">
-        <div class="avatar">{{ (emp.prenom?.charAt(0) ?? '') + (emp.nom?.charAt(0) ?? '') }}</div>
-        <div class="status-badge" [class]="emp.statut.toLowerCase()">{{ emp.statut }}</div>
+
+        <app-employee-avatar
+          [employee]="emp"
+          size="lg"
+          shape="circle">
+        </app-employee-avatar>
+
+        <span class="status-badge" [ngClass]="getStatutClass(emp.statut)">
+          {{ emp.statut || 'Non défini' }}
+        </span>
       </div>
-      <h3>{{ emp.prenom }} {{ emp.nom }}</h3>
-      <p class="poste">💼 {{ emp.poste }}</p>
+
+      <div class="employee-main">
+        <h3>{{ getFullName(emp) }}</h3>
+
+        <p class="poste">
+          <span>💼</span>
+          {{ emp.poste || 'Poste non défini' }}
+        </p>
+      </div>
 
       <div class="indicators">
-        <div class="indicator" [class]="getAbsenteismeClass(emp.absenteisme)">
-          <span class="icon">📉</span>
-          <span class="value">{{ emp.absenteisme != null ? (emp.absenteisme | number:'1.1-1') : '?' }}%</span>
-          <span class="label">Absentéisme</span>
-          <span class="tooltip">Taux d'absence sur les 12 derniers mois</span>
+        <div class="indicator" [ngClass]="getAbsenteismeClass(emp.absenteisme)">
+          <span class="indicator-icon">📉</span>
+
+          <strong>
+            {{ emp.absenteisme != null ? (emp.absenteisme | number:'1.1-1') + '%' : '—' }}
+          </strong>
+
+          <span>Absentéisme</span>
+          <small>Taux d’absence</small>
         </div>
-        <div class="indicator" [class]="getScoreClass(emp.scoreTurnover)">
-          <span class="icon">⚠️</span>
-          <span class="value">{{ emp.scoreTurnover ?? '?' }}</span>
-          <span class="label">Risque turnover</span>
-          <span class="tooltip">Score de probabilité de départ (0-100)</span>
+
+        <div class="indicator" [ngClass]="getScoreClass(emp.scoreTurnover)">
+          <span class="indicator-icon">⚠️</span>
+
+          <strong>
+            {{ emp.scoreTurnover != null ? emp.scoreTurnover : '—' }}
+          </strong>
+
+          <span>Risque turnover</span>
+          <small>Score 0-100</small>
         </div>
       </div>
 
-      <div class="footer">
-        <span class="dept">{{ emp.departement || 'Sans département' }}</span>
-        <span style="font-size:0.7rem; color:#94a3b8;">{{ emp.dateEmbauche | date:'MMM y' }}</span>
+      <div class="card-footer">
+        <span class="dept-pill">{{ emp.departement || 'Sans département' }}</span>
+        <span class="date-text">
+          {{ emp.dateEmbauche ? (emp.dateEmbauche | date:'MMM y') : 'Date inconnue' }}
+        </span>
       </div>
-    </div>
-  </div>
 
-  <!-- Message si aucun résultat -->
-  <div *ngIf="!loading && filteredEmployes.length === 0" class="empty-state">
+    </article>
+
+  </section>
+
+  <section *ngIf="!loading && filteredEmployes.length === 0" class="empty-state">
     <div class="empty-icon">👥</div>
-    <h3>Aucun résultat</h3>
-    <p *ngIf="searchTerm">Essayez un autre nom ou prénom.</p>
-    <p *ngIf="!searchTerm">Les employés vous seront assignés par l'administrateur RH.</p>
+
+    <h3>Aucun collaborateur trouvé</h3>
+
+    <p *ngIf="searchTerm">
+      Essayez avec un autre nom, poste, département ou email.
+    </p>
+
+    <p *ngIf="!searchTerm">
+      Les employés vous seront assignés par l’administrateur RH.
+    </p>
+  </section>
+
+  <div *ngIf="loadingIndicators && !loading" class="indicators-loading">
+    Mise à jour des indicateurs RH...
   </div>
+
 </div>

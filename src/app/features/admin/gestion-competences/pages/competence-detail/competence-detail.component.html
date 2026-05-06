@@ -2,7 +2,9 @@
 
   <!-- 🔙 TOP BAR -->
   <div class="top-bar">
-    <button class="back-btn" (click)="goBack()">← Retour</button>
+    <button class="back-btn" type="button" (click)="goBack()">
+      ← Retour
+    </button>
   </div>
 
   <!-- 🎯 HEADER -->
@@ -14,7 +16,7 @@
       <p>{{ competence.description }}</p>
 
       <span class="badge" [ngClass]="getBadgeClass(competence.categorie)">
-        {{ competence.categorie?.replace('_',' ') }}
+        {{ competence.categorie?.replace('_', ' ') }}
       </span>
     </div>
   </div>
@@ -23,7 +25,7 @@
   <div class="stats-card">
     <div class="stat">
       👥
-      <h2>{{ competence.nombreEmployes }}</h2>
+      <h2>{{ competence.nombreEmployes || employes.length || 0 }}</h2>
       <p>Employés associés</p>
     </div>
   </div>
@@ -36,16 +38,20 @@
       Aucun employé associé
     </div>
 
-    <div class="employee-list">
+    <div class="employee-list" *ngIf="employes.length > 0">
 
-      <div class="employee-card"
-           *ngFor="let emp of employes"
-           (click)="goToEmploye(emp)">
+      <div
+        class="employee-card"
+        *ngFor="let emp of employes"
+        (click)="goToEmploye(emp)"
+      >
 
-        <!-- Avatar -->
-        <div class="avatar">
-          {{ emp.prenom[0] }}{{ emp.nom[0] }}
-        </div>
+        <!-- Avatar photo + fallback initiales -->
+        <app-employee-avatar
+          [employee]="emp"
+          size="lg"
+          shape="circle">
+        </app-employee-avatar>
 
         <!-- Infos -->
         <div class="details">
@@ -54,16 +60,16 @@
 
           <!-- 📊 Progress -->
           <div class="progress">
-            <div class="progress-bar"
-                 [style.width.%]="(emp.niveau || 0) * 25">
+            <div
+              class="progress-bar"
+              [style.width.%]="getProgressValue(emp.niveau)">
             </div>
           </div>
 
           <span class="level">
-             Niveau {{ getNiveauValue(emp.niveau) }}/4
-              <small>({{ emp.niveau }})</small>
+            Niveau {{ getNiveauValue(emp.niveau) }}/4
+            <small *ngIf="emp.niveau">({{ emp.niveau }})</small>
           </span>
-
         </div>
 
       </div>

@@ -7,7 +7,7 @@
       <p>Suivez et gérez les demandes</p>
     </div>
 
-    <button mat-raised-button class="btn-refresh" (click)="refreshAllData()">
+    <button mat-raised-button class="btn-refresh" type="button" (click)="refreshAllData()">
       🔄 Actualiser
     </button>
   </div>
@@ -17,7 +17,7 @@
 
     <div class="stat-card">
       <h2>{{ stats.EN_ATTENTE || 0 }}</h2>
-      <p>En attente</p>
+      <p>En attente RH</p>
     </div>
 
     <div class="stat-card">
@@ -31,48 +31,477 @@
     </div>
 
     <div class="stat-card">
-      <h2>{{ (stats.EN_ATTENTE||0)+(stats.APPROUVE||0)+(stats.REFUSE||0) }}</h2>
+      <h2>{{ (stats.EN_ATTENTE || 0) + (stats.APPROUVE || 0) + (stats.REFUSE || 0) }}</h2>
       <p>Total</p>
     </div>
 
   </div>
 
-  <!-- TABLE -->
-  <div class="card-table" *ngIf="!loadingTaches">
+  <!-- ONGLETS -->
+  <mat-tab-group animationDuration="0ms" class="custom-tabs">
 
-    <table class="modern-table">
+    <!-- TAB 1 : DEMANDES À VALIDER RH -->
+    <mat-tab label="📋 Demandes RH">
 
-      <tr>
-        <th>Employé</th>
-        <th>Période</th>
-        <th>Jours</th>
-        <th>Type</th>
-        <th>Actions</th>
-      </tr>
+      <div class="section-title">
+        <div>
+          <h2>Demandes à valider par RH</h2>
+          <p>Seules les demandes en attente RH peuvent être approuvées ou refusées.</p>
+        </div>
+      </div>
 
-      <tr *ngFor="let t of taches">
-        <td>{{ t.employePrenom }} {{ t.employeNom }}</td>
-        <td>{{ formatDate(t.dateDebut) }} → {{ formatDate(t.dateFin) }}</td>
-        <td>{{ t.nbJours }}</td>
-        <td>{{ getTypeLabel(t.type) }}</td>
+      <div class="card-table" *ngIf="!loadingTaches">
 
-        <td>
-          <button (click)="openApproveModal(t)">✅</button>
-          <button (click)="openRejectModal(t)">❌</button>
-        </td>
-      </tr>
+        <table class="modern-table">
 
-    </table>
+          <thead>
+            <tr>
+              <th>Employé</th>
+              <th>Période</th>
+              <th>Jours</th>
+              <th>Type</th>
+              <th>Statut</th>
+              <th class="center">Actions</th>
+            </tr>
+          </thead>
 
-    <div *ngIf="taches.length === 0" class="empty-state">
-      Aucune demande
+          <tbody>
+            <tr
+              *ngFor="let t of taches; trackBy: trackByTaskId"
+              [class.row-final]="!isPendingRh(t)">
+
+              <td>
+                <div class="employee-cell">
+                  <app-employee-avatar
+                    [employee]="t"
+                    size="md"
+                    shape="circle">
+                  </app-employee-avatar>
+
+                  <div>
+                    <strong>{{ t.employePrenom }} {{ t.employeNom }}</strong>
+                    <small>{{ t.employeEmail || '-' }}</small>
+                  </div>
+                </div>
+              </td>
+
+              <td>{{ formatDate(t.dateDebut) }} → {{ formatDate(t.dateFin) }}</td>
+
+              <td>
+                <span class="days-chip">
+                  {{ t.nbJours || 0 }} jour(s)
+                </span>
+              </td>
+
+              <td>{{ getTypeLabel(t.type) }}</td>
+
+              <td>
+                <span class="status-badge" [ngClass]="getStatusClass(t.statut)">
+                  {{ getStatutLabel(t.statut || 'EN_ATTENTE_RH') }}
+                </span>
+              </td>
+
+              <td>
+                <div class="actions-group" *ngIf="canTreatRh(t); else noActionTpl">
+                  <button
+                    type="button"
+                    class="action-btn approve"
+                    title="Approuver"
+                    [disabled]="isSubmitting"
+                    (click)="openApproveModal(t)">
+                    <span>✓</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="action-btn reject"
+                    title="Refuser"
+                    [disabled]="isSubmitting"
+                    (click)="openRejectModal(t)">
+                    <span>×</span>
+                  </button>
+                </div>
+
+                <ng-template #noActionTpl>
+                  <span class="final-label own-request" *ngIf="isOwnRequest(t); else finalStatusTpl">
+                    Votre propre demande
+                  </span>
+
+                  <ng-template #finalStatusTpl>
+                    <span class="final-label">
+                      Déjà traitée
+                    </span>
+                  </ng-template>
+                </ng-template>
+              </td>
+
+            </tr>
+          </tbody>
+
+        </table>
+
+        <div *ngIf="taches.length === 0" class="empty-state">
+          Aucune demande en attente RH
+        </div>
+
+      </div>
+
+      <div *ngIf="loadingTaches" class="loading-container">
+        Chargement...
+      </div>
+
+    </mat-tab>
+
+    <!-- TAB 2 : CALENDRIER -->
+    <mat-tab label="📅 Calendrier">
+
+      <div class="section-title">
+        <div>
+          <h2>Calendrier des congés</h2>
+          <p>Visualisez les congés en attente, approuvés et refusés.</p>
+        </div>
+      </div>
+
+      <div class="calendar-layout">
+
+        <div class="calendar-sidebar">
+
+          <h3>Navigation</h3>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Année</mat-label>
+            <mat-select [(value)]="selectedYear" (selectionChange)="changeYearMonth()">
+              <mat-option *ngFor="let year of years" [value]="year">
+                {{ year }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Mois</mat-label>
+            <mat-select [(value)]="selectedMonth" (selectionChange)="changeYearMonth()">
+              <mat-option *ngFor="let month of months; let i = index" [value]="i">
+                {{ month }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <h3>Légende</h3>
+
+          <div class="legend-item">
+            <span class="legend-color approved"></span>
+            Approuvé
+          </div>
+
+          <div class="legend-item">
+            <span class="legend-color pending"></span>
+            En attente
+          </div>
+
+          <div class="legend-item">
+            <span class="legend-color refused"></span>
+            Refusé
+          </div>
+
+          <div class="legend-item">
+            <span class="legend-color other"></span>
+            Autre
+          </div>
+
+        </div>
+
+        <div class="calendar-container">
+          <full-calendar
+            #calendar
+            [options]="calendarOptions">
+          </full-calendar>
+        </div>
+
+      </div>
+
+    </mat-tab>
+
+    <!-- TAB 3 : REFUS MANAGER -->
+    <mat-tab label="⚠️ Refus manager">
+
+      <div class="section-title refus-section-title">
+        <div>
+          <h2>Demandes déjà refusées par manager</h2>
+          <p>Ces demandes sont consultables, mais ne peuvent plus être approuvées par RH.</p>
+        </div>
+
+        <span class="section-count">
+          {{ refusManager.length || 0 }} refus
+        </span>
+      </div>
+
+      <div class="card-table refused-card" *ngIf="!loadingRefus">
+
+        <table class="modern-table">
+
+          <thead>
+            <tr>
+              <th>Employé</th>
+              <th>Manager</th>
+              <th>Période</th>
+              <th>Motif du refus</th>
+              <th>Date décision</th>
+              <th class="center">Statut</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              *ngFor="let r of refusManager; trackBy: trackByRefusId"
+              class="row-refused-manager">
+
+              <td>
+                <div class="employee-cell">
+                  <app-employee-avatar
+                    [employee]="r"
+                    size="md"
+                    shape="circle">
+                  </app-employee-avatar>
+
+                  <div>
+                    <strong>{{ r.employePrenom }} {{ r.employeNom }}</strong>
+                    <small>{{ r.employeDepartement || '-' }}</small>
+                  </div>
+                </div>
+              </td>
+
+              <td>
+                {{ r.managerNom || '-' }}
+              </td>
+
+              <td>
+                {{ formatDate(r.dateDebut) }} → {{ formatDate(r.dateFin) }}
+              </td>
+
+              <td>
+                <span class="motif-refus">
+                  {{ r.motifRefus || 'Motif non renseigné' }}
+                </span>
+              </td>
+
+              <td>
+                {{ formatFullDate(r.dateDecision) || '-' }}
+              </td>
+
+              <td class="center">
+                <button
+                  type="button"
+                  class="status-badge manager-refused clickable-status"
+                  title="Voir détails"
+                  (click)="openRefusDetails(r)">
+                  ❌ Refus manager
+                </button>
+              </td>
+
+            </tr>
+          </tbody>
+
+        </table>
+
+        <div *ngIf="refusManager.length === 0" class="empty-state">
+          Aucune demande refusée par manager
+        </div>
+
+      </div>
+
+      <div *ngIf="loadingRefus" class="loading-container">
+        Chargement des refus manager...
+      </div>
+
+    </mat-tab>
+
+  </mat-tab-group>
+
+  <!-- MODAL APPROBATION -->
+  <div class="modal-backdrop" *ngIf="showApproveModal && selectedTache">
+    <div class="modal-card approve-modal">
+
+      <div class="modal-header">
+        <div class="modal-title-zone">
+          <div class="modal-icon approve-icon">
+            ✓
+          </div>
+
+          <div>
+            <h2>Approuver la demande</h2>
+            <p>{{ selectedTache.employePrenom }} {{ selectedTache.employeNom }}</p>
+          </div>
+        </div>
+
+        <button type="button" class="modal-close" (click)="closeModals()">
+          ×
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <label for="commentaire-approbation">
+          Commentaire optionnel
+        </label>
+
+        <textarea
+          id="commentaire-approbation"
+          [(ngModel)]="commentaire"
+          placeholder="Ajouter un commentaire pour l'approbation..."
+          rows="5">
+        </textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="btn-cancel"
+          [disabled]="isSubmitting"
+          (click)="closeModals()">
+          Annuler
+        </button>
+
+        <button
+          type="button"
+          class="btn-confirm approve"
+          [disabled]="isSubmitting"
+          (click)="confirmApprove()">
+          ✓ Confirmer l’approbation
+        </button>
+      </div>
+
     </div>
-
   </div>
 
-  <!-- LOADING -->
-  <div *ngIf="loadingTaches" class="loading-container">
-    Chargement...
+  <!-- MODAL REFUS -->
+  <div class="modal-backdrop" *ngIf="showRejectModal && selectedTache">
+    <div class="modal-card reject-modal">
+
+      <div class="modal-header">
+        <div class="modal-title-zone">
+          <div class="modal-icon reject-icon">
+            ×
+          </div>
+
+          <div>
+            <h2>Refuser la demande</h2>
+            <p>{{ selectedTache.employePrenom }} {{ selectedTache.employeNom }}</p>
+          </div>
+        </div>
+
+        <button type="button" class="modal-close" (click)="closeModals()">
+          ×
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <label for="motif-refus">
+          Motif du refus *
+        </label>
+
+        <textarea
+          id="motif-refus"
+          [(ngModel)]="motifRefus"
+          placeholder="Exemple : solde insuffisant..."
+          rows="5">
+        </textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="btn-cancel"
+          [disabled]="isSubmitting"
+          (click)="closeModals()">
+          Annuler
+        </button>
+
+        <button
+          type="button"
+          class="btn-confirm reject"
+          [disabled]="isSubmitting || !motifRefus.trim()"
+          (click)="confirmReject()">
+          × Confirmer le refus
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL DÉTAIL REFUS MANAGER -->
+  <div class="modal-backdrop" *ngIf="showRefusDetailsModal">
+    <div class="modal-card reject-modal">
+
+      <div class="modal-header">
+        <div class="modal-title-zone">
+          <div class="modal-icon reject-icon">
+            ×
+          </div>
+
+          <div>
+            <h2>Détail du refus manager</h2>
+            <p>Demande déjà refusée avant validation RH</p>
+          </div>
+        </div>
+
+        <button type="button" class="modal-close" (click)="closeRefusDetails()">
+          ×
+        </button>
+      </div>
+
+      <div class="modal-body">
+
+        <div *ngIf="loadingRefusDetails" class="loading-container">
+          Chargement des détails...
+        </div>
+
+        <div *ngIf="!loadingRefusDetails && selectedRefusDetails" class="details-grid">
+
+          <div class="detail-row">
+            <span>Employé</span>
+            <strong>
+              {{ selectedRefusDetails.employeePrenom }} {{ selectedRefusDetails.employeeNom }}
+            </strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Manager</span>
+            <strong>
+              {{ selectedRefusDetails.managerNom || '-' }}
+            </strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Période</span>
+            <strong>
+              {{ formatDate(selectedRefusDetails.dateDebut) }} → {{ formatDate(selectedRefusDetails.dateFin) }}
+            </strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Motif refus</span>
+            <strong>
+              {{ selectedRefusDetails.motifRefus || 'Motif non renseigné' }}
+            </strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Date décision</span>
+            <strong>
+              {{ formatFullDate(selectedRefusDetails.dateDecisionManager) || '-' }}
+            </strong>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" (click)="closeRefusDetails()">
+          Fermer
+        </button>
+      </div>
+
+    </div>
   </div>
 
 </div>

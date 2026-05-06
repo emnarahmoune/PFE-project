@@ -48,8 +48,8 @@ export class WorkflowService {
   }
 
   // ==================== MANAGER ====================
-  getManagerTasks(): Observable<Task[]> {
-    return this.http.get<any>(`${this.apiUrl}/manager/conges`, { headers: this.getHeaders() })
+ getManagerTasks(): Observable<Task[]> {
+  return this.http.get<any>(`${this.apiUrl}/workflow/manager/tasks`, { headers: this.getHeaders() })
       .pipe(map(response => {
         console.log('📦 Réponse brute de /api/manager/conges :', response);
         let tasks: Task[] = [];
@@ -70,21 +70,29 @@ export class WorkflowService {
       }));
   }
 
-  approveTask(taskId: string, commentaire: string): Observable<ApiResponse<string>> {
-    return this.http.post<ApiResponse<string>>(
-      `${this.apiUrl}/manager/approuver-demande`,
-      { taskId, commentaire },
-      { headers: this.getHeaders() }
-    );
-  }
+approveTask(taskId: string, commentaire: string = ''): Observable<ApiResponse<string>> {
+  return this.http.post<ApiResponse<string>>(
+    `${this.apiUrl}/workflow/manager/decide`,
+    {
+      taskId,
+      approve: true,
+      comment: commentaire || ''
+    },
+    { headers: this.getHeaders() }
+  );
+}
 
-  rejectTask(taskId: string, motif: string): Observable<ApiResponse<string>> {
-    return this.http.post<ApiResponse<string>>(
-      `${this.apiUrl}/manager/refuser-demande`,
-      { taskId, motif },
-      { headers: this.getHeaders() }
-    );
-  }
+rejectTask(taskId: string, motif: string): Observable<ApiResponse<string>> {
+  return this.http.post<ApiResponse<string>>(
+    `${this.apiUrl}/workflow/manager/decide`,
+    {
+      taskId,
+      approve: false,
+      comment: motif
+    },
+    { headers: this.getHeaders() }
+  );
+}
 
   // ==================== ADMIN RH ====================
   getRHTasks(): Observable<Task[]> {

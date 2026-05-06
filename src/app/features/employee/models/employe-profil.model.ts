@@ -16,9 +16,11 @@ export interface EmployeProfil {
   managerNom?: string;
   dateCreation: Date;
   adresse?: string;
+  photoUrl?: string | null;
+  role?: string;
+  typeUtilisateur?: string;
 }
 
-// ✅ Ajouter cet alias pour compatibilité
 export type Employe = EmployeProfil;
 
 export interface SoldeConges {
@@ -66,10 +68,23 @@ export interface UpdateProfilRequest {
   photo?: string;
 }
 
-export interface EmployeProfilResponse {
+export interface ApiResponse<T> {
   success: boolean;
   message: string;
-  data: EmployeProfil | SoldeConges | CompetenceEmploye[] | FormationEmploye[] | HistoriqueConge[];
+  data: T;
   timestamp: string;
   statusCode: number;
 }
+
+export type EmployeProfilResponse = ApiResponse<EmployeProfil>;
+export type SoldeCongesResponse = ApiResponse<SoldeConges>;
+export type CompetencesEmployeResponse = ApiResponse<CompetenceEmploye[]>;
+export type FormationsEmployeResponse = ApiResponse<FormationEmploye[]>;
+export type HistoriqueCongesResponse = ApiResponse<HistoriqueConge[]>;
+
+/**
+ * Ancien type si tu l’utilises ailleurs.
+ * À éviter dans mon-profil.component.ts.
+ */
+export type EmployeGenericResponse =
+  ApiResponse<EmployeProfil | SoldeConges | CompetenceEmploye[] | FormationEmploye[] | HistoriqueConge[]>;

@@ -19,6 +19,7 @@ export interface ManagerProfile {
   nombreEmployesGeres: number;
   nomComplet: string;
   photoUrl?: string;   // ← propriété optionnelle
+  ancienneteManagerLabel?: string;
 }
 
 export interface UpdateProfileData {

@@ -1,0 +1,17 @@
+<div [ngClass]="avatarClasses">
+
+  <img
+    *ngIf="normalizedPhotoUrl && !imageError; else initialsTemplate"
+    [src]="normalizedPhotoUrl"
+    class="avatar-img"
+    alt="Photo employé"
+    (error)="onImageError()"
+  />
+
+  <ng-template #initialsTemplate>
+    <span class="avatar-initials">
+      {{ initials }}
+    </span>
+  </ng-template>
+
+</div>

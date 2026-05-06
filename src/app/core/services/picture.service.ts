@@ -1,28 +1,66 @@
-// core/services/picture.service.ts
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class PictureService {
-  private rawUrlSubject = new BehaviorSubject<string | null>(null);
+  private pictureSubject = new BehaviorSubject<string | null>(null);
+  picture$ = this.pictureSubject.asObservable();
 
-  /**
-   * Émet l'URL brute sans timestamp.
-   * Chaque composant abonné ajoute son propre timestamp via buildDisplayUrl().
-   */
-  picture$: Observable<string | null> = this.rawUrlSubject.asObservable();
-
-  setPicture(rawUrl: string | null): void {
-    this.rawUrlSubject.next(rawUrl || null);
+  setPicture(url: string | null): void {
+    this.pictureSubject.next(PictureService.buildDisplayUrl(url));
   }
 
-  /**
-   * Construit une URL prête à l'affichage avec cache-busting.
-   * À appeler dans les subscribers, pas dans setPicture().
-   */
-  static buildDisplayUrl(rawUrl: string | null): string | null {
-    if (!rawUrl) return null;
-    const sep = rawUrl.includes('?') ? '&' : '?';
-    return `${rawUrl}${sep}t=${Date.now()}`;
+  static buildDisplayUrl(url?: string | null): string | null {
+    if (!url) {
+      return null;
+    }
+
+    let cleanUrl = String(url).trim();
+
+    if (!cleanUrl) {
+      return null;
+    }
+
+    cleanUrl = cleanUrl.split('?')[0];
+
+    if (cleanUrl.startsWith('data:image')) {
+      return cleanUrl;
+    }
+
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      return `${cleanUrl}?t=${Date.now()}`;
+    }
+
+    // ✅ Déjà une URL API correcte
+    if (cleanUrl.startsWith('/api/')) {
+      return `${cleanUrl}?t=${Date.now()}`;
+    }
+
+    if (cleanUrl.startsWith('api/')) {
+      return `/${cleanUrl}?t=${Date.now()}`;
+    }
+
+    // ✅ Ton backend retourne visiblement /photos/xxx.jpg
+    if (cleanUrl.startsWith('/photos/')) {
+      return `/api${cleanUrl}?t=${Date.now()}`;
+    }
+
+    if (cleanUrl.startsWith('photos/')) {
+      return `/api/${cleanUrl}?t=${Date.now()}`;
+    }
+
+    // ✅ Si jamais backend retourne /uploads/...
+    if (cleanUrl.startsWith('/uploads/')) {
+      return `/api${cleanUrl}?t=${Date.now()}`;
+    }
+
+    if (cleanUrl.startsWith('uploads/')) {
+      return `/api/${cleanUrl}?t=${Date.now()}`;
+    }
+
+    // ✅ Si backend retourne seulement le nom du fichier
+    return `/api/photos/${cleanUrl}?t=${Date.now()}`;
   }
 }

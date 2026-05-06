@@ -1,0 +1,357 @@
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Évaluations RH</h1>
+      <p>Vue globale des évaluations des employés et managers.</p>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="secondary-btn" (click)="loadData()">
+        Actualiser
+      </button>
+
+      <button type="button" class="primary-btn" (click)="openEvaluationModal()">
+        + Évaluer un manager
+      </button>
+    </div>
+  </div>
+
+  <div class="stats-grid" *ngIf="stats">
+    <div class="stat-card">
+      <span>Total évaluations</span>
+      <strong>{{ getStatsTotal() }}</strong>
+    </div>
+
+    <div class="stat-card">
+      <span>Moyenne globale</span>
+      <strong>{{ getStatsMoyenne() }}/10</strong>
+    </div>
+
+    <div class="stat-card">
+      <span>Meilleure note</span>
+      <strong>{{ getStatsMeilleureNote() }}/10</strong>
+    </div>
+
+    <div class="stat-card">
+      <span>Progression</span>
+      <strong>{{ getStatsProgression() }}%</strong>
+    </div>
+  </div>
+
+  <div class="alert success" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+
+  <div class="alert error" *ngIf="errorMessage && !showEvaluationModal">
+    {{ errorMessage }}
+  </div>
+
+  <div class="modal-backdrop" *ngIf="showEvaluationModal" (click)="closeEvaluationModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <div>
+          <h2>{{ editingEvaluationId ? 'Continuer l’évaluation' : 'Évaluer un manager' }}</h2>
+          <p>Créer ou compléter une évaluation RH complète pour un manager.</p>
+        </div>
+
+        <button type="button" class="modal-close" (click)="closeEvaluationModal()">
+          ×
+        </button>
+      </div>
+
+      <div class="alert error modal-alert" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <form class="evaluation-form">
+
+        <div class="form-section">
+          <h3 class="form-section-title">Informations générales</h3>
+
+          <div class="form-row">
+            <div class="form-group full">
+              <label>Manager à évaluer</label>
+
+              <select
+                class="manager-select"
+                [(ngModel)]="newEvaluation.employeId"
+                name="employeId"
+                [disabled]="editingEvaluationId !== null"
+                required>
+                <option [ngValue]="null">Sélectionner un manager</option>
+
+                <option
+                  *ngFor="let manager of managers"
+                  [ngValue]="manager.id">
+                  {{ manager.prenom }} {{ manager.nom }} - {{ manager.email }}
+                </option>
+              </select>
+
+              <small class="field-error" *ngIf="managers.length === 0">
+                Aucun manager chargé. Vérifiez l’endpoint /employes/managers.
+              </small>
+            </div>
+
+            <div class="form-group">
+              <label>Période</label>
+              <input
+                type="text"
+                [(ngModel)]="newEvaluation.periode"
+                name="periode"
+                placeholder="Ex: 2026 - Trimestre 1"
+                required />
+            </div>
+
+            <div class="form-group">
+              <label>Date d’évaluation</label>
+              <input
+                type="date"
+                [(ngModel)]="newEvaluation.dateEvaluation"
+                name="dateEvaluation" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="form-section-title">Notation</h3>
+
+          <div class="score-grid">
+            <div class="form-group score-field">
+              <label>Note globale <span class="score-hint">/10</span></label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                step="0.5"
+                [(ngModel)]="newEvaluation.note"
+                name="note"
+                required />
+            </div>
+
+            <div class="form-group score-field">
+              <label>Technique <span class="score-hint">/10</span></label>
+              <input
+                type="number"
+                min="0"
+                max="10"
+                step="0.5"
+                [(ngModel)]="newEvaluation.noteTechnique"
+                name="noteTechnique" />
+            </div>
+
+            <div class="form-group score-field">
+              <label>Communication <span class="score-hint">/10</span></label>
+              <input
+                type="number"
+                min="0"
+                max="10"
+                step="0.5"
+                [(ngModel)]="newEvaluation.noteCommunication"
+                name="noteCommunication" />
+            </div>
+
+            <div class="form-group score-field">
+              <label>Leadership <span class="score-hint">/10</span></label>
+              <input
+                type="number"
+                min="0"
+                max="10"
+                step="0.5"
+                [(ngModel)]="newEvaluation.noteLeadership"
+                name="noteLeadership" />
+            </div>
+
+            <div class="form-group score-field">
+              <label>Ponctualité <span class="score-hint">/10</span></label>
+              <input
+                type="number"
+                min="0"
+                max="10"
+                step="0.5"
+                [(ngModel)]="newEvaluation.notePonctualite"
+                name="notePonctualite" />
+            </div>
+
+            <div class="form-group score-field">
+              <label>Productivité <span class="score-hint">/10</span></label>
+              <input
+                type="number"
+                min="0"
+                max="10"
+                step="0.5"
+                [(ngModel)]="newEvaluation.noteProductivite"
+                name="noteProductivite" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="form-section-title">Objectifs</h3>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Objectifs atteints <span class="score-hint">%</span></label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                [(ngModel)]="newEvaluation.objectifsAtteints"
+                name="objectifsAtteints" />
+            </div>
+
+            <div class="form-group full">
+              <label>Objectifs</label>
+              <textarea
+                rows="3"
+                [(ngModel)]="newEvaluation.objectifs"
+                name="objectifs"
+                placeholder="Objectifs pour la prochaine période"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3 class="form-section-title">Commentaires RH</h3>
+
+          <div class="form-row">
+            <div class="form-group full">
+              <label>Points forts</label>
+              <textarea
+                rows="3"
+                [(ngModel)]="newEvaluation.pointsForts"
+                name="pointsForts"
+                placeholder="Points forts du manager"></textarea>
+            </div>
+
+            <div class="form-group full">
+              <label>Axes d’amélioration</label>
+              <textarea
+                rows="3"
+                [(ngModel)]="newEvaluation.axesAmelioration"
+                name="axesAmelioration"
+                placeholder="Axes à améliorer"></textarea>
+            </div>
+
+            <div class="form-group full">
+              <label>Commentaire RH</label>
+              <textarea
+                rows="3"
+                [(ngModel)]="newEvaluation.commentaire"
+                name="commentaire"
+                placeholder="Commentaire global RH"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="secondary-btn"
+            (click)="closeEvaluationModal()"
+            [disabled]="saving">
+            Annuler
+          </button>
+
+          <button
+            type="button"
+            class="secondary-btn"
+            (click)="saveEvaluation('BROUILLON')"
+            [disabled]="saving">
+            {{ saving ? 'Enregistrement...' : 'Enregistrer brouillon' }}
+          </button>
+
+          <button
+            type="button"
+            class="primary-btn"
+            (click)="saveEvaluation('PUBLIEE')"
+            [disabled]="saving">
+            {{ saving ? 'Publication...' : 'Publier l’évaluation' }}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <div class="loading" *ngIf="loading">
+    Chargement des évaluations...
+  </div>
+
+  <div class="table-card" *ngIf="!loading">
+    <table *ngIf="evaluations.length > 0; else emptyState">
+      <thead>
+        <tr>
+          <th>Employé évalué</th>
+          <th>Évaluateur</th>
+          <th>Période</th>
+          <th>Date</th>
+          <th>Note</th>
+          <th>Objectifs</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let evaluation of evaluations">
+          <td>
+            <div class="employee-cell">
+              <app-employee-avatar
+                [employee]="evaluation"
+                size="sm">
+              </app-employee-avatar>
+
+              <div>
+                <strong>{{ getEmployeName(evaluation) }}</strong>
+                <small>{{ evaluation.employeEmail || '-' }}</small>
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <strong>{{ getEvaluateurLabel(evaluation) }}</strong>
+            <small>{{ getEvaluateurName(evaluation) }}</small>
+          </td>
+
+          <td>{{ getPeriode(evaluation) }}</td>
+
+          <td>
+            {{ evaluation.dateEvaluation ? (evaluation.dateEvaluation | date: 'dd/MM/yyyy') : '-' }}
+          </td>
+
+          <td>
+            <span class="score" [ngClass]="getScoreClass(getNote(evaluation))">
+              {{ getNote(evaluation) }}/10
+            </span>
+          </td>
+
+          <td>{{ getObjectifsAtteints(evaluation) }}%</td>
+
+          <td>
+            <span class="status" [ngClass]="getStatutClass(evaluation)">
+              {{ getStatut(evaluation) }}
+            </span>
+          </td>
+
+          <td>
+            <button
+              *ngIf="getStatut(evaluation) === 'BROUILLON'"
+              type="button"
+              class="continue-btn"
+              (click)="continueEvaluation(evaluation)">
+              Continuer
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ng-template #emptyState>
+      <div class="empty">
+        Aucune évaluation trouvée.
+      </div>
+    </ng-template>
+  </div>
+</div>

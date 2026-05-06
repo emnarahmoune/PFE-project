@@ -51,7 +51,8 @@
               class="filter-btn" 
               [class.active]="selectedFilter === filter.value"
               (click)="changeFilter(filter.value)">
-        <span>{{ filter.icon }}</span>
+       <span>{{ filter?.icon }}</span>
+       {{ filter?.label }}
         {{ filter.label }}
       </button>
     </div>
@@ -108,13 +109,16 @@
         </div>
       </div>
       
-      <div class="notification-actions">
-        <button class="btn-delete" (click)="deleteNotification(notification, $event)" 
-                title="Supprimer">
-          🗑️
-        </button>
-        <div *ngIf="!notification.lu" class="unread-dot"></div>
-      </div>
+  <div class="notification-actions">
+  <button
+    type="button"
+    class="btn-delete"
+    (click)="deleteNotification(notification, $event)"
+    title="Supprimer">
+    🗑️
+  </button>
+
+  <div *ngIf="!notification.lu" class="unread-dot"></div>
+</div>
     </div>
   </div>
-</div>

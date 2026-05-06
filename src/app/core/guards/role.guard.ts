@@ -3,49 +3,63 @@ import { CanActivateFn, Router, ActivatedRouteSnapshot, RouterStateSnapshot } fr
 import { KeycloakInitService } from '../services/keycloak-init.service';
 
 export const roleGuard: CanActivateFn = async (
-  route: ActivatedRouteSnapshot, 
+  route: ActivatedRouteSnapshot,
   state: RouterStateSnapshot
 ) => {
   const keycloakService = inject(KeycloakInitService);
   const router = inject(Router);
-  
+
   const requiredRoles = route.data['roles'] as string[] || [];
   const userRoles = keycloakService.getUserRoles();
-  
+
+  const normalizedUserRoles = userRoles.map(role => role.toLowerCase());
+  const normalizedRequiredRoles = requiredRoles.map(role => role.toLowerCase());
+
   console.log('🔐 roleGuard - Rôles requis:', requiredRoles);
   console.log('👤 Rôles utilisateur:', userRoles);
-  
-  // Si aucun rôle requis, accès autorisé
+
   if (requiredRoles.length === 0) {
     return true;
   }
-  
-  // Vérification insensible à la casse
-  const hasRequiredRole = requiredRoles.some((requiredRole: string) => 
-    userRoles.some((userRole: string) => userRole.toLowerCase() === requiredRole.toLowerCase())
+
+  const hasRequiredRole = normalizedRequiredRoles.some(requiredRole =>
+    normalizedUserRoles.includes(requiredRole)
   );
-  
+
   if (hasRequiredRole) {
     console.log('✅ Rôle autorisé');
     return true;
   }
-  
+
   console.warn('⛔ Accès refusé - Rôle requis non trouvé');
-  
-  // Redirection selon le rôle de l'utilisateur
-  if (userRoles.some(role => role.toLowerCase() === 'manager')) {
-    console.log('🔄 Redirection vers /manager/dashboard');
-    router.navigate(['/manager/dashboard']);
-  } else if (userRoles.some(role => role.toLowerCase() === 'admin')) {
+
+  if (
+    normalizedUserRoles.includes('admin') ||
+    normalizedUserRoles.includes('admin_rh') ||
+    normalizedUserRoles.includes('rh')
+  ) {
     console.log('🔄 Redirection vers /admin/dashboard');
     router.navigate(['/admin/dashboard']);
-  } else if (userRoles.some(role => role.toLowerCase() === 'user')) {
+    return false;
+  }
+
+  if (normalizedUserRoles.includes('manager')) {
+    console.log('🔄 Redirection vers /manager/dashboard');
+    router.navigate(['/manager/dashboard']);
+    return false;
+  }
+
+  if (
+    normalizedUserRoles.includes('user') ||
+    normalizedUserRoles.includes('employe') ||
+    normalizedUserRoles.includes('employee')
+  ) {
     console.log('🔄 Redirection vers /employee/dashboard');
     router.navigate(['/employee/dashboard']);
-  } else {
-    console.log('🔄 Redirection vers /auth/login');
-    router.navigate(['/auth/login']);
+    return false;
   }
-  
+
+  console.log('🔄 Redirection vers /auth/login');
+  router.navigate(['/auth/login']);
   return false;
 };

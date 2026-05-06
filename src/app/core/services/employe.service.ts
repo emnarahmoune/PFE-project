@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 @Injectable({
   providedIn: 'root'
 })
@@ -10,7 +11,8 @@ export class EmployeService {
 
   private endpoint = 'employes';
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, 
+    private http: HttpClient) {}
 
   // =========================
   // ===== CRUD ==============
@@ -30,6 +32,7 @@ export class EmployeService {
     return this.api.post(this.endpoint, data)
       .pipe(catchError(this.handleError('create', {})));
   }
+
 
   update(id: number, data: any): Observable<any> {
     return this.api.put(this.endpoint, id, data)
@@ -103,6 +106,14 @@ export class EmployeService {
   assignManager(employeId: number, managerId: number): Observable<any> {
     return this.updateManager(employeId, managerId);
   }
+
+  unassignManager(employeId: number): Observable<any> {
+  return this.http.delete<any>(
+    `${environment.apiUrl}/employes/${employeId}/manager`
+  ).pipe(
+    catchError(this.handleError('unassignManager', {}))
+  );
+}
 
   getEquipeByManagerId(managerId: number): Observable<any> {
     return this.api.get(`${this.endpoint}/manager/${managerId}/equipe`)

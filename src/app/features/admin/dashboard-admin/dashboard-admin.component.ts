@@ -1,26 +1,38 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { SharedChartsModule } from '../../../shared/shared-charts.module';   // ← module enveloppe
+import { RouterModule, Router } from '@angular/router';
 import { ChartConfiguration, ChartData } from 'chart.js';
 import { Subject, takeUntil, finalize, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { DashboardService, DashboardStats, EmployeRecent, Alerte, Competence } from '../../../core/services/dashboard.service';
+
+import { SharedChartsModule } from '../../../shared/shared-charts.module';
+import {
+  DashboardService,
+  DashboardStats,
+  EmployeRecent,
+  Alerte,
+  Competence
+} from '../../../core/services/dashboard.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Router } from '@angular/router';
-// import { FormationService } from '../../../core/services/formation.service';
+import { EmployeeAvatarComponent } from '../../../shared/layouts/components/employee-avatar/employee-avatar.component';
 
 @Component({
   selector: 'app-dashboard-admin',
   standalone: true,
-  imports: [CommonModule, RouterModule, SharedChartsModule],   // ← import du module
+  imports: [
+    CommonModule,
+    RouterModule,
+    SharedChartsModule,
+    EmployeeAvatarComponent
+  ],
   templateUrl: './dashboard-admin.component.html',
   styleUrls: ['./dashboard-admin.component.scss']
-  
 })
 export class DashboardAdminComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-recommendations: any[] = [];
+
+  recommendations: any[] = [];
+
   currentDate = new Date();
   currentYear = this.currentDate.getFullYear();
   currentMonth = this.currentDate.toLocaleString('fr-FR', { month: 'long' });
@@ -55,33 +67,86 @@ recommendations: any[] = [];
   topCompetences: Competence[] = [];
 
   private readonly deptColors: Record<string, string> = {
-    'RH': '#5B3FA6',
-    'Technique': '#0C6E8C',
-    'Commercial': '#B45309',
-    'Finance': '#1A5C3A',
-    'Marketing': '#9C2461',
-    'Direction': '#1B3A6B',
-    'Logistique': '#3D5A9E',
+    RH: '#5B3FA6',
+    Technique: '#0C6E8C',
+    Commercial: '#B45309',
+    Finance: '#1A5C3A',
+    Marketing: '#9C2461',
+    Direction: '#1B3A6B',
+    Logistique: '#3D5A9E'
   };
 
+  turnoverChartData: ChartData<'bar'> = {
+    labels: [],
+    datasets: [
+      {
+        data: [],
+        label: 'Turnover (%)',
+        backgroundColor: '#4A72B0',
+        borderRadius: 6,
+        borderWidth: 0,
+        hoverBackgroundColor: '#1B3A6B'
+      }
+    ]
+  };
 
-  getAdminDisplayName(): string {
-  const name = `${this.userPrenom || ''} ${this.userNom || ''}`.trim();
+  turnoverChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0F1923',
+        titleColor: '#fff',
+        bodyColor: '#B8C4CC'
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: { color: '#E8EAE6' },
+        ticks: { font: { family: 'Inter', size: 11 } }
+      },
+      x: {
+        grid: { display: false },
+        ticks: { font: { family: 'Inter', size: 12 } }
+      }
+    }
+  };
 
-  if (name) {
-    return name;
-  }
+  employeesChartData: ChartData<'doughnut'> = {
+    labels: [],
+    datasets: [
+      {
+        data: [],
+        backgroundColor: ['#1A5C3A', '#B45309', '#8B1A1A', '#1B3A6B'],
+        borderWidth: 0,
+        hoverOffset: 8
+      }
+    ]
+  };
 
-  if (this.userEmail) {
-    return this.userEmail;
-  }
+  employeesChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          font: { family: 'Inter', size: 12 },
+          color: '#4B5563',
+          boxWidth: 12,
+          padding: 16
+        }
+      }
+    },
+    cutout: '65%'
+  };
 
-  return 'Administrateur';
-}
   constructor(
     private dashboardService: DashboardService,
     private authService: AuthService,
-    private router: Router,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -95,8 +160,23 @@ recommendations: any[] = [];
     this.destroy$.complete();
   }
 
+  getAdminDisplayName(): string {
+    const name = `${this.userPrenom || ''} ${this.userNom || ''}`.trim();
+
+    if (name) {
+      return name;
+    }
+
+    if (this.userEmail) {
+      return this.userEmail;
+    }
+
+    return 'Administrateur';
+  }
+
   loadUserInfo(): void {
     const user = this.authService.getCurrentUser();
+
     if (user) {
       this.userNom = user.nom || '';
       this.userPrenom = user.prenom || '';
@@ -107,42 +187,44 @@ recommendations: any[] = [];
 
   setWelcomeMessage(): void {
     const hour = new Date().getHours();
+
     if (hour < 12) {
       this.welcomeMessage = 'Bonjour';
     } else if (hour < 18) {
-      this.welcomeMessage = 'Bon après‑midi';
+      this.welcomeMessage = 'Bon après-midi';
     } else {
       this.welcomeMessage = 'Bonsoir';
     }
   }
 
-
-
-//   loadRecommendations(): void {
-//   const userId = this.authService.getCurrentUser()?.id || 1;
-
-//   this.formationService.getRecommendations(userId)
-//     .pipe(takeUntil(this.destroy$))
-//     .subscribe({
-//       next: (data) => {
-//         this.recommendations = data;
-//       },
-//       error: () => {
-//         console.error('Erreur recommandations');
-//       }
-//     });
-// }
   loadDashboardData(): void {
     this.loading = true;
     this.errorMessage = null;
 
     forkJoin({
-      stats: this.dashboardService.getDashboardStats().pipe(catchError(() => of(this.stats))),
-      employes: this.dashboardService.getEmployesRecents(5).pipe(catchError(() => of([]))),
-      alertes: this.dashboardService.getAlertes().pipe(catchError(() => of([]))),
-      turnover: this.dashboardService.getTurnoverData().pipe(catchError(() => of({ labels: [], data: [] }))),
-      repartition: this.dashboardService.getRepartitionEmployes().pipe(catchError(() => of({ labels: [], data: [] }))),
-      competences: this.dashboardService.getTopCompetences(5).pipe(catchError(() => of([])))
+      stats: this.dashboardService
+        .getDashboardStats()
+        .pipe(catchError(() => of(this.stats))),
+
+      employes: this.dashboardService
+        .getEmployesRecents(5)
+        .pipe(catchError(() => of([]))),
+
+      alertes: this.dashboardService
+        .getAlertes()
+        .pipe(catchError(() => of([]))),
+
+      turnover: this.dashboardService
+        .getTurnoverData()
+        .pipe(catchError(() => of({ labels: [], data: [] }))),
+
+      repartition: this.dashboardService
+        .getRepartitionEmployes()
+        .pipe(catchError(() => of({ labels: [], data: [] }))),
+
+      competences: this.dashboardService
+        .getTopCompetences(5)
+        .pipe(catchError(() => of([])))
     })
       .pipe(
         takeUntil(this.destroy$),
@@ -155,6 +237,7 @@ recommendations: any[] = [];
         next: (data: any) => {
           this.stats = data.stats || this.stats;
           this.buildStatCards();
+
           this.recentEmployees = data.employes || [];
           this.alerts = data.alertes || [];
           this.topCompetences = data.competences || [];
@@ -163,14 +246,25 @@ recommendations: any[] = [];
             this.turnoverChartData = {
               ...this.turnoverChartData,
               labels: data.turnover.labels,
-              datasets: [{ ...this.turnoverChartData.datasets[0], data: data.turnover.data }]
+              datasets: [
+                {
+                  ...this.turnoverChartData.datasets[0],
+                  data: data.turnover.data
+                }
+              ]
             };
           }
+
           if (data.repartition?.labels) {
             this.employeesChartData = {
               ...this.employeesChartData,
               labels: data.repartition.labels,
-              datasets: [{ ...this.employeesChartData.datasets[0], data: data.repartition.data }]
+              datasets: [
+                {
+                  ...this.employeesChartData.datasets[0],
+                  data: data.repartition.data
+                }
+              ]
             };
           }
         },
@@ -183,6 +277,7 @@ recommendations: any[] = [];
   buildStatCards(): void {
     const t = this.stats.turnover || 0;
     const a = this.stats.absenteisme || 0;
+
     this.statCards = [
       {
         title: 'Employés actifs',
@@ -236,7 +331,12 @@ recommendations: any[] = [];
   }
 
   getAlertEmoji(type: string): string {
-    return { danger: '🔴', warning: '🟡', info: '🔵', success: '🟢' }[type] ?? '⚪';
+    return {
+      danger: '🔴',
+      warning: '🟡',
+      info: '🔵',
+      success: '🟢'
+    }[type] ?? '⚪';
   }
 
   getAvatarBg(dept: string): string {
@@ -244,71 +344,34 @@ recommendations: any[] = [];
   }
 
   getDepartements(): string[] {
-    return Object.keys(this.stats.parDepartement).slice(0, 5);
+    return Object.keys(this.stats.parDepartement || {}).slice(0, 5);
   }
 
-  turnoverChartData: ChartData<'bar'> = {
-    labels: [],
-    datasets: [{
-      data: [],
-      label: 'Turnover (%)',
-      backgroundColor: '#4A72B0',
-      borderRadius: 6,
-      borderWidth: 0,
-      hoverBackgroundColor: '#1B3A6B'
-    }]
-  };
+  // ✅ Format dinar tunisien
+  private formatTnd(value: number | null | undefined): string {
+    const amount = Number(value || 0);
 
-  turnoverChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#0F1923',
-        titleColor: '#fff',
-        bodyColor: '#B8C4CC'
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: '#E8EAE6' },
-        ticks: { font: { family: 'Inter', size: 11 } }
-      },
-      x: {
-        grid: { display: false },
-        ticks: { font: { family: 'Inter', size: 12 } }
-      }
-    }
-  };
+    const formatted = new Intl.NumberFormat('fr-FR', {
+      maximumFractionDigits: 0
+    }).format(amount);
 
-  employeesChartData: ChartData<'doughnut'> = {
-    labels: [],
-    datasets: [{
-      data: [],
-      backgroundColor: ['#1A5C3A', '#B45309', '#8B1A1A', '#1B3A6B'],
-      borderWidth: 0,
-      hoverOffset: 8
-    }]
-  };
+    return `${formatted} DT`;
+  }
 
-  employeesChartOptions: ChartConfiguration<'doughnut'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          font: { family: 'Inter', size: 12 },
-          color: '#4B5563',
-          boxWidth: 12,
-          padding: 16
-        }
-      }
-    },
-    cutout: '65%'
-  };
+  getMasseSalarialeFormatee(): string {
+    return this.formatTnd(this.stats.masseSalariale);
+  }
+
+  getSalaireMoyenFormate(): string {
+    return this.formatTnd(this.stats.salaireMoyen);
+  }
+
+  getTauxRemplissage(dept: string): number {
+    const values = Object.values(this.stats.parDepartement || {}).map(Number);
+    const max = Math.max(...values, 1);
+
+    return Math.round(((this.stats.parDepartement[dept] || 0) / max) * 100);
+  }
 
   rafraichir(): void {
     this.refreshing = true;
@@ -317,27 +380,6 @@ recommendations: any[] = [];
 
   exporterRapport(): void {
     this.dashboardService.exporterRapport();
-  }
-
-  getMasseSalarialeFormatee(): string {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0
-    }).format(this.stats.masseSalariale || 0);
-  }
-
-  getSalaireMoyenFormate(): string {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0
-    }).format(this.stats.salaireMoyen || 0);
-  }
-
-  getTauxRemplissage(dept: string): number {
-    const max = Math.max(...Object.values(this.stats.parDepartement).map(Number), 1);
-    return Math.round(((this.stats.parDepartement[dept] || 0) / max) * 100);
   }
 
   navigateTo(link: string): void {

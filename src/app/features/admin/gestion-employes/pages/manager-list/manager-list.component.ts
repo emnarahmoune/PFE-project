@@ -4,9 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+
 import { EmployeService } from '../../../../../core/services/employe.service';
 import { Employe } from '../../models/employe.model';
 import { HistoriqueCongesModalComponent } from '../historique-conges-modal/historique-conges-modal.component';
+import { EmployeeAvatarComponent } from '../../../../../shared/layouts/components/employee-avatar/employee-avatar.component';
 
 interface ManagerWithEquipe {
   manager: Employe;
@@ -23,7 +25,8 @@ interface ManagerWithEquipe {
     FormsModule,
     RouterModule,
     MatDialogModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    EmployeeAvatarComponent
   ],
   templateUrl: './manager-list.component.html',
   styleUrls: ['./manager-list.component.scss']
@@ -34,7 +37,7 @@ export class ManagerListComponent implements OnInit {
   filteredManagers: ManagerWithEquipe[] = [];
 
   loading = false;
-  teamsLoaded = false;          // ✅ indique si les équipes sont toutes préchargées
+  teamsLoaded = false;
   searchTerm = '';
   selectedDept = 'ALL';
   sortMode: 'nameAsc' | 'nameDesc' | 'teamDesc' | 'teamAsc' = 'nameAsc';
@@ -60,12 +63,12 @@ export class ManagerListComponent implements OnInit {
     return emp.id ?? index;
   }
 
-  // ========================= 1. Chargement des managers (immédiat) =========================
   loadManagers(): void {
     this.loading = true;
     this.teamsLoaded = false;
+
     this.employeService.getAllManagers().subscribe({
-      next: (res) => {
+      next: (res: any) => {
         if (res.success && res.data) {
           this.managers = res.data.map((m: Employe) => ({
             manager: m,
@@ -73,10 +76,11 @@ export class ManagerListComponent implements OnInit {
             expanded: false,
             loading: false
           }));
+
           this.applyFilters();
           this.loading = false;
           this.cdr.detectChanges();
-          // On lance le préchargement silencieux de toutes les équipes
+
           this.preloadAllEquipes();
         } else {
           this.error('Erreur chargement managers');
@@ -86,41 +90,55 @@ export class ManagerListComponent implements OnInit {
     });
   }
 
-  // ========================= 2. Préchargement silencieux (non bloquant) =========================
   private preloadAllEquipes(): void {
     if (!this.managers.length) {
       this.teamsLoaded = true;
       return;
     }
+
     let completed = 0;
     const total = this.managers.length;
 
     this.managers.forEach((mgr, idx) => {
       const id = mgr.manager.id;
+
       if (!id) {
         completed++;
-        if (completed === total) this.onPreloadComplete();
+        if (completed === total) {
+          this.onPreloadComplete();
+        }
         return;
       }
+
       if (this.cacheEquipes.has(id)) {
         this.managers[idx].equipe = this.cacheEquipes.get(id)!;
         completed++;
-        if (completed === total) this.onPreloadComplete();
+        if (completed === total) {
+          this.onPreloadComplete();
+        }
         return;
       }
+
       this.employeService.getEquipeByManagerId(id).subscribe({
-        next: (res) => {
+        next: (res: any) => {
           if (res.success && res.data) {
             this.managers[idx].equipe = res.data;
             this.cacheEquipes.set(id, res.data);
-            this.applyFilters(); // met à jour les KPI
+            this.applyFilters();
           }
+
           completed++;
-          if (completed === total) this.onPreloadComplete();
+
+          if (completed === total) {
+            this.onPreloadComplete();
+          }
         },
         error: () => {
           completed++;
-          if (completed === total) this.onPreloadComplete();
+
+          if (completed === total) {
+            this.onPreloadComplete();
+          }
         }
       });
     });
@@ -131,11 +149,16 @@ export class ManagerListComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  // ========================= 3. Chargement à la demande (au clic, si manquant) =========================
   private loadEquipe(manager: ManagerWithEquipe): void {
-    if (manager.equipe.length > 0) return;
+    if (manager.equipe.length > 0) {
+      return;
+    }
+
     const id = manager.manager.id;
-    if (!id) return;
+
+    if (!id) {
+      return;
+    }
 
     manager.loading = true;
     this.cdr.detectChanges();
@@ -149,13 +172,14 @@ export class ManagerListComponent implements OnInit {
     }
 
     this.employeService.getEquipeByManagerId(id).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         if (res.success && res.data) {
           manager.equipe = res.data;
           this.cacheEquipes.set(id, res.data);
         } else {
           manager.equipe = [];
         }
+
         manager.loading = false;
         this.applyFilters();
         this.cdr.detectChanges();
@@ -164,46 +188,67 @@ export class ManagerListComponent implements OnInit {
         manager.loading = false;
         manager.equipe = [];
         this.cdr.detectChanges();
-        this.snackBar.open('Erreur chargement équipe', 'Fermer', { duration: 2000 });
+
+        this.snackBar.open('Erreur chargement équipe', 'Fermer', {
+          duration: 2000
+        });
       }
     });
   }
 
-  // ========================= 4. Toggle =========================
   toggleEquipe(manager: ManagerWithEquipe): void {
     this.managers.forEach(m => {
       if (m !== manager && m.expanded) {
         m.expanded = false;
       }
     });
+
     manager.expanded = !manager.expanded;
+
     if (manager.expanded) {
       this.loadEquipe(manager);
     }
+
     this.cdr.detectChanges();
   }
 
-  // ========================= 5. Filtre et tri =========================
   applyFilters(): void {
     let data = [...this.managers];
+
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
-      data = data.filter(m => (`${m.manager.prenom} ${m.manager.nom}`).toLowerCase().includes(term));
+
+      data = data.filter(m =>
+        `${m.manager.prenom} ${m.manager.nom}`.toLowerCase().includes(term)
+      );
     }
+
     if (this.selectedDept !== 'ALL') {
       data = data.filter(m => m.manager.departement === this.selectedDept);
     }
+
     switch (this.sortMode) {
-      case 'nameAsc': data.sort((a,b) => (a.manager.nom ?? '').localeCompare(b.manager.nom ?? '')); break;
-      case 'nameDesc': data.sort((a,b) => (b.manager.nom ?? '').localeCompare(a.manager.nom ?? '')); break;
-      case 'teamDesc': data.sort((a,b) => b.equipe.length - a.equipe.length); break;
-      case 'teamAsc': data.sort((a,b) => a.equipe.length - b.equipe.length); break;
+      case 'nameAsc':
+        data.sort((a, b) => (a.manager.nom ?? '').localeCompare(b.manager.nom ?? ''));
+        break;
+
+      case 'nameDesc':
+        data.sort((a, b) => (b.manager.nom ?? '').localeCompare(a.manager.nom ?? ''));
+        break;
+
+      case 'teamDesc':
+        data.sort((a, b) => b.equipe.length - a.equipe.length);
+        break;
+
+      case 'teamAsc':
+        data.sort((a, b) => a.equipe.length - b.equipe.length);
+        break;
     }
+
     this.filteredManagers = data;
     this.cdr.detectChanges();
   }
 
-  // ========================= STATS (réactifs) =========================
   get totalEmployees(): number {
     return this.managers.reduce((sum, m) => sum + m.equipe.length, 0);
   }
@@ -217,19 +262,33 @@ export class ManagerListComponent implements OnInit {
   }
 
   get biggestTeam(): ManagerWithEquipe | null {
-    if (!this.managers.length) return null;
-    return this.managers.reduce((prev, curr) => curr.equipe.length > prev.equipe.length ? curr : prev);
+    if (!this.managers.length) {
+      return null;
+    }
+
+    return this.managers.reduce((prev, curr) =>
+      curr.equipe.length > prev.equipe.length ? curr : prev
+    );
   }
 
   get hasNoExpandedManager(): boolean {
     return this.filteredManagers.every(m => !m.expanded);
   }
 
-  // ========================= MODAL =========================
   voirHistoriqueConges(emp: Employe): void {
+    if (!emp?.id) {
+      this.snackBar.open('Employé invalide', 'Fermer', {
+        duration: 2000
+      });
+      return;
+    }
+
     this.dialog.open(HistoriqueCongesModalComponent, {
       width: '800px',
-      data: { employeId: emp.id, employeNom: `${emp.prenom} ${emp.nom}` }
+      data: {
+        employeId: emp.id,
+        employeNom: `${emp.prenom || ''} ${emp.nom || ''}`.trim()
+      }
     });
   }
 
@@ -238,33 +297,60 @@ export class ManagerListComponent implements OnInit {
     this.loadManagers();
   }
 
-  // ========================= MÉTHODES D'UI (avatar, risque, etc.) =========================
   getAvatarColor(dept: string): string {
     const colors: Record<string, string> = {
-      RH: '#8b5cf6', Technique: '#0891b2', Commercial: '#d97706',
-      Finance: '#059669', Marketing: '#db2777', Direction: '#7c3aed', Logistique: '#4f46e5'
+      RH: '#8b5cf6',
+      Technique: '#0891b2',
+      Commercial: '#d97706',
+      Finance: '#059669',
+      Marketing: '#db2777',
+      Direction: '#7c3aed',
+      Logistique: '#4f46e5'
     };
+
     return colors[dept] || '#6366f1';
   }
 
   getRiskScore(manager: ManagerWithEquipe): number {
     const teamSize = manager.equipe.length;
     let score = 20;
-    if (teamSize > 10) score += 20;
-    if (teamSize > 20) score += 30;
-    if (teamSize === 0) score += 40;
+
+    if (teamSize > 10) {
+      score += 20;
+    }
+
+    if (teamSize > 20) {
+      score += 30;
+    }
+
+    if (teamSize === 0) {
+      score += 40;
+    }
+
     return Math.min(score, 100);
   }
 
   getRiskLabel(score: number): string {
-    if (score < 30) return 'Faible';
-    if (score < 60) return 'Moyen';
+    if (score < 30) {
+      return 'Faible';
+    }
+
+    if (score < 60) {
+      return 'Moyen';
+    }
+
     return 'Élevé';
   }
 
   getRiskColor(score: number): string {
-    if (score < 30) return '#10b981';
-    if (score < 60) return '#f59e0b';
+    if (score < 30) {
+      return '#10b981';
+    }
+
+    if (score < 60) {
+      return '#f59e0b';
+    }
+
     return '#ef4444';
   }
 
@@ -273,28 +359,48 @@ export class ManagerListComponent implements OnInit {
   }
 
   getPerformanceClass(riskScore: number): string {
-    if (riskScore < 30) return 'excellent';
-    if (riskScore < 60) return 'good';
+    if (riskScore < 30) {
+      return 'excellent';
+    }
+
+    if (riskScore < 60) {
+      return 'good';
+    }
+
     return 'warning';
   }
 
   getPerformanceLabel(riskScore: number): string {
-    if (riskScore < 30) return '🌟 Excellent';
-    if (riskScore < 60) return '👍 Bon';
+    if (riskScore < 30) {
+      return '🌟 Excellent';
+    }
+
+    if (riskScore < 60) {
+      return '👍 Bon';
+    }
+
     return '⚠️ À surveiller';
   }
 
   getTurnOverRate(manager: ManagerWithEquipe): number {
     const baseTurnover = 5;
     const risk = this.getRiskScore(manager);
+
     let extra = 0;
-    if (risk > 70) extra = 20;
-    else if (risk > 50) extra = 10;
+
+    if (risk > 70) {
+      extra = 20;
+    } else if (risk > 50) {
+      extra = 10;
+    }
+
     return Math.min(baseTurnover + extra, 35);
   }
 
   private error(msg: string): void {
     this.loading = false;
-    this.snackBar.open(msg, 'Fermer', { duration: 3000 });
+    this.snackBar.open(msg, 'Fermer', {
+      duration: 3000
+    });
   }
 }

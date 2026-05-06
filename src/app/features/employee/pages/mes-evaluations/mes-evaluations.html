@@ -1,0 +1,105 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Mes évaluations</h1>
+      <p>Consultez votre performance et votre progression.</p>
+    </div>
+
+    <button type="button" class="refresh-btn" (click)="loadData()">
+      Actualiser
+    </button>
+  </div>
+
+  <div class="stats-grid" *ngIf="stats">
+    <div class="stat-card">
+      <span>Total évaluations</span>
+      <strong>{{ getStatsTotal() }}</strong>
+    </div>
+
+    <div class="stat-card">
+      <span>Moyenne globale</span>
+      <strong>{{ getStatsMoyenne() }}/5</strong>
+    </div>
+
+    <div class="stat-card">
+      <span>Progression</span>
+      <strong>{{ getStatsProgression() }}%</strong>
+    </div>
+  </div>
+
+  <div class="alert error" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <div class="loading" *ngIf="loading">
+    Chargement de vos évaluations...
+  </div>
+
+  <div class="timeline" *ngIf="!loading">
+    <div class="evaluation-card" *ngFor="let evaluation of evaluations">
+      <div class="card-header">
+        <div>
+          <h2>{{ getPeriode(evaluation) }}</h2>
+
+          <p>
+  {{ getEvaluateurLabel(evaluation) }} :
+  {{ getEvaluateurName(evaluation) }}
+  · {{ evaluation.dateEvaluation | date:'dd/MM/yyyy' }}
+</p>
+        </div>
+
+        <span
+          class="score"
+          [ngClass]="getScoreClass(getNoteSur5(evaluation))">
+          {{ getNoteSur5(evaluation) }}/5
+        </span>
+      </div>
+
+      <div class="notes-grid">
+        <div>
+          <span>Technique</span>
+          <strong>{{ getNoteTechnique(evaluation) }}/5</strong>
+        </div>
+
+        <div>
+          <span>Communication</span>
+          <strong>{{ getNoteCommunication(evaluation) }}/5</strong>
+        </div>
+
+        <div>
+          <span>Leadership</span>
+          <strong>{{ getNoteLeadership(evaluation) }}/5</strong>
+        </div>
+
+        <div>
+          <span>Productivité</span>
+          <strong>{{ getNoteProductivite(evaluation) }}/5</strong>
+        </div>
+      </div>
+
+      <div class="section" *ngIf="getPointsForts(evaluation)">
+        <h3>Points forts</h3>
+        <p>{{ getPointsForts(evaluation) }}</p>
+      </div>
+
+      <div class="section" *ngIf="getAxesAmelioration(evaluation)">
+        <h3>Axes d’amélioration</h3>
+        <p>{{ getAxesAmelioration(evaluation) }}</p>
+      </div>
+
+      <div class="section" *ngIf="getObjectifs(evaluation)">
+        <h3>Objectifs</h3>
+        <p>{{ getObjectifs(evaluation) }}</p>
+      </div>
+
+      <div class="section" *ngIf="getCommentaireManager(evaluation)">
+        <h3>Commentaire manager</h3>
+        <p>{{ getCommentaireManager(evaluation) }}</p>
+      </div>
+    </div>
+
+    <div class="empty" *ngIf="evaluations.length === 0">
+      Aucune évaluation disponible.
+    </div>
+  </div>
+</div>

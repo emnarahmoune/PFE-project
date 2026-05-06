@@ -42,9 +42,11 @@
       <div class="row" *ngFor="let p of participants">
 
         <div class="user">
-          <div class="avatar">
-            {{ getInitial(p) }}
-          </div>
+          <app-employee-avatar
+            [employee]="p"
+            size="md"
+            shape="circle">
+          </app-employee-avatar>
 
           <div>
             <strong>{{ p.prenom || '' }} {{ p.nom || '' }}</strong>

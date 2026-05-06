@@ -76,38 +76,46 @@ export class KeycloakInitService {
     }
   }
 
- private async cleanUrlAfterAuth(): Promise<void> {
-  const hasFragment = window.location.hash && (
-    window.location.hash.includes('state=') ||
-    window.location.hash.includes('session_state=') ||
-    window.location.hash.includes('code=')
-  );
-  
-  if (hasFragment) {
-    console.log('🧹 Nettoyage URL');
-    const userRoles = this.getUserRoles();
-    console.log('👤 Rôles détectés:', userRoles);
-    
-    let targetPath = '/dashboard';
-    
-    // Vérifier d'abord manager, puis admin
-    if (userRoles.includes('manager')) {
-      targetPath = '/manager/dashboard';
-      console.log('🎯 Manager détecté → /manager/dashboard');
-    } else if (userRoles.includes('ADMIN')) {
-      targetPath = '/admin/dashboard';
-      console.log('🎯 Admin détecté → /admin/dashboard');
-    } else if (userRoles.includes('user')) {
-      targetPath = '/employee/dashboard';
-      console.log('🎯 User détecté → /employee/dashboard');
-    }
-    
-    console.log('🎯 Redirection finale vers:', targetPath);
-    window.history.replaceState({}, document.title, targetPath);
-    await this.router.navigateByUrl(targetPath);
-  }
-}
+private async cleanUrlAfterAuth(): Promise<void> {
+  const url = window.location.href;
 
+  const hasAuthParams =
+    url.includes('state=') ||
+    url.includes('session_state=') ||
+    url.includes('code=');
+
+  if (!hasAuthParams) {
+    return;
+  }
+
+  console.log('🧹 Nettoyage URL après Keycloak');
+
+  const user = this.getUser();
+  const backendRole = (
+    user?.role ||
+    user?.typeEmploye ||
+    user?.type_employe ||
+    ''
+  ).toString().toLowerCase();
+
+  console.log('👤 User backend:', user);
+  console.log('👤 Rôle backend:', backendRole);
+
+  let targetPath = '/employee/dashboard';
+
+  if (backendRole === 'admin_rh' || backendRole === 'admin') {
+    targetPath = '/admin/dashboard';
+  } else if (backendRole === 'manager') {
+    targetPath = '/manager/dashboard';
+  } else {
+    targetPath = '/employee/dashboard';
+  }
+
+  console.log('🎯 Redirection finale vers:', targetPath);
+
+  window.history.replaceState({}, document.title, targetPath);
+  await this.router.navigateByUrl(targetPath);
+}
   async getToken(): Promise<string> {
     try {
       await this.keycloak.updateToken(-1);

@@ -1,34 +1,58 @@
-// core/services/manager-profile.service.ts
+// src/app/core/services/manager-profile.service.ts
+
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ManagerProfile, UpdateProfileData, ChangePasswordData } from '../../features/manager/models/manager-profile.model';
+import {
+  ManagerProfile,
+  UpdateProfileData,
+  ChangePasswordData
+} from '../../features/manager/models/manager-profile.model';
 
 @Injectable({ providedIn: 'root' })
 export class ManagerProfileService {
-  changePassword(data: ChangePasswordData): Observable<{ success: boolean; message: string }> {
-    return this.http.post<{ success: boolean; message: string }>(`${this.apiUrl}/change-password`, data);
-  }
-  private apiUrl = `${environment.apiUrl}/manager/profile`;
+
+  // ✅ profil manager
+  private profileUrl = `${environment.apiUrl}/manager/profile`;
+
+  // ✅ racine manager backend
+  private managerUrl = `${environment.apiUrl}/manager`;
 
   constructor(private http: HttpClient) {}
 
   getProfile(): Observable<{ success: boolean; data: ManagerProfile; message: string }> {
-    return this.http.get<{ success: boolean; data: ManagerProfile; message: string }>(this.apiUrl);
+    return this.http.get<{ success: boolean; data: ManagerProfile; message: string }>(
+      this.profileUrl
+    );
   }
+
   updateProfile(data: UpdateProfileData): Observable<{ success: boolean; data: ManagerProfile; message: string }> {
-    return this.http.put<{ success: boolean; data: ManagerProfile; message: string }>(this.apiUrl, data);
+    return this.http.put<{ success: boolean; data: ManagerProfile; message: string }>(
+      this.profileUrl,
+      data
+    );
   }
-    uploadPhoto(file: File): Observable<{ success: boolean; data: { photoUrl: string }; message: string }> {
+  
+changePassword(data: ChangePasswordData) {
+  return this.http.post<any>('/api/manager/change-password', data);
+}
+
+  uploadPhoto(file: File): Observable<{ success: boolean; data: { photoUrl: string; message?: string }; message: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.post<{ success: boolean; data: { photoUrl: string }; message: string }>(
-      `${this.apiUrl}/photo`, formData
+
+    // ✅ backend : POST /api/manager/photo
+    return this.http.post<{ success: boolean; data: { photoUrl: string; message?: string }; message: string }>(
+      `${this.managerUrl}/photo`,
+      formData
     );
   }
 
   deletePhoto(): Observable<{ success: boolean; message: string }> {
-    return this.http.delete<{ success: boolean; message: string }>(`${this.apiUrl}/photo`);
+    // ✅ backend : DELETE /api/manager/photo
+    return this.http.delete<{ success: boolean; message: string }>(
+      `${this.managerUrl}/photo`
+    );
   }
 }

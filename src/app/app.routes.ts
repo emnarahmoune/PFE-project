@@ -91,6 +91,12 @@ export const routes: Routes = [
     .then(m => m.AdminProfilComponent),
   canActivate: [roleGuard],
   data: { roles: ['ADMIN_RH', 'admin_rh', 'rh', 'admin'] }  // élargi
+},
+{
+  path: 'evaluations',
+  loadComponent: () =>
+    import('./features/admin/evaluation-list/evaluation-list')
+      .then(m => m.EvaluationListComponent)
 }
     ]
   },
@@ -150,7 +156,13 @@ export const routes: Routes = [
           .then(m => m.ManagerProfilComponent),
         canActivate: [roleGuard],
         data: { roles: ['manager'] }
-      }
+      },
+     {
+  path: 'evaluations',
+  loadComponent: () =>
+    import('./features/manager/page/evaluations/pages/evaluations-manager/manager-evaluations')
+      .then(m => m.ManagerEvaluationsComponent)
+}
     ]
   },
   

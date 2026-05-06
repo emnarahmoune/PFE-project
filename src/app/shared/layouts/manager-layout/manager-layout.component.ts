@@ -1,16 +1,28 @@
 import { Component, OnInit, Renderer2, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, RouterOutlet, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+
 import { AuthService } from '../../../core/services/auth.service';
 import { KeycloakInitService } from '../../../core/services/keycloak-init.service';
 import { PictureService } from '../../../core/services/picture.service';
 import { ManagerProfileService } from '../../../core/services/manager-profile.service';
-import { Subscription } from 'rxjs';
+
+import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-manager-layout',
   standalone: true,
-  imports: [CommonModule, RouterModule, RouterOutlet],
+  imports: [
+    CommonModule,
+    RouterModule,
+    RouterOutlet,
+    MatIconModule,
+    MatMenuModule,
+    MatButtonModule
+  ],
   templateUrl: './manager-layout.component.html',
   styleUrls: ['./manager-layout.component.scss']
 })
@@ -30,11 +42,13 @@ export class ManagerLayoutComponent implements OnInit, OnDestroy {
   private pictureSubscription: Subscription | null = null;
 
   menuItems = [
-    { path: '/manager/dashboard', icon: '◪', label: 'Dashboard' },
-    { path: '/manager/equipe', icon: '◌', label: 'Mon équipe' },
-    { path: '/manager/conges', icon: '◍', label: 'Demandes de congé' },
-    { path: '/manager/indicateurs', icon: '◕', label: 'Indicateurs' },
-    { path: '/manager/profil', icon: '👤', label: 'Mon profil' }
+    { path: '/manager/dashboard', icon: 'dashboard', label: 'Tableau de bord' },
+    { path: '/manager/equipe', icon: 'groups', label: 'Mon équipe' },
+    { path: '/manager/conges', icon: 'event', label: 'Demandes de congé' },
+    { path: '/manager/indicateurs', icon: 'analytics', label: 'Indicateurs' },
+    { path: '/manager/profil', icon: 'person', label: 'Mon profil' },
+    { path: '/manager/evaluations',icon: 'assignment',label: 'Évaluations',
+}
   ];
 
   constructor(
@@ -78,59 +92,71 @@ export class ManagerLayoutComponent implements OnInit, OnDestroy {
 
   private loadFullProfile(): void {
     this.managerProfileService.getProfile().subscribe({
-      next: (response) => {
+      next: (response: any) => {
         if (response.success && response.data) {
-
           this.userNom = response.data.nom || this.userNom;
           this.userPrenom = response.data.prenom || this.userPrenom;
           this.userEmail = response.data.email || this.userEmail;
           this.userRole = response.data.role || this.userRole;
 
-          this.pictureService.setPicture(response.data.photoUrl || null);
+           this.pictureService.setPicture(response.data.photoUrl || null);
         }
       },
-      error: (err) => console.error(err)
+      error: (err: any) => {
+        console.error('Erreur chargement profil manager', err);
+      }
     });
   }
 
   subscribeToPicture(): void {
-    this.pictureSubscription = this.pictureService.picture$.subscribe(url => {
-      this.userPhotoUrl = PictureService.buildDisplayUrl(url);
+    this.pictureSubscription = this.pictureService.picture$.subscribe(rawUrl => {
+      this.userPhotoUrl = rawUrl;
       this.cdr.detectChanges();
     });
   }
 
+  private normalizePhotoUrl(url?: string | null): string | null {
+    if (!url) {
+      return null;
+    }
+
+    let cleanUrl = String(url).trim();
+
+    if (!cleanUrl) {
+      return null;
+    }
+
+    cleanUrl = cleanUrl.split('?')[0];
+
+    if (cleanUrl.startsWith('data:image')) {
+      return cleanUrl;
+    }
+
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      return `${cleanUrl}?t=${Date.now()}`;
+    }
+
+    if (cleanUrl.startsWith('/api/')) {
+      return `${cleanUrl}?t=${Date.now()}`;
+    }
+
+    if (cleanUrl.startsWith('api/')) {
+      return `/${cleanUrl}?t=${Date.now()}`;
+    }
+
+    if (cleanUrl.startsWith('/uploads/')) {
+      return `/api${cleanUrl}?t=${Date.now()}`;
+    }
+
+    if (cleanUrl.startsWith('uploads/')) {
+      return `/api/${cleanUrl}?t=${Date.now()}`;
+    }
+
+    return `/api/uploads/profile-photos/${cleanUrl}?t=${Date.now()}`;
+  }
+
   toggleSidebar(): void {
     this.isSidebarOpen = !this.isSidebarOpen;
-  }
-
-  logout(): void {
-    this.keycloakService.logout();
-  }
-
-  getUserName(): string {
-    return this.userPrenom && this.userNom
-      ? `${this.userPrenom} ${this.userNom}`
-      : 'Manager';
-  }
-
-  getUserInitials(): string {
-    return this.userPrenom && this.userNom
-      ? `${this.userPrenom.charAt(0)}${this.userNom.charAt(0)}`.toUpperCase()
-      : 'MG';
-  }
-
-  /** ✅ CORRIGÉ + ajout MON PROFIL */
-  getCurrentPageTitle(): string {
-    const path = this.router.url;
-
-    if (path.includes('/manager/dashboard')) return 'Tableau de bord';
-    if (path.includes('/manager/equipe')) return 'Mon équipe';
-    if (path.includes('/manager/conges')) return 'Demandes de congé';
-    if (path.includes('/manager/indicateurs')) return 'Indicateurs';
-    if (path.includes('/manager/profil')) return 'Mon profil';
-
-    return 'Espace Manager';
   }
 
   toggleTheme(): void {
@@ -151,7 +177,46 @@ export class ManagerLayoutComponent implements OnInit, OnDestroy {
     if (savedTheme === 'dark') {
       this.darkMode = true;
       this.renderer.addClass(document.body, 'dark-theme');
+    } else {
+      this.darkMode = false;
+      this.renderer.removeClass(document.body, 'dark-theme');
     }
+  }
+
+  logout(): void {
+    this.keycloakService.logout();
+  }
+
+  goToProfile(): void {
+    this.router.navigate(['/manager/profil']);
+  }
+
+  goToPersonalSpace(): void {
+    this.router.navigate(['/employee/dashboard']);
+  }
+
+  getUserName(): string {
+    return this.userPrenom && this.userNom
+      ? `${this.userPrenom} ${this.userNom}`
+      : 'Manager';
+  }
+
+  getUserInitials(): string {
+    return this.userPrenom && this.userNom
+      ? `${this.userPrenom.charAt(0)}${this.userNom.charAt(0)}`.toUpperCase()
+      : 'MG';
+  }
+
+  getCurrentPageTitle(): string {
+    const path = this.router.url;
+
+    if (path.includes('/manager/dashboard')) return 'Tableau de bord';
+    if (path.includes('/manager/equipe')) return 'Mon équipe';
+    if (path.includes('/manager/conges')) return 'Demandes de congé';
+    if (path.includes('/manager/indicateurs')) return 'Indicateurs';
+    if (path.includes('/manager/profil')) return 'Mon profil';
+
+    return 'Espace Manager';
   }
 
   isRouteActive(path: string): boolean {

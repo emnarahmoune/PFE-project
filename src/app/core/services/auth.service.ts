@@ -48,11 +48,10 @@ export class AuthService {
     return null;
   }
 
-  getUserRole(): string {
-    const user = this.getCurrentUser();
-    return user?.role || user?.typeUtilisateur || 'EMPLOYE';
-  }
-
+ getUserRole(): string {
+  const user = this.getCurrentUser();
+  return user?.role ?? 'USER';
+}
   login(redirectUrl?: string): void {
     console.log('🔑 Redirection vers Keycloak');
     this.keycloakService.login(redirectUrl);
