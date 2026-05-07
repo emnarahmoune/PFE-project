@@ -107,12 +107,11 @@
 ========================================================= */
 
 .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 24px;
-  margin-bottom: 38px;
+  align-items: flex-start;
 }
-
 /* =========================================================
    FORMATION CARD
 ========================================================= */
@@ -132,6 +131,10 @@
   box-shadow: var(--shadow-sm);
 
   transition: 220ms ease;
+   width: 31%;
+  min-width: 300px;
+  height: auto;
+  align-self: flex-start;
 }
 
 .card:hover {
@@ -507,4 +510,82 @@ button:disabled,
   .reco-card {
     border-radius: 20px;
   }
+}
+
+
+.success-message {
+  margin-top: 12px;
+  padding: 10px;
+  background: #e8f8ee;
+  color: #1f7a3f;
+  border-radius: 8px;
+  font-weight: 600;
+  text-align: center;
+}
+
+
+.card-body .success-message {
+  margin: 18px 0 14px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #15803d;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.4;
+  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.18);
+}
+
+.card-body .success-message + .btn-primary {
+  margin-top: 0;
+  margin-bottom: 14px;
+}
+
+.card-body > .btn-primary {
+  width: 100%;
+  margin-top: 14px;
+}
+
+.card-body .btn-primary {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  border-radius: 28px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.video-section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+
+
+.success-message {
+  margin: 18px 0 12px;
+  padding: 12px 16px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  border-radius: 18px;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.4;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.12);
+}
+
+.btn-certificate {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+.bottom-success {
+  margin-top: 24px;
 }

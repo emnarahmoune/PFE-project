@@ -10,16 +10,17 @@ import { Formation, FormationResponse } from '../../features/admin/gestion-forma
 export class FormationService {
 
   private endpoint = 'formations';
-  private baseUrl = '/api/formations'; // 🔥 simplifié (proxy Angular)
+
+  // Pour les routes /api/formations
+  private baseUrl = '/api/formations';
+
+  // Pour les routes /api/certificates
+  private apiRoot = '/api';
 
   constructor(
     private api: ApiService,
     private http: HttpClient
   ) {}
-
-  // =========================
-  // CRUD
-  // =========================
 
   getAll(): Observable<FormationResponse> {
     return this.api.get<FormationResponse>(this.endpoint);
@@ -29,7 +30,6 @@ export class FormationService {
     return this.api.get<FormationResponse>(`${this.endpoint}/paged`, { page, size });
   }
 
-  // 🔥 CORRIGÉ → DETAILS COMPLETS
   getById(id: number): Observable<any> {
     return this.http.get(`${this.baseUrl}/${id}/details`);
   }
@@ -42,14 +42,9 @@ export class FormationService {
     return this.api.put<FormationResponse>(`${this.endpoint}/id`, id, formation);
   }
 
-  // 🔥 CORRIGÉ (URL BACKEND)
   delete(id: number): Observable<any> {
     return this.http.delete(`${this.baseUrl}/id/${id}`);
   }
-
-  // =========================
-  // PARTICIPANTS
-  // =========================
 
   getParticipants(id: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/${id}/participants`);
@@ -58,10 +53,6 @@ export class FormationService {
   retirerParticipant(formationId: number, employeId: number): Observable<any> {
     return this.http.delete(`${this.baseUrl}/${formationId}/participants/${employeId}`);
   }
-
-  // =========================
-  // MES FORMATIONS
-  // =========================
 
   getMyFormations(): Observable<any[]> {
     return this.http.get<any[]>(`/api/employe-formations/mes-formations`);
@@ -73,10 +64,6 @@ export class FormationService {
     });
   }
 
-  // =========================
-  // RECOMMANDATIONS
-  // =========================
-
   getRecommendations(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/recommandations`);
   }
@@ -84,10 +71,6 @@ export class FormationService {
   getRecommendationsSkill(): Observable<any[]> {
     return this.http.get<any[]>(`${this.baseUrl}/recommandations-skill`);
   }
-
-  // =========================
-  // VIDEOS
-  // =========================
 
   getVideos(formationId: number): Observable<any[]> {
     return this.http.get<any[]>(`/api/employe-formations/${formationId}/videos`);
@@ -101,41 +84,48 @@ export class FormationService {
     return this.http.get<number[]>(`/api/employe-formations/${formationId}/completed-videos`);
   }
 
-  // =========================
-  // UPLOAD
-  // =========================
-
   uploadPdf(formData: FormData) {
     return this.http.post(`${this.baseUrl}/upload-pdf`, formData);
   }
-
-  // =========================
-  // SEARCH
-  // =========================
 
   search(keyword: string): Observable<FormationResponse> {
     return this.api.get<FormationResponse>(`${this.endpoint}/search`, { keyword });
   }
 
- // =========================
-  // ACTIVER / DESACTIVER
-  // =========================
- activer(id: number) {
-  return this.http.put(`/api/formations/${id}/activer`, {});
-}
+  activer(id: number) {
+    return this.http.put(`/api/formations/${id}/activer`, {});
+  }
 
-desactiver(id: number) {
-  return this.http.put(`/api/formations/${id}/desactiver`, {});
-}
- 
-
- 
-
-  // =========================
-  // STATS
-  // =========================
+  desactiver(id: number) {
+    return this.http.put(`/api/formations/${id}/desactiver`, {});
+  }
 
   getStats(): Observable<any> {
     return this.http.get(`${this.baseUrl}/stats`);
   }
+
+ generateCertificate(formationId: number) {
+  return this.http.post(
+    `${this.apiRoot}/certificates/generate/${formationId}`,
+    {},
+    {
+      responseType: 'blob'
+    }
+  );
+}
+
+  getMyCertificates() {
+    return this.http.get<any[]>(
+      `${this.apiRoot}/certificates/me`
+    );
+  }
+
+
+
+  resetFormationProgress(formationId: number) {
+  return this.http.put(
+    `${this.apiRoot}/formations/reset-progress/${formationId}`,
+    {}
+  );
+}
 }

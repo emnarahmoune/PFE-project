@@ -1,8 +1,5 @@
 <div class="container">
 
-  <!-- ========================= -->
-  <!-- 📚 MES FORMATIONS -->
-  <!-- ========================= -->
   <h2 class="section-title">📚 Mes formations</h2>
 
   <div *ngIf="formationsSuivies.length === 0" class="empty">
@@ -11,9 +8,8 @@
 
   <div class="grid" *ngIf="formationsSuivies.length > 0">
 
-    <div *ngFor="let ef of formationsSuivies" class="card">
+    <div *ngFor="let ef of formationsSuivies; let i = index" class="card">
 
-      <!-- 🔥 COVER -->
       <div class="card-cover">
         <div class="overlay"></div>
 
@@ -21,7 +17,6 @@
         <span class="badge">{{ ef.formation?.domaine }}</span>
       </div>
 
-      <!-- 🔥 BODY -->
       <div class="card-body">
 
         <p class="progress-text">
@@ -29,36 +24,52 @@
         </p>
 
         <div class="progress-container">
-          <div 
+          <div
             class="progress-bar"
             [style.width.%]="ef.progression">
           </div>
         </div>
 
-        <!-- 🔥 TOGGLE BUTTON -->
-        <button 
+        <!-- ===== VERSION 1 : DANS LA CARD ===== -->
+        <div *ngIf="ef.progression === 100" class="success-message">
+          🎉 Formation terminée avec succès
+        </div>
+
+        <button
+          class="btn-primary btn-certificate"
+          *ngIf="ef.progression === 100 && ef.formation?.id"
+          (click)="generateCertificate(ef.formation.id)">
+          🎓 Générer certificat
+        </button>
+
+        <!-- Bouton principal -->
+        <button
           class="btn-primary"
           *ngIf="ef.formation?.id"
-          (click)="voirFormation(ef.formation.id)">
+          (click)="handleFormationButton(ef, i)">
 
-          <span *ngIf="selectedFormationId !== ef.formation.id">
+          <span *ngIf="selectedFormationIndex !== i && ef.progression < 100">
             ▶ Voir contenu
           </span>
 
-          <span *ngIf="selectedFormationId === ef.formation.id">
+          <span *ngIf="selectedFormationIndex !== i && ef.progression === 100">
+            🔁 Revoir la formation
+          </span>
+
+          <span *ngIf="selectedFormationIndex === i">
             ✖ Fermer
           </span>
 
         </button>
 
-        <!-- ========================= -->
-        <!-- 🎬 VIDEOS -->
-        <!-- ========================= -->
-        <div *ngIf="selectedFormationId === ef.formation?.id" class="video-section">
+        <!-- ===== CONTENU ===== -->
+        <div
+          *ngIf="selectedFormationIndex === i"
+          class="video-section">
 
           <h4>🎬 Contenu</h4>
 
-          <p *ngIf="videos?.length === 0">
+          <p *ngIf="videos.length === 0">
             Aucune vidéo disponible
           </p>
 
@@ -79,23 +90,36 @@
               ⚠️ URL vidéo invalide
             </p>
 
-            <button 
-  class="btn-secondary"
-  (click)="completeVideo(v.id)"
-  [disabled]="completedVideos.includes(v.id)"
-  [class.done]="completedVideos.includes(v.id)">
+            <!-- Boutons vidéo -->
+            <button
+              *ngIf="!v.completedView"
+              class="btn-secondary"
+              type="button"
+              (click)="completeVideo(v, ef)">
+              ✔ Marquer comme terminé
+            </button>
 
-  <span *ngIf="!completedVideos.includes(v.id)">
-    ✔ Marquer comme terminé
-  </span>
-
-  <span *ngIf="completedVideos.includes(v.id)">
-    ✅ Terminé
-  </span>
-
-</button>
+            <button
+              *ngIf="v.completedView"
+              class="btn-secondary done"
+              type="button"
+              disabled>
+              ✅ Terminé
+            </button>
 
           </div>
+
+          <!-- ===== VERSION 2 : À LA FIN DU CONTENU ===== -->
+          <div *ngIf="ef.progression === 100" class="success-message bottom-success">
+            🎉 Formation terminée avec succès
+          </div>
+
+          <button
+            class="btn-primary btn-certificate"
+            *ngIf="ef.progression === 100 && ef.formation?.id"
+            (click)="generateCertificate(ef.formation.id)">
+            🎓 Générer certificat
+          </button>
 
         </div>
 
@@ -105,11 +129,6 @@
 
   </div>
 
-  <hr>
-
-  <!-- ========================= -->
-  <!-- 🤖 RECOMMANDATIONS IA -->
-  <!-- ========================= -->
   <h2 class="section-title">🤖 Recommandations IA</h2>
 
   <div *ngIf="recommandations.length === 0" class="empty">
@@ -140,9 +159,6 @@
 
   </div>
 
-  <!-- ========================= -->
-  <!-- 🧠 RECOMMANDATIONS SKILL -->
-  <!-- ========================= -->
   <h2 class="section-title">🧠 Recommandations par compétences</h2>
 
   <div *ngIf="recommandationsSkill.length === 0" class="empty">
