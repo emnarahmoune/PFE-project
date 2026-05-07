@@ -5,6 +5,7 @@ import com.codeWithProject.ecom.service.dto.EmployeDTO;
 import java.util.Map;
 import java.util.List;
 import java.util.HashMap;
+import org.springframework.security.core.Authentication;
 
 
 public interface FormationService {
@@ -42,6 +43,9 @@ Map<String, Object> getByIdComplete(Long id);
 
 void activer(Long id);
 void desactiver(Long id);
+
+
+void resetProgress(Long formationId, Authentication auth);
 
 
 }

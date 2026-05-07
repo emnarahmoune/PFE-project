@@ -56,4 +56,7 @@ List<EmployeFormation> findByEmployeId(@Param("employeId") Long employeId);
 
 @Query("SELECT COUNT(ef) FROM EmployeFormation ef WHERE ef.formation.id = :id")
 int countByFormationId(@Param("id") Long id);
+
+
+
 }

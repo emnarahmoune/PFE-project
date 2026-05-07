@@ -198,4 +198,15 @@ public void desactiver(@PathVariable Long id) {
             return ResponseEntity.status(500).body("Erreur upload PDF");
         }
     }
+
+
+    @PutMapping("/reset-progress/{formationId}")
+public ResponseEntity<?> resetProgress(
+        @PathVariable Long formationId,
+        Authentication auth) {
+
+    formationService.resetProgress(formationId, auth);
+
+    return ResponseEntity.ok().build();
+}
 }

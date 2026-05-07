@@ -9,7 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
-
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import java.util.*;
 
 @Service
@@ -505,4 +506,26 @@ public class FormationServiceImpl implements FormationService {
 
         return niveau;
     }
+
+
+
+
+
+ @Override
+public void resetProgress(Long formationId, Authentication auth) {
+
+    Jwt jwt = (Jwt) auth.getPrincipal();
+    String email = jwt.getClaimAsString("email");
+
+    Employe employe = employeRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("Employé introuvable"));
+
+    EmployeFormation ef = employeFormationRepository
+            .findByEmploye_IdAndFormation_Id(employe.getId(), formationId)
+            .orElseThrow(() -> new RuntimeException("Inscription introuvable"));
+
+    ef.setProgression(0);
+
+    employeFormationRepository.save(ef);
+}
 }

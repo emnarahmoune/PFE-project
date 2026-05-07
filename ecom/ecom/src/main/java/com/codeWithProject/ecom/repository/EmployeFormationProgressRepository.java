@@ -4,7 +4,7 @@ import com.codeWithProject.ecom.entity.EmployeFormation;
 import com.codeWithProject.ecom.entity.EmployeFormationProgress;
 import com.codeWithProject.ecom.entity.FormationVideo;
 import org.springframework.data.jpa.repository.JpaRepository;
-
+import java.util.Optional;
 import java.util.List;
 
 public interface EmployeFormationProgressRepository
@@ -16,6 +16,6 @@ findByEmployeIdAndVideo_Formation_IdAndCompletedTrue(Long empId, Long formationI
 List<EmployeFormationProgress> findByFormationId(Long formationId);
 
 boolean existsByEmployeIdAndVideo(Long employeId, FormationVideo video);
-
+Optional<EmployeFormation> findByEmployeIdAndFormationId(Long employeId, Long formationId);
 
 }
