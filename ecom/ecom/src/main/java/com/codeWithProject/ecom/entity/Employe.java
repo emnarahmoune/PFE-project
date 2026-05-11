@@ -5,8 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
-import camundajar.impl.scala.annotation.meta.getter;
+import java.math.BigDecimal;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
@@ -41,8 +40,10 @@ public class Employe {
     private String password;
     private LocalDate dateEmbauche;
     private String poste;
-    private Double salaire;
-    private String adresse;
+@Column(precision = 10, scale = 2)
+private BigDecimal salaire;
+
+private String adresse;
     private String statut = "ACTIF";
     private String departement;
 
@@ -220,9 +221,11 @@ private List<DemandeConge> demandesConge = new ArrayList<>();
     }
 
     @Transient
-    public Double getSalaireAnnuel() {
-        return salaire == null ? 0.0 : salaire * 12;
-    }
+public BigDecimal getSalaireAnnuel() {
+    return salaire == null
+            ? BigDecimal.ZERO
+            : salaire.multiply(BigDecimal.valueOf(12));
+}
 
     // =========================
     // HOOKS

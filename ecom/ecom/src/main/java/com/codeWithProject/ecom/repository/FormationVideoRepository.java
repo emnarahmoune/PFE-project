@@ -9,9 +9,17 @@ import java.util.List;
 @Repository
 public interface FormationVideoRepository extends JpaRepository<FormationVideo, Long> {
 
-    long countByFormationId(Long formationId);
-    List<FormationVideo> findByFormationId(Long formationId);
+    List<FormationVideo> findByFormation_IdOrderByOrdreAsc(Long formationId);
 
-    List<FormationVideo> findByFormation_IdOrderByOrdre(Long formationId);
+    boolean existsByFormation_Id(Long formationId);
 
+    boolean existsByFormation_IdAndUrlYoutubeContainingIgnoreCase(
+            Long formationId,
+            String keyword
+    );
+
+    void deleteByFormation_IdAndUrlYoutubeContainingIgnoreCase(
+            Long formationId,
+            String keyword
+    );
 }

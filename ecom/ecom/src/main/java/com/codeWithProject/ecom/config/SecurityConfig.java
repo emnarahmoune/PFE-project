@@ -60,12 +60,16 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Auth / synchronisation
-                        .requestMatchers("/api/auth/**").authenticated()
+                        // =========================
+                        // Public / Auth
+                        // =========================
+                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/uploads/**").permitAll()
                         .requestMatchers("/api/photos/**").permitAll()
 
+                        // =========================
                         // Profil employé connecté
+                        // =========================
                         .requestMatchers(HttpMethod.GET, "/api/employes/mon-profil").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/employes/mon-profil").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/employes/mon-profil").authenticated()
@@ -79,7 +83,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/employes/change-email").authenticated()
                         .requestMatchers("/api/employes/me/competences/**").authenticated()
 
-                        // Audit RH réservé admin/RH
+                        // =========================
+                        // Audit RH réservé Admin/RH
+                        // =========================
                         .requestMatchers("/api/audit-logs/**").hasAnyAuthority(
                                 "ROLE_ADMIN_RH",
                                 "ROLE_admin_rh",
@@ -89,15 +95,14 @@ public class SecurityConfig {
                                 "admin"
                         )
 
+                        // =========================
                         // Congés
-
-                        // Endpoints publics
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/photos/**").permitAll()   // ✅ Autorise l'accès aux images
-                        // Endpoints nécessitant authentification
+                        // =========================
                         .requestMatchers("/api/conges/**").authenticated()
 
+                        // =========================
                         // Workflow manager
+                        // =========================
                         .requestMatchers("/api/workflow/manager/**").hasAnyAuthority(
                                 "ROLE_MANAGER",
                                 "ROLE_manager",
@@ -105,7 +110,9 @@ public class SecurityConfig {
                                 "manager"
                         )
 
+                        // =========================
                         // Workflow RH
+                        // =========================
                         .requestMatchers("/api/workflow/rh/**").hasAnyAuthority(
                                 "ROLE_ADMIN_RH",
                                 "ROLE_admin_rh",
@@ -117,13 +124,17 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/workflow/instance/**").authenticated()
 
+                        // =========================
                         // Modules authentifiés
+                        // =========================
                         .requestMatchers("/api/formations/**").authenticated()
                         .requestMatchers("/api/competences/**").authenticated()
                         .requestMatchers("/api/indicateurs/**").authenticated()
                         .requestMatchers("/api/employe-formations/**").authenticated()
 
+                        // =========================
                         // Employés
+                        // =========================
                         .requestMatchers(HttpMethod.GET, "/api/employes/**").authenticated()
 
                         .requestMatchers(HttpMethod.POST, "/api/employes/**").hasAnyAuthority(
@@ -155,6 +166,15 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.PATCH, "/api/employes/**").authenticated()
 
+                        // =========================
+                        // Recrutement interne
+                        // Temporairement authentifié pour débloquer POST/PUT/PATCH/DELETE
+                        // =========================
+                        .requestMatchers("/api/recrutement/**").authenticated()
+                        .requestMatchers("/api/candidatures/**").authenticated()
+                        .requestMatchers("/api/cv-analysis/**").authenticated()
+
+                        // IMPORTANT : toujours en dernier
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 ->
@@ -170,41 +190,40 @@ public class SecurityConfig {
         return http.build();
     }
 
-   @Bean
-public JwtAuthenticationConverter jwtAuthenticationConverter() {
-    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
 
-    converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-        Collection<GrantedAuthority> authorities = new ArrayList<>();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            Collection<GrantedAuthority> authorities = new ArrayList<>();
 
-        Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+            Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
 
-        if (realmAccess != null && realmAccess.containsKey("roles")) {
-            List<String> roles = (List<String>) realmAccess.get("roles");
+            if (realmAccess != null && realmAccess.containsKey("roles")) {
+                List<String> roles = (List<String>) realmAccess.get("roles");
 
-            for (String role : roles) {
+                for (String role : roles) {
+                    if ("admin".equalsIgnoreCase(role)) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+                        authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN_RH"));
 
-                if ("admin".equalsIgnoreCase(role)) {
-                    authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-                    authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN_RH"));
+                    } else if ("admin_rh".equalsIgnoreCase(role)) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN_RH"));
 
-                } else if ("admin_rh".equalsIgnoreCase(role)) {
-                    authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN_RH"));
+                    } else if ("manager".equalsIgnoreCase(role)) {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_MANAGER"));
 
-                } else if ("manager".equalsIgnoreCase(role)) {
-                    authorities.add(new SimpleGrantedAuthority("ROLE_MANAGER"));
-
-                } else {
-                    authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+                    } else {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+                    }
                 }
             }
-        }
 
-        return authorities;
-    });
+            return authorities;
+        });
 
-    return converter;
-}
+        return converter;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {

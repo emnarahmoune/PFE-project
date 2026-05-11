@@ -4,7 +4,7 @@ import com.codeWithProject.ecom.entity.Employe;
 import com.codeWithProject.ecom.entity.Manager;
 import com.codeWithProject.ecom.repository.EmployeRepository;
 import com.codeWithProject.ecom.repository.ManagerRepository;
-
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,7 +42,7 @@ public class KeycloakSyncService {
             newEmp.setActif(true);
             newEmp.setCompteVerrouille(false);
             newEmp.setDateEmbauche(LocalDate.now());
-            newEmp.setSalaire(0.0);
+            newEmp.setSalaire(BigDecimal.ZERO);
             newEmp.setStatut("ACTIF");
             newEmp.setSoldeConges(25);
             newEmp.setMatricule(generateMatricule());

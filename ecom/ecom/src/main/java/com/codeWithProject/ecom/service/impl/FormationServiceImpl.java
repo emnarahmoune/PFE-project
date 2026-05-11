@@ -1,16 +1,17 @@
 package com.codeWithProject.ecom.service.impl;
-
+import org.springframework.transaction.annotation.Transactional;
 import com.codeWithProject.ecom.entity.*;
 import com.codeWithProject.ecom.repository.*;
 import com.codeWithProject.ecom.service.FormationService;
 import com.codeWithProject.ecom.service.dto.EmployeDTO;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.Jwt;
+
 import java.util.*;
 
 @Service
@@ -21,15 +22,19 @@ public class FormationServiceImpl implements FormationService {
     private final EmployeCompetenceRepository employeCompetenceRepository;
     private final EmployeFormationRepository employeFormationRepository;
     private final PosteCompetenceRepository posteCompetenceRepository;
-    private final FormationCompetenceRepository formationCompetenceRepository;
     private final EmployeRepository employeRepository;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${ai.recommendation.url:http://localhost:5000/recommend}")
+    private String aiRecommendationUrl;
 
     // =========================
     // CREATE
     // =========================
+
     @Override
     public Formation create(Formation formation) {
-
         if (formation.getActif() == null) {
             formation.setActif(true);
         }
@@ -64,25 +69,24 @@ public class FormationServiceImpl implements FormationService {
     // =========================
     // GET ALL
     // =========================
+
     @Override
     public List<Map<String, Object>> getAll() {
-
         List<Formation> formations = formationRepository.findAllWithDetails();
         long totalEmployes = employeRepository.count();
 
         List<Map<String, Object>> result = new ArrayList<>();
 
-        for (Formation f : formations) {
-
-            int nbParticipants = employeFormationRepository.countByFormationId(f.getId());
+        for (Formation formation : formations) {
+            int nbParticipants = employeFormationRepository.countByFormationId(formation.getId());
 
             Map<String, Object> map = new HashMap<>();
-            map.put("id", f.getId());
-            map.put("titre", f.getTitre());
-            map.put("description", f.getDescription());
-            map.put("domaine", f.getDomaine());
-            map.put("dureeHeures", f.getDureeHeures());
-            map.put("actif", f.getActif());
+            map.put("id", formation.getId());
+            map.put("titre", formation.getTitre());
+            map.put("description", formation.getDescription());
+            map.put("domaine", formation.getDomaine());
+            map.put("dureeHeures", formation.getDureeHeures());
+            map.put("actif", formation.getActif());
             map.put("nombreParticipants", nbParticipants);
             map.put("totalEmployes", totalEmployes);
 
@@ -93,12 +97,17 @@ public class FormationServiceImpl implements FormationService {
     }
 
     // =========================
-    // GET BY ID COMPLET
+    // GET BY ID
     // =========================
-    @Override
-    @Transactional
-    public Map<String, Object> getByIdComplete(Long id) {
 
+    @Override
+    public Formation getById(Long id) {
+        return formationRepository.findByIdWithDetails(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Object> getByIdComplete(Long id) {
         Formation formation = formationRepository.findByIdWithDetails(id);
 
         if (formation == null) {
@@ -117,13 +126,12 @@ public class FormationServiceImpl implements FormationService {
         List<Map<String, Object>> videos = new ArrayList<>();
 
         if (formation.getVideos() != null) {
-            for (FormationVideo v : formation.getVideos()) {
-
+            for (FormationVideo video : formation.getVideos()) {
                 Map<String, Object> item = new HashMap<>();
-                item.put("id", v.getId());
-                item.put("titre", v.getTitre());
-                item.put("urlYoutube", v.getUrlYoutube());
-                item.put("ordre", v.getOrdre());
+                item.put("id", video.getId());
+                item.put("titre", video.getTitre());
+                item.put("urlYoutube", video.getUrlYoutube());
+                item.put("ordre", video.getOrdre());
 
                 videos.add(item);
             }
@@ -134,13 +142,12 @@ public class FormationServiceImpl implements FormationService {
         List<Map<String, Object>> supports = new ArrayList<>();
 
         if (formation.getSupports() != null) {
-            for (FormationSupport s : formation.getSupports()) {
-
+            for (FormationSupport support : formation.getSupports()) {
                 Map<String, Object> item = new HashMap<>();
-                item.put("id", s.getId());
-                item.put("titre", s.getTitre());
-                item.put("fichierUrl", s.getFichierUrl());
-                item.put("ordre", s.getOrdre());
+                item.put("id", support.getId());
+                item.put("titre", support.getTitre());
+                item.put("fichierUrl", support.getFichierUrl());
+                item.put("ordre", support.getOrdre());
 
                 supports.add(item);
             }
@@ -151,120 +158,8 @@ public class FormationServiceImpl implements FormationService {
         return response;
     }
 
-    // =========================
-    // GET BY ID SIMPLE
-    // =========================
-    @Override
-    public Formation getById(Long id) {
-        return formationRepository.findByIdWithDetails(id);
-    }
-
-    // =========================
-    // UPDATE
-    // =========================
-    @Override
-    public Formation update(Long id, Formation f) {
-
-        Formation formation = formationRepository.findByIdWithDetails(id);
-
-        if (formation == null) {
-            throw new RuntimeException("Formation introuvable");
-        }
-
-        formation.setTitre(f.getTitre());
-        formation.setDescription(f.getDescription());
-        formation.setDomaine(f.getDomaine());
-        formation.setDureeHeures(f.getDureeHeures());
-
-        if (f.getActif() != null) {
-            formation.setActif(f.getActif());
-        }
-
-        formation.getVideos().clear();
-
-        if (f.getVideos() != null) {
-            for (FormationVideo v : f.getVideos()) {
-                v.setId(null);
-                v.setFormation(formation);
-                formation.getVideos().add(v);
-            }
-        }
-
-        formation.getSupports().clear();
-
-        if (f.getSupports() != null) {
-            for (FormationSupport s : f.getSupports()) {
-                s.setId(null);
-                s.setFormation(formation);
-                formation.getSupports().add(s);
-            }
-        }
-
-        return formationRepository.save(formation);
-    }
-
-    // =========================
-    // DELETE
-    // =========================
-    @Override
-    public void delete(Long id) {
-        formationRepository.deleteById(id);
-    }
-
-    // =========================
-    // ACTIVER / DESACTIVER
-    // =========================
-    @Override
-    public void activer(Long id) {
-        Formation f = formationRepository.findByIdWithDetails(id);
-
-        if (f == null) {
-            throw new RuntimeException("Formation introuvable");
-        }
-
-        f.setActif(true);
-        formationRepository.save(f);
-    }
-
-    @Override
-    public void desactiver(Long id) {
-        Formation f = formationRepository.findByIdWithDetails(id);
-
-        if (f == null) {
-            throw new RuntimeException("Formation introuvable");
-        }
-
-        f.setActif(false);
-        formationRepository.save(f);
-    }
-
-    // =========================
-    // FORMATIONS ACTIVES
-    // =========================
-    @Override
-    public List<Formation> getActives() {
-        return formationRepository.findByActifTrue();
-    }
-
-    // =========================
-    // GET PARTICIPANTS
-    // =========================
-    @Override
-    public List<EmployeDTO> getParticipants(Long formationId) {
-
-        return employeFormationRepository.findByFormation_Id(formationId)
-                .stream()
-                .map(ef -> toEmployeDTO(ef.getEmploye()))
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    // =========================
-    // GET BY ID AVEC EMPLOYES
-    // =========================
     @Override
     public Map<String, Object> getByIdWithEmployes(Long id) {
-
         Map<String, Object> response = new HashMap<>(getByIdComplete(id));
 
         List<EmployeDTO> participants = employeFormationRepository
@@ -281,16 +176,136 @@ public class FormationServiceImpl implements FormationService {
     }
 
     // =========================
-    // FILTER DOMAINE
+    // UPDATE
     // =========================
+
+    @Override
+    @Transactional
+    public Formation update(Long id, Formation request) {
+        Formation formation = formationRepository.findByIdWithDetails(id);
+
+        if (formation == null) {
+            throw new RuntimeException("Formation introuvable");
+        }
+
+        formation.setTitre(request.getTitre());
+        formation.setDescription(request.getDescription());
+        formation.setDomaine(request.getDomaine());
+        formation.setDureeHeures(request.getDureeHeures());
+
+        if (request.getActif() != null) {
+            formation.setActif(request.getActif());
+        }
+
+        if (formation.getVideos() != null) {
+            formation.getVideos().clear();
+
+            if (request.getVideos() != null) {
+                int ordre = 1;
+
+                for (FormationVideo video : request.getVideos()) {
+                    video.setId(null);
+                    video.setFormation(formation);
+
+                    if (video.getOrdre() == 0) {
+                        video.setOrdre(ordre++);
+                    }
+
+                    formation.getVideos().add(video);
+                }
+            }
+        }
+
+        if (formation.getSupports() != null) {
+            formation.getSupports().clear();
+
+            if (request.getSupports() != null) {
+                int ordre = 1;
+
+                for (FormationSupport support : request.getSupports()) {
+                    support.setId(null);
+                    support.setFormation(formation);
+
+                    if (support.getOrdre() == 0) {
+                        support.setOrdre(ordre++);
+                    }
+
+                    formation.getSupports().add(support);
+                }
+            }
+        }
+
+        return formationRepository.save(formation);
+    }
+
+    // =========================
+    // DELETE
+    // =========================
+
+    @Override
+    public void delete(Long id) {
+        formationRepository.deleteById(id);
+    }
+
+    // =========================
+    // ACTIVER / DESACTIVER
+    // =========================
+
+    @Override
+    public void activer(Long id) {
+        Formation formation = formationRepository.findByIdWithDetails(id);
+
+        if (formation == null) {
+            throw new RuntimeException("Formation introuvable");
+        }
+
+        formation.setActif(true);
+        formationRepository.save(formation);
+    }
+
+    @Override
+    public void desactiver(Long id) {
+        Formation formation = formationRepository.findByIdWithDetails(id);
+
+        if (formation == null) {
+            throw new RuntimeException("Formation introuvable");
+        }
+
+        formation.setActif(false);
+        formationRepository.save(formation);
+    }
+
+    // =========================
+    // FILTRES
+    // =========================
+
+    @Override
+    public List<Formation> getActives() {
+        return formationRepository.findByActifTrue();
+    }
+
     @Override
     public List<Formation> getByDomaine(String domaine) {
         return formationRepository.findByDomaine(domaine);
     }
 
     // =========================
+    // PARTICIPANTS
+    // =========================
+
+    @Override
+    public List<EmployeDTO> getParticipants(Long formationId) {
+        return employeFormationRepository.findByFormation_Id(formationId)
+                .stream()
+                .map(ef -> toEmployeDTO(ef.getEmploye()))
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    // =========================
     // FORMATIONS PAR EMPLOYE
     // =========================
+
     @Override
     public List<Formation> getFormationsByEmploye(Long employeId) {
         return employeFormationRepository.findByEmployeId(employeId)
@@ -301,57 +316,91 @@ public class FormationServiceImpl implements FormationService {
     }
 
     // =========================
-    // RECO IA = APPEL FLASK /recommend
+    // IA LOGIQUE 1 : GAP POSTE
     // =========================
-    @Override
-    public List<Formation> getRecommendationsAI(Long employeId) {
 
-        Employe employe = employeRepository.findById(employeId)
-                .orElseThrow(() -> new RuntimeException("Employé introuvable avec id: " + employeId));
+@Override
+@Transactional(readOnly = true)
+public List<Formation> getRecommendationsAI(Long employeId) {
+    try {
+        Employe employe = getEmployeOrThrow(employeId);
 
-        List<EmployeCompetence> competencesEmploye =
-                employeCompetenceRepository.findByEmploye_Id(employeId);
+        Map<String, Integer> userSkills = buildUserSkills(employeId);
+        Map<String, Integer> requiredSkills = buildRequiredSkillsByPoste(employe.getPoste());
 
-        Map<String, Integer> userSkills = new HashMap<>();
+        System.out.println("===== RECO GAP POSTE SPRING =====");
+        System.out.println("EMPLOYE ID = " + employeId);
+        System.out.println("POSTE = " + employe.getPoste());
+        System.out.println("USER SKILLS = " + userSkills);
+        System.out.println("REQUIRED SKILLS = " + requiredSkills);
+        System.out.println("=================================");
 
-        for (EmployeCompetence ec : competencesEmploye) {
-            if (ec.getCompetence() != null && ec.getCompetence().getNom() != null) {
-                userSkills.put(
-                        ec.getCompetence().getNom(),
-                        convertLevelToInt(ec.getNiveau())
-                );
-            }
+        if (userSkills.isEmpty()) {
+            System.out.println("⚠️ Aucune compétence utilisateur trouvée");
+            return List.of();
         }
 
-        Map<String, Integer> requiredSkills = new HashMap<>();
-
-        if (employe.getPoste() != null && !employe.getPoste().isBlank()) {
-
-            String poste = employe.getPoste().trim();
-
-            List<PosteCompetence> competencesPoste =
-                    posteCompetenceRepository.findByPosteIgnoreCase(poste);
-
-            if (competencesPoste == null || competencesPoste.isEmpty()) {
-                competencesPoste = posteCompetenceRepository.findByPosteContainingIgnoreCase(poste);
-            }
-
-            if (competencesPoste != null) {
-                for (PosteCompetence pc : competencesPoste) {
-                    if (pc.getCompetence() != null && pc.getCompetence().getNom() != null) {
-                        requiredSkills.put(
-                                pc.getCompetence().getNom(),
-                                convertLevelToInt(pc.getNiveauRequis())
-                        );
-                    }
-                }
-            }
+        if (requiredSkills.isEmpty()) {
+            System.out.println("⚠️ Aucune compétence requise trouvée pour le poste : " + employe.getPoste());
+            return List.of();
         }
 
-        List<Formation> formationsNonSuivies =
-                formationRepository.findFormationsNonSuivies(employeId);
+        List<Formation> formationsNonSuivies = getFormationsNonSuivies(employeId);
 
-        if (formationsNonSuivies == null || formationsNonSuivies.isEmpty()) {
+        if (formationsNonSuivies.isEmpty()) {
+    System.out.println("⚠️ Aucune formation interne non suivie trouvée, l’IA utilisera les recommandations externes.");
+}
+
+        List<String> formationTitles = formationsNonSuivies.stream()
+                .map(Formation::getTitre)
+                .filter(Objects::nonNull)
+                .toList();
+
+        List<String> formationsSuivies = buildFormationsSuivies(employeId);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("mode", "GAP_POSTE");
+        payload.put("poste", employe.getPoste());
+        payload.put("userSkills", userSkills);
+        payload.put("requiredSkills", requiredSkills);
+        payload.put("formations", formationTitles);
+        payload.put("formationsSuivies", formationsSuivies);
+
+        System.out.println("PAYLOAD GAP POSTE = " + payload);
+
+        System.out.println("===== RECO GAP POSTE SPRING =====");
+System.out.println("EMPLOYE ID = " + employeId);
+System.out.println("POSTE = " + employe.getPoste());
+System.out.println("USER SKILLS = " + userSkills);
+System.out.println("REQUIRED SKILLS = " + requiredSkills);
+System.out.println("=================================");
+        return callFlaskAndMapToFormations(payload, formationsNonSuivies);
+
+    } catch (Exception e) {
+        System.err.println("❌ ERREUR getRecommendationsAI : " + e.getMessage());
+        e.printStackTrace();
+        return List.of();
+    }
+}
+
+    // =========================
+    // IA LOGIQUE 2 : BOOST COMPETENCES
+    // =========================
+
+   @Override
+@Transactional(readOnly = true)
+public List<Formation> getRecommendationsBySkills(Long employeId) {
+        Employe employe = getEmployeOrThrow(employeId);
+
+        Map<String, Integer> userSkills = buildUserSkills(employeId);
+
+        if (userSkills.isEmpty()) {
+            return List.of();
+        }
+
+        List<Formation> formationsNonSuivies = getFormationsNonSuivies(employeId);
+
+        if (formationsNonSuivies.isEmpty()) {
             return List.of();
         }
 
@@ -360,123 +409,242 @@ public class FormationServiceImpl implements FormationService {
                 .filter(Objects::nonNull)
                 .toList();
 
-        List<String> formationsSuivies = employeFormationRepository.findByEmployeId(employeId)
+        List<String> formationsSuivies = buildFormationsSuivies(employeId);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("mode", "BOOST_COMPETENCES");
+        payload.put("poste", employe.getPoste());
+        payload.put("userSkills", userSkills);
+        payload.put("requiredSkills", Map.of());
+        payload.put("formations", formationTitles);
+        payload.put("formationsSuivies", formationsSuivies);
+
+        return callFlaskAndMapToFormations(payload, formationsNonSuivies);
+    }
+
+    // =========================
+    // ALIASES ANCIENS
+    // =========================
+
+    @Override
+    public List<Formation> getRecommendations(Long employeId) {
+        return getRecommendationsAI(employeId);
+    }
+
+    @Override
+    public List<Formation> recommander(Long employeId) {
+        return getRecommendationsAI(employeId);
+    }
+
+    // =========================
+    // RESET PROGRESS
+    // =========================
+
+    @Override
+    public void resetProgress(Long formationId, Authentication auth) {
+        Jwt jwt = (Jwt) auth.getPrincipal();
+        String email = jwt.getClaimAsString("email");
+
+        Employe employe = employeRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Employé introuvable"));
+
+        EmployeFormation employeFormation = employeFormationRepository
+                .findByEmploye_IdAndFormation_Id(employe.getId(), formationId)
+                .orElseThrow(() -> new RuntimeException("Inscription introuvable"));
+
+        employeFormation.setProgression(0);
+
+        employeFormationRepository.save(employeFormation);
+    }
+
+    // =========================
+    // HELPERS IA
+    // =========================
+
+    private Employe getEmployeOrThrow(Long employeId) {
+        return employeRepository.findById(employeId)
+                .orElseThrow(() -> new RuntimeException("Employé introuvable avec id: " + employeId));
+    }
+
+    private List<Formation> getFormationsNonSuivies(Long employeId) {
+        List<Formation> formations = formationRepository.findFormationsNonSuivies(employeId);
+
+        if (formations == null) {
+            return List.of();
+        }
+
+        return formations.stream()
+                .filter(Objects::nonNull)
+                .filter(f -> Boolean.TRUE.equals(f.getActif()))
+                .toList();
+    }
+
+    private Map<String, Integer> buildUserSkills(Long employeId) {
+        List<EmployeCompetence> competencesEmploye =
+                employeCompetenceRepository.findByEmploye_Id(employeId);
+
+        Map<String, Integer> result = new LinkedHashMap<>();
+
+        if (competencesEmploye == null) {
+            return result;
+        }
+
+        for (EmployeCompetence ec : competencesEmploye) {
+            if (ec.getCompetence() == null || ec.getCompetence().getNom() == null) {
+                continue;
+            }
+
+            result.put(
+                    ec.getCompetence().getNom(),
+                    convertLevelToInt(ec.getNiveau())
+            );
+        }
+
+        return result;
+    }
+
+private Map<String, Integer> buildRequiredSkillsByPoste(String poste) {
+    Map<String, Integer> result = new LinkedHashMap<>();
+
+    if (poste == null || poste.isBlank()) {
+        System.out.println("⚠️ Poste employé vide");
+        return result;
+    }
+
+    String cleanedPoste = poste.trim();
+
+    List<PosteCompetence> competencesPoste =
+            posteCompetenceRepository.findByPosteIgnoreCaseWithCompetence(cleanedPoste);
+
+    if (competencesPoste == null || competencesPoste.isEmpty()) {
+        competencesPoste =
+                posteCompetenceRepository.findMatchingPosteWithCompetence(cleanedPoste);
+    }
+
+    System.out.println("===== DEBUG POSTE COMPETENCE =====");
+    System.out.println("POSTE EMPLOYE = " + cleanedPoste);
+    System.out.println("NB COMPETENCES POSTE = " + (competencesPoste != null ? competencesPoste.size() : 0));
+    System.out.println("==================================");
+
+    if (competencesPoste == null || competencesPoste.isEmpty()) {
+        return result;
+    }
+
+    for (PosteCompetence pc : competencesPoste) {
+        if (pc.getCompetence() == null || pc.getCompetence().getNom() == null) {
+            continue;
+        }
+
+        result.put(
+                pc.getCompetence().getNom(),
+                convertLevelToInt(pc.getNiveauRequis())
+        );
+    }
+
+    return result;
+}
+    private List<String> buildFormationsSuivies(Long employeId) {
+        return employeFormationRepository.findByEmployeId(employeId)
                 .stream()
                 .map(EmployeFormation::getFormation)
                 .filter(Objects::nonNull)
                 .map(Formation::getTitre)
                 .filter(Objects::nonNull)
                 .toList();
-
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("userSkills", userSkills);
-        payload.put("requiredSkills", requiredSkills);
-        payload.put("formations", formationTitles);
-        payload.put("formationsSuivies", formationsSuivies);
-
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> response = restTemplate.postForObject(
-                    "http://localhost:5000/recommend",
-                    payload,
-                    List.class
-            );
-
-           if (response == null || response.isEmpty()) {
-    return List.of();
-}
-            List<String> recommendedTitles = response.stream()
-                    .map(item -> item.get("formation"))
-                    .filter(Objects::nonNull)
-                    .map(Object::toString)
-                    .toList();
-
-            return formationsNonSuivies.stream()
-                    .filter(f -> recommendedTitles.contains(f.getTitre()))
-                    .limit(3)
-                    .toList();
-
-        } catch (Exception e) {
-    e.printStackTrace();
-    return List.of();
-}
     }
 
-    // =========================
-    // RECO PAR COMPETENCES
-    // =========================
-    @Override
-    public List<Formation> getRecommendationsBySkills(Long employeId) {
+   @SuppressWarnings("unchecked")
+private List<Formation> callFlaskAndMapToFormations(
+        Map<String, Object> payload,
+        List<Formation> formationsDisponibles
+) {
+    try {
+        Map<String, Object> response = restTemplate.postForObject(
+                aiRecommendationUrl,
+                payload,
+                Map.class
+        );
 
-        List<EmployeCompetence> competencesEmploye =
-                employeCompetenceRepository.findByEmploye_Id(employeId);
-
-        if (competencesEmploye == null || competencesEmploye.isEmpty()) {
+        if (response == null || response.isEmpty()) {
             return List.of();
         }
 
-        List<Long> competenceIds = competencesEmploye.stream()
-                .filter(ec -> ec.getCompetence() != null)
-                .map(ec -> ec.getCompetence().getId())
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
+        Object recommendationsObject = response.get("recommendations");
 
-        if (competenceIds.isEmpty()) {
+        if (!(recommendationsObject instanceof List<?> recommendations)) {
+            System.out.println("⚠️ Réponse IA sans recommendations : " + response);
             return List.of();
         }
 
-        return formationRepository.findRecommendedByCompetenceIds(employeId, competenceIds)
-                .stream()
-                .limit(3)
+        Map<String, Formation> formationByTitle = new LinkedHashMap<>();
+
+        for (Formation formation : formationsDisponibles) {
+            if (formation.getTitre() != null) {
+                formationByTitle.put(formation.getTitre(), formation);
+            }
+        }
+
+        List<Formation> result = new ArrayList<>();
+
+        for (Object obj : recommendations) {
+            if (!(obj instanceof Map<?, ?> item)) {
+                continue;
+            }
+
+            Object titleObject = item.get("formation");
+
+            if (titleObject == null) {
+                titleObject = item.get("title");
+            }
+
+            if (titleObject == null) {
+                continue;
+            }
+
+            Formation formation = formationByTitle.get(titleObject.toString());
+
+            if (formation != null) {
+                result.add(formation);
+            }
+        }
+
+        return result.stream()
+                .limit(6)
                 .toList();
+
+    } catch (Exception e) {
+        System.err.println("❌ Erreur appel IA Flask : " + e.getMessage());
+        e.printStackTrace();
+        return List.of();
     }
+}
 
     // =========================
-    // RECOMMANDATION SIMPLE
+    // HELPERS DTO
     // =========================
-    @Override
-    public List<Formation> getRecommendations(Long employeId) {
-        return getRecommendationsBySkills(employeId);
-    }
 
-    // =========================
-    // RECOMMANDATION PRINCIPALE
-    // =========================
-    @Override
-    public List<Formation> recommander(Long employeId) {
-        return getRecommendationsBySkills(employeId);
-    }
-
-    // =========================
-    // HELPERS
-    // =========================
-    private EmployeDTO toEmployeDTO(Employe e) {
-        if (e == null) {
+    private EmployeDTO toEmployeDTO(Employe employe) {
+        if (employe == null) {
             return null;
         }
 
-        String photo = e.getPhotoUrl();
+        String photo = employe.getPhotoUrl();
 
         return EmployeDTO.builder()
-        .id(e.getId())
-        .matricule(e.getMatricule())
-        .nom(e.getNom())
-        .prenom(e.getPrenom())
-        .email(e.getEmail())
-        .telephone(e.getTelephone())
-        .poste(e.getPoste())
-        .departement(e.getDepartement())
-        .statut(e.getStatut())
-        .dateEmbauche(e.getDateEmbauche())
-        .soldeConges(e.getSoldeConges())
-
-        .photoUrl(photo)
-        .employePhotoProfil(photo)
-
-        .build();
+                .id(employe.getId())
+                .matricule(employe.getMatricule())
+                .nom(employe.getNom())
+                .prenom(employe.getPrenom())
+                .email(employe.getEmail())
+                .telephone(employe.getTelephone())
+                .poste(employe.getPoste())
+                .departement(employe.getDepartement())
+                .statut(employe.getStatut())
+                .dateEmbauche(employe.getDateEmbauche())
+                .soldeConges(employe.getSoldeConges())
+                .photoUrl(photo)
+                .employePhotoProfil(photo)
+                .build();
     }
 
     private int convertLevelToInt(String niveau) {
@@ -485,10 +653,11 @@ public class FormationServiceImpl implements FormationService {
         }
 
         return switch (niveau.trim().toUpperCase()) {
-            case "DEBUTANT" -> 1;
-            case "INTERMEDIAIRE" -> 2;
-            case "AVANCE" -> 3;
+            case "DEBUTANT", "DÉBUTANT" -> 1;
+            case "INTERMEDIAIRE", "INTERMÉDIAIRE" -> 2;
+            case "AVANCE", "AVANCÉ" -> 3;
             case "EXPERT" -> 4;
+            case "MAITRISE", "MAÎTRISE" -> 5;
             default -> {
                 try {
                     yield Integer.parseInt(niveau.trim());
@@ -500,32 +669,6 @@ public class FormationServiceImpl implements FormationService {
     }
 
     private int convertLevelToInt(Integer niveau) {
-        if (niveau == null) {
-            return 0;
-        }
-
-        return niveau;
+        return niveau != null ? niveau : 0;
     }
-
-
-
-
-
- @Override
-public void resetProgress(Long formationId, Authentication auth) {
-
-    Jwt jwt = (Jwt) auth.getPrincipal();
-    String email = jwt.getClaimAsString("email");
-
-    Employe employe = employeRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Employé introuvable"));
-
-    EmployeFormation ef = employeFormationRepository
-            .findByEmploye_IdAndFormation_Id(employe.getId(), formationId)
-            .orElseThrow(() -> new RuntimeException("Inscription introuvable"));
-
-    ef.setProgression(0);
-
-    employeFormationRepository.save(ef);
-}
 }

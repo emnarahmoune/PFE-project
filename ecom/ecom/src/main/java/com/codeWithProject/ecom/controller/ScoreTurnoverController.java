@@ -124,33 +124,33 @@ public class ScoreTurnoverController {
         return ResponseEntity.ok(ApiResponse.success(scores, "Derniers scores récupérés"));
     }
 
-    @PostMapping("/calculer/employe/{employeId}")
-    @Operation(summary = "Calcule un nouveau score pour un employé")
-    public ResponseEntity<ApiResponse<ScoreTurnoverDTO>> calculerScorePourEmploye(
-            @Parameter(description = "ID de l'employé") @PathVariable Long employeId,
-            @RequestParam Long systemeBIId) {
+  @PostMapping("/calculer/employe/{employeId}")
+@Operation(summary = "Calcule un nouveau score pour un employé")
+public ResponseEntity<ApiResponse<ScoreTurnoverDTO>> calculerScorePourEmploye(
+        @Parameter(description = "ID de l'employé") @PathVariable Long employeId,
+        @RequestParam(required = false) Long systemeBIId) {
 
-        log.info("POST /api/scores-turnover/calculer/employe/{} - système BI: {}", employeId, systemeBIId);
+    log.info("POST /api/scores-turnover/calculer/employe/{} - système BI: {}", employeId, systemeBIId);
 
-        ScoreTurnoverDTO score = scoreTurnoverService.calculerScorePourEmploye(employeId, systemeBIId);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.created(score, "Score calculé avec succès"));
-    }
+    ScoreTurnoverDTO score = scoreTurnoverService.calculerScorePourEmploye(employeId, systemeBIId);
 
+    return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(ApiResponse.created(score, "Score recalculé avec succès"));
+}
     @PostMapping("/calculer/tous")
-    @Operation(summary = "Calcule les scores pour tous les employés")
-    public ResponseEntity<ApiResponse<List<ScoreTurnoverDTO>>> calculerScoresPourTousEmployes(
-            @RequestParam Long systemeBIId) {
+@Operation(summary = "Calcule les scores pour tous les employés")
+public ResponseEntity<ApiResponse<List<ScoreTurnoverDTO>>> calculerScoresPourTousEmployes(
+        @RequestParam(required = false) Long systemeBIId) {
 
-        log.info("POST /api/scores-turnover/calculer/tous - système BI: {}", systemeBIId);
+    log.info("POST /api/scores-turnover/calculer/tous - système BI: {}", systemeBIId);
 
-        List<ScoreTurnoverDTO> scores = scoreTurnoverService.calculerScoresPourTousEmployes(systemeBIId);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(ApiResponse.created(scores, "Scores calculés pour tous les employés"));
-    }
+    List<ScoreTurnoverDTO> scores = scoreTurnoverService.calculerScoresPourTousEmployes(systemeBIId);
 
+    return ResponseEntity
+            .status(HttpStatus.CREATED)
+            .body(ApiResponse.created(scores, "Scores recalculés pour tous les employés"));
+}
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprime un score")
     public ResponseEntity<ApiResponse<Void>> deleteScore(

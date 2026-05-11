@@ -133,4 +133,14 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
             @Param("managerId") Long managerId,
             @Param("noteMax") Double noteMax
     );
+     @Query("""
+        SELECT AVG(e.note)
+        FROM Evaluation e
+        WHERE e.employe.id = :employeId
+        AND YEAR(e.dateEvaluation) = :annee
+    """)
+    Double moyenneEvaluationAnnuelle(
+            @Param("employeId") Long employeId,
+            @Param("annee") int annee
+    );
 }

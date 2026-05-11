@@ -1,7 +1,16 @@
 package com.codeWithProject.ecom.service.impl;
 
-import com.codeWithProject.ecom.entity.*;
-import com.codeWithProject.ecom.repository.*;
+import com.codeWithProject.ecom.entity.Employe;
+import com.codeWithProject.ecom.entity.EmployeFormation;
+import com.codeWithProject.ecom.entity.IndicateurRH;
+import com.codeWithProject.ecom.entity.ScoreTurnover;
+import com.codeWithProject.ecom.entity.SystemeBI;
+import com.codeWithProject.ecom.repository.EmployeFormationRepository;
+import com.codeWithProject.ecom.repository.EmployeRepository;
+import com.codeWithProject.ecom.repository.EvaluationRepository;
+import com.codeWithProject.ecom.repository.IndicateurRHRepository;
+import com.codeWithProject.ecom.repository.ScoreTurnoverRepository;
+import com.codeWithProject.ecom.repository.SystemeBIRepository;
 import com.codeWithProject.ecom.service.ParametreService;
 import com.codeWithProject.ecom.service.ScoreTurnoverService;
 import com.codeWithProject.ecom.service.dto.ScoreTurnoverDTO;
@@ -15,9 +24,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,24 +45,27 @@ public class ScoreTurnoverServiceImpl implements ScoreTurnoverService {
     private final SystemeBIRepository systemeBIRepository;
     private final EvaluationRepository evaluationRepository;
     private final IndicateurRHRepository indicateurRHRepository;
+    private final EmployeFormationRepository employeFormationRepository;
     private final ParametreService parametreService;
     private final ScoreTurnoverMapper mapper;
 
-    // ==================== MÉTHODES CRUD ====================
-
     @Override
     public List<ScoreTurnoverDTO> findAll() {
-        return scoreTurnoverRepository.findAll().stream()
+        return scoreTurnoverRepository.findAll()
+                .stream()
                 .map(mapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     public Page<ScoreTurnoverDTO> findAll(Pageable pageable) {
         Page<ScoreTurnover> page = scoreTurnoverRepository.findAll(pageable);
-        List<ScoreTurnoverDTO> dtos = page.getContent().stream()
+
+        List<ScoreTurnoverDTO> dtos = page.getContent()
+                .stream()
                 .map(mapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
+
         return new PageImpl<>(dtos, pageable, page.getTotalElements());
     }
 
@@ -61,54 +76,76 @@ public class ScoreTurnoverServiceImpl implements ScoreTurnoverService {
 
     @Override
     public List<ScoreTurnoverDTO> findByEmployeId(Long employeId) {
-        return scoreTurnoverRepository.findByEmployeId(employeId).stream()
+        return scoreTurnoverRepository.findByEmployeId(employeId)
+                .stream()
                 .map(mapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     public List<ScoreTurnoverDTO> findHistoriqueEmploye(Long employeId) {
-        return scoreTurnoverRepository.findHistoriqueEmploye(employeId).stream()
+        return scoreTurnoverRepository.findHistoriqueEmploye(employeId)
+                .stream()
                 .map(mapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     public Optional<ScoreTurnoverDTO> findDernierScoreEmploye(Long employeId) {
         return scoreTurnoverRepository.findDernierScoreEmploye(employeId)
-                .stream().findFirst()
+                .stream()
+                .findFirst()
                 .map(mapper::toDto);
     }
 
     @Override
     public List<ScoreTurnoverDTO> findByNiveauRisque(String niveauRisque) {
-        return scoreTurnoverRepository.findByNiveauRisque(niveauRisque).stream()
+        return scoreTurnoverRepository.findByNiveauRisque(niveauRisque)
+                .stream()
                 .map(mapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     public List<ScoreTurnoverDTO> findScoresRisques() {
-        return scoreTurnoverRepository.findScoresRisques().stream()
+        return scoreTurnoverRepository.findScoresRisques()
+                .stream()
                 .map(mapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     public List<ScoreTurnoverDTO> findScoresCritiques() {
-        return scoreTurnoverRepository.findScoresCritiques().stream()
+        return scoreTurnoverRepository.findScoresCritiques()
+                .stream()
                 .map(mapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
+    @Transactional
     public List<ScoreTurnoverDTO> findDerniersScores() {
-        return scoreTurnoverRepository.findDerniersScores().stream()
-                .map(mapper::toDto)
-                .collect(Collectors.toList());
-    }
+        SystemeBI systemeBI = getSystemeBIActif();
 
-    // ==================== CALCUL DES SCORES (dynamique) ====================
+        List<Employe> employes = employeRepository.findAll();
+
+        for (Employe employe : employes) {
+            try {
+                calculerScorePourEmploye(employe.getId(), systemeBI.getId());
+            } catch (Exception e) {
+                log.warn(
+                        "Score turnover non recalculé pour employé {} : {}",
+                        employe.getId(),
+                        e.getMessage()
+                );
+            }
+        }
+
+        return scoreTurnoverRepository.findDerniersScores()
+                .stream()
+                .map(mapper::toDto)
+                .toList();
+    }
 
     @Override
     @Transactional
@@ -116,66 +153,116 @@ public class ScoreTurnoverServiceImpl implements ScoreTurnoverService {
         Employe employe = employeRepository.findById(employeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employé", employeId));
 
-        SystemeBI systemeBI = systemeBIRepository.findById(systemeBIId)
-                .orElseThrow(() -> new ResourceNotFoundException("SystemeBI", systemeBIId));
+        SystemeBI systemeBI = systemeBIId != null
+                ? systemeBIRepository.findById(systemeBIId)
+                    .orElseThrow(() -> new ResourceNotFoundException("SystemeBI", systemeBIId))
+                : getSystemeBIActif();
 
-        // Récupération des poids (dynamiques)
-        double poidsAnciennete = parametreService.getDouble("score.turnover.poids.anciennete", 0.25);
-        double poidsSalaire     = parametreService.getDouble("score.turnover.poids.salaire", 0.30);
+        double poidsAnciennete = parametreService.getDouble("score.turnover.poids.anciennete", 0.20);
+        double poidsSalaire = parametreService.getDouble("score.turnover.poids.salaire", 0.25);
         double poidsPerformance = parametreService.getDouble("score.turnover.poids.performance", 0.20);
-        double poidsFormation   = parametreService.getDouble("score.turnover.poids.formation", 0.15);
-        double poidsAbsenteisme = parametreService.getDouble("score.turnover.poids.absenteisme", 0.10);
+        double poidsFormation = parametreService.getDouble("score.turnover.poids.formation", 0.15);
+        double poidsAbsenteisme = parametreService.getDouble("score.turnover.poids.absenteisme", 0.20);
+
+        double totalPoids = poidsAnciennete
+                + poidsSalaire
+                + poidsPerformance
+                + poidsFormation
+                + poidsAbsenteisme;
+
+        if (totalPoids <= 0) {
+            totalPoids = 1.0;
+        }
+
+        poidsAnciennete = poidsAnciennete / totalPoids;
+        poidsSalaire = poidsSalaire / totalPoids;
+        poidsPerformance = poidsPerformance / totalPoids;
+        poidsFormation = poidsFormation / totalPoids;
+        poidsAbsenteisme = poidsAbsenteisme / totalPoids;
 
         double scoreAnciennete = calculerScoreAnciennete(employe.getDateEmbauche());
-        double scoreSalaire    = calculerScoreSalaire(employe.getSalaire());
-        double scoreFormation  = calculerScoreFormation(employe.getFormations().size());
+        double scoreSalaire = calculerScoreSalaire(employe.getSalaire());
         double scorePerformance = calculerScorePerformance(employeId);
+        double scoreFormation = calculerScoreFormation(employeId);
         double scoreAbsenteisme = calculerScoreAbsenteisme(employeId);
 
-        double scoreGlobal = scoreAnciennete * poidsAnciennete
-                + scoreSalaire    * poidsSalaire
-                + scorePerformance * poidsPerformance
-                + scoreFormation   * poidsFormation
-                + scoreAbsenteisme * poidsAbsenteisme;
+        double scoreGlobal =
+                scoreAnciennete * poidsAnciennete
+                        + scoreSalaire * poidsSalaire
+                        + scorePerformance * poidsPerformance
+                        + scoreFormation * poidsFormation
+                        + scoreAbsenteisme * poidsAbsenteisme;
+
+        scoreGlobal = round2(clamp(scoreGlobal, 0, 100));
 
         String niveau = determinerNiveauRisque(scoreGlobal);
-        String facteurs = identifierFacteurs(scoreAnciennete, scoreSalaire, scorePerformance, scoreFormation, scoreAbsenteisme);
-        String actions = recommanderActions(scoreAnciennete, scoreSalaire, scorePerformance, scoreFormation, scoreAbsenteisme, employe);
 
-        ScoreTurnover score = ScoreTurnover.builder()
-                .employe(employe)
-                .systemeBI(systemeBI)
-                .score(scoreGlobal)
-                .niveauRisque(niveau)
-                .datePrediction(LocalDate.now())
-                .periodePrediction("6_MOIS")
-                .facteursPrincipaux(facteurs)
-                .actionRecommandee(actions)
-                .confianceModele(parametreService.getDouble("score.turnover.confiance.modele", 0.85))
-                .versionModele(parametreService.getValeur("score.turnover.version.modele", "v2.0"))
-                .scoreAnciennete(scoreAnciennete)
-                .scoreSalaire(scoreSalaire)
-                .scorePerformance(scorePerformance)
-                .scoreFormation(scoreFormation)
-                .scoreAbsenteisme(scoreAbsenteisme)
-                .build();
+        String facteurs = identifierFacteurs(
+                scoreAnciennete,
+                scoreSalaire,
+                scorePerformance,
+                scoreFormation,
+                scoreAbsenteisme
+        );
+
+        String actions = recommanderActions(
+                scoreAnciennete,
+                scoreSalaire,
+                scorePerformance,
+                scoreFormation,
+                scoreAbsenteisme
+        );
+
+        LocalDate today = LocalDate.now();
+
+        ScoreTurnover score = scoreTurnoverRepository
+                .findByEmployeIdAndDatePrediction(employeId, today)
+                .orElseGet(ScoreTurnover::new);
+
+        score.setEmploye(employe);
+        score.setSystemeBI(systemeBI);
+        score.setScore(scoreGlobal);
+        score.setNiveauRisque(niveau);
+        score.setDatePrediction(today);
+        score.setPeriodePrediction("6_MOIS");
+        score.setFacteursPrincipaux(facteurs);
+        score.setActionRecommandee(actions);
+        score.setConfianceModele(parametreService.getDouble("score.turnover.confiance.modele", 0.88));
+        score.setVersionModele(parametreService.getValeur("score.turnover.version.modele", "v3.0-dynamique"));
+        score.setScoreAnciennete(round2(scoreAnciennete));
+        score.setScoreSalaire(round2(scoreSalaire));
+        score.setScorePerformance(round2(scorePerformance));
+        score.setScoreFormation(round2(scoreFormation));
+        score.setScoreAbsenteisme(round2(scoreAbsenteisme));
 
         ScoreTurnover saved = scoreTurnoverRepository.save(score);
+
         return mapper.toDto(saved);
     }
 
     @Override
     @Transactional
     public List<ScoreTurnoverDTO> calculerScoresPourTousEmployes(Long systemeBIId) {
+        SystemeBI systemeBI = systemeBIId != null
+                ? systemeBIRepository.findById(systemeBIId)
+                    .orElseThrow(() -> new ResourceNotFoundException("SystemeBI", systemeBIId))
+                : getSystemeBIActif();
+
         List<Employe> employes = employeRepository.findAll();
         List<ScoreTurnoverDTO> resultats = new ArrayList<>();
-        for (Employe e : employes) {
+
+        for (Employe employe : employes) {
             try {
-                resultats.add(calculerScorePourEmploye(e.getId(), systemeBIId));
-            } catch (Exception ex) {
-                log.error("Erreur lors du calcul pour employé {}: {}", e.getId(), ex.getMessage());
+                resultats.add(calculerScorePourEmploye(employe.getId(), systemeBI.getId()));
+            } catch (Exception e) {
+                log.error(
+                        "Erreur calcul score turnover employé {} : {}",
+                        employe.getId(),
+                        e.getMessage()
+                );
             }
         }
+
         return resultats;
     }
 
@@ -184,13 +271,12 @@ public class ScoreTurnoverServiceImpl implements ScoreTurnoverService {
         return calculerScorePourEmploye(employeId, systemeBIId);
     }
 
-    // ==================== SUPPRESSION ====================
-
     @Override
     public void delete(Long id) {
         if (!scoreTurnoverRepository.existsById(id)) {
             throw new ResourceNotFoundException("ScoreTurnover", id);
         }
+
         scoreTurnoverRepository.deleteById(id);
     }
 
@@ -198,69 +284,104 @@ public class ScoreTurnoverServiceImpl implements ScoreTurnoverService {
     public void deleteScoresObsoletes(int jours) {
         LocalDate dateLimite = LocalDate.now().minusDays(jours);
         List<ScoreTurnover> obsoletes = scoreTurnoverRepository.findScoresObsoletes(dateLimite);
+
         scoreTurnoverRepository.deleteAll(obsoletes);
+
         log.info("{} scores obsolètes supprimés", obsoletes.size());
     }
 
-    // ==================== STATISTIQUES ====================
-
     @Override
     public Map<String, Long> getRepartitionRisques() {
-        return scoreTurnoverRepository.repartitionRisquesActuels().stream()
+        return scoreTurnoverRepository.repartitionRisquesActuels()
+                .stream()
                 .collect(Collectors.toMap(
-                        arr -> (String) arr[0],
-                        arr -> (Long) arr[1]
+                        arr -> arr[0] == null ? "INCONNU" : String.valueOf(arr[0]),
+                        arr -> ((Number) arr[1]).longValue(),
+                        Long::sum,
+                        LinkedHashMap::new
                 ));
     }
 
     @Override
     public Double getScoreMoyenActuel() {
-        return scoreTurnoverRepository.scoreMoyenActuel();
+        Double moyenne = scoreTurnoverRepository.scoreMoyenActuel();
+        return moyenne == null ? 0.0 : round2(moyenne);
     }
 
     @Override
     public Map<String, Double> getScoreMoyenParDepartement() {
-        return scoreTurnoverRepository.scoreMoyenParDepartement().stream()
+        return scoreTurnoverRepository.scoreMoyenParDepartement()
+                .stream()
                 .collect(Collectors.toMap(
-                        arr -> (String) arr[0],
-                        arr -> (Double) arr[1]
+                        arr -> arr[0] == null ? "Non défini" : String.valueOf(arr[0]),
+                        arr -> arr[1] == null ? 0.0 : round2(((Number) arr[1]).doubleValue()),
+                        (a, b) -> b,
+                        LinkedHashMap::new
                 ));
     }
 
     @Override
     public List<ScoreTurnoverDTO> findScoresAvecActions() {
-        return scoreTurnoverRepository.findAvecActionsRecommandees().stream()
+        return scoreTurnoverRepository.findAvecActionsRecommandees()
+                .stream()
                 .map(mapper::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     public Map<String, Object> getStatsTableauBord() {
-        List<Object[]> stats = scoreTurnoverRepository.getStatsTableauBord();
-        if (stats == null || stats.isEmpty()) {
-            return Map.of(
-                    "totalScores", 0L,
-                    "scoreMoyen", 0.0,
-                    "scoreMin", 0.0,
-                    "scoreMax", 0.0,
-                    "risqueCritique", 0L,
-                    "risqueEleve", 0L,
-                    "risqueMoyen", 0L,
-                    "risqueFaible", 0L,
-                    "confianceMoyenne", 0.0
-            );
-        }
-        Object[] stat = stats.get(0);
+        List<ScoreTurnoverDTO> derniers = findDerniersScores();
+
+        long total = derniers.size();
+
+        double moyenne = total == 0
+                ? 0.0
+                : derniers.stream()
+                    .mapToDouble(s -> s.getScore() == null ? 0.0 : s.getScore())
+                    .average()
+                    .orElse(0.0);
+
+        double min = derniers.stream()
+                .mapToDouble(s -> s.getScore() == null ? 0.0 : s.getScore())
+                .min()
+                .orElse(0.0);
+
+        double max = derniers.stream()
+                .mapToDouble(s -> s.getScore() == null ? 0.0 : s.getScore())
+                .max()
+                .orElse(0.0);
+
+        long critique = derniers.stream()
+                .filter(s -> "CRITIQUE".equalsIgnoreCase(s.getNiveauRisque()))
+                .count();
+
+        long eleve = derniers.stream()
+                .filter(s -> "ELEVE".equalsIgnoreCase(s.getNiveauRisque()))
+                .count();
+
+        long moyen = derniers.stream()
+                .filter(s -> "MOYEN".equalsIgnoreCase(s.getNiveauRisque()))
+                .count();
+
+        long faible = derniers.stream()
+                .filter(s -> "FAIBLE".equalsIgnoreCase(s.getNiveauRisque()))
+                .count();
+
+        double confianceMoyenne = derniers.stream()
+                .mapToDouble(s -> s.getConfianceModele() == null ? 0.0 : s.getConfianceModele())
+                .average()
+                .orElse(0.0);
+
         return Map.of(
-                "totalScores", stat[0] != null ? stat[0] : 0L,
-                "scoreMoyen", stat[1] != null ? stat[1] : 0.0,
-                "scoreMin", stat[2] != null ? stat[2] : 0.0,
-                "scoreMax", stat[3] != null ? stat[3] : 0.0,
-                "risqueCritique", stat[4] != null ? stat[4] : 0L,
-                "risqueEleve", stat[5] != null ? stat[5] : 0L,
-                "risqueMoyen", stat[6] != null ? stat[6] : 0L,
-                "risqueFaible", stat[7] != null ? stat[7] : 0L,
-                "confianceMoyenne", stat[8] != null ? stat[8] : 0.0
+                "totalScores", total,
+                "scoreMoyen", round2(moyenne),
+                "scoreMin", round2(min),
+                "scoreMax", round2(max),
+                "risqueCritique", critique,
+                "risqueEleve", eleve,
+                "risqueMoyen", moyen,
+                "risqueFaible", faible,
+                "confianceMoyenne", round2(confianceMoyenne)
         );
     }
 
@@ -270,127 +391,271 @@ public class ScoreTurnoverServiceImpl implements ScoreTurnoverService {
         return scoreTurnoverRepository.hasScoreRecent(employeId, dateLimite);
     }
 
-    // ==================== MÉTHODES PRIVÉES DYNAMIQUES ====================
-
     private double calculerScoreAnciennete(LocalDate dateEmbauche) {
-        if (dateEmbauche == null) return 0;
-        long annees = ChronoUnit.YEARS.between(dateEmbauche, LocalDate.now());
-        int seuilAn1 = parametreService.getInt("score.anciennete.seuil.an1", 1);
-        int seuilAn3 = parametreService.getInt("score.anciennete.seuil.an3", 3);
-        int seuilAn5 = parametreService.getInt("score.anciennete.seuil.an5", 5);
-        double valCourt   = parametreService.getDouble("score.anciennete.valeur.court", 30.0);
-        double valMoyen   = parametreService.getDouble("score.anciennete.valeur.moyen", 15.0);
-        double valLong    = parametreService.getDouble("score.anciennete.valeur.long", 5.0);
-        double valTresLong = parametreService.getDouble("score.anciennete.valeur.treslong", 25.0);
+        if (dateEmbauche == null) {
+            return 50.0;
+        }
 
-        if (annees < seuilAn1) return valCourt;
-        if (annees < seuilAn3) return valMoyen;
-        if (annees < seuilAn5) return valLong;
-        return valTresLong;
+        long mois = ChronoUnit.MONTHS.between(dateEmbauche, LocalDate.now());
+
+        if (mois < 6) {
+            return 85.0;
+        }
+
+        if (mois < 12) {
+            return 65.0;
+        }
+
+        if (mois < 36) {
+            return 35.0;
+        }
+
+        if (mois < 60) {
+            return 10.0;
+        }
+
+        if (mois < 96) {
+            return 25.0;
+        }
+
+        return 45.0;
     }
 
-    private double calculerScoreSalaire(Double salaire) {
-        if (salaire == null) return 0;
-        double seuilBas    = parametreService.getDouble("score.salaire.seuil.bas", 30000.0);
-        double seuilMedium = parametreService.getDouble("score.salaire.seuil.medium", 45000.0);
-        double seuilHaut   = parametreService.getDouble("score.salaire.seuil.haut", 60000.0);
-        double valBas      = parametreService.getDouble("score.salaire.valeur.bas", 30.0);
-        double valMedium   = parametreService.getDouble("score.salaire.valeur.medium", 15.0);
-        double valHaut     = parametreService.getDouble("score.salaire.valeur.haut", 5.0);
-        double valTresHaut = parametreService.getDouble("score.salaire.valeur.treshaut", 0.0);
+    private double calculerScoreSalaire(BigDecimal salaire) {
+        if (salaire == null || salaire.compareTo(BigDecimal.ZERO) <= 0) {
+            return 70.0;
+        }
 
-        if (salaire < seuilBas) return valBas;
-        if (salaire < seuilMedium) return valMedium;
-        if (salaire < seuilHaut) return valHaut;
-        return valTresHaut;
-    }
+        double salaireValue = salaire.doubleValue();
 
-    private double calculerScoreFormation(int nbFormations) {
-        int seuilMax = parametreService.getInt("score.formation.seuil.max", 3);
-        double valZero = parametreService.getDouble("score.formation.valeur.zero", 20.0);
-        double valPeu  = parametreService.getDouble("score.formation.valeur.peu", 10.0);
-        double valNorm = parametreService.getDouble("score.formation.valeur.normal", 0.0);
+        double salaireMinDt = parametreService.getDouble("score.salaire.minimum.dt", 900.0);
+        double seuilBas = parametreService.getDouble("score.salaire.seuil.bas.dt", 1200.0);
+        double seuilMoyen = parametreService.getDouble("score.salaire.seuil.moyen.dt", 1800.0);
+        double seuilBon = parametreService.getDouble("score.salaire.seuil.bon.dt", 2500.0);
 
-        if (nbFormations == 0) return valZero;
-        if (nbFormations < seuilMax) return valPeu;
-        return valNorm;
+        if (salaireValue <= salaireMinDt) {
+            return 100.0;
+        }
+
+        if (salaireValue <= seuilBas) {
+            return 80.0;
+        }
+
+        if (salaireValue <= seuilMoyen) {
+            return 50.0;
+        }
+
+        if (salaireValue <= seuilBon) {
+            return 25.0;
+        }
+
+        return 5.0;
     }
 
     private double calculerScorePerformance(Long employeId) {
-        double moyenneIdeale = parametreService.getDouble("score.performance.moyenne.ideal", 10.0);
-        double coefficient   = parametreService.getDouble("score.performance.coefficient", 10.0);
-        Double moyenne = evaluationRepository.moyenneEvaluationAnnuelle(employeId, LocalDate.now().getYear());
-        if (moyenne == null || moyenne == 0) return coefficient; // fallback : score maximum
-        return (moyenneIdeale - moyenne) * coefficient;
+        Double moyenne = evaluationRepository.moyenneEvaluationAnnuelle(
+                employeId,
+                LocalDate.now().getYear()
+        );
+
+        double noteMax = parametreService.getDouble("score.performance.note.max", 10.0);
+
+        if (moyenne == null) {
+            return 40.0;
+        }
+
+        moyenne = clamp(moyenne, 0, noteMax);
+
+        double risque = ((noteMax - moyenne) / noteMax) * 100.0;
+
+        return clamp(risque, 0, 100);
+    }
+
+    private double calculerScoreFormation(Long employeId) {
+        List<EmployeFormation> formations = employeFormationRepository.findByEmployeId(employeId);
+
+        if (formations == null || formations.isEmpty()) {
+            return 100.0;
+        }
+
+        long terminees = formations.stream()
+                .filter(f ->
+                        "TERMINEE".equalsIgnoreCase(String.valueOf(f.getStatut()))
+                                || "TERMINE".equalsIgnoreCase(String.valueOf(f.getStatut()))
+                                || (f.getProgression() != null && f.getProgression() >= 100)
+                )
+                .count();
+
+        double progressionMoyenne = formations.stream()
+                .mapToDouble(f -> f.getProgression() == null ? 0.0 : f.getProgression())
+                .average()
+                .orElse(0.0);
+
+        if (terminees >= 3) {
+            return 5.0;
+        }
+
+        if (terminees >= 1 && progressionMoyenne >= 70) {
+            return 15.0;
+        }
+
+        if (progressionMoyenne >= 50) {
+            return 35.0;
+        }
+
+        if (progressionMoyenne >= 20) {
+            return 60.0;
+        }
+
+        return 80.0;
     }
 
     private double calculerScoreAbsenteisme(Long employeId) {
         Optional<IndicateurRH> dernierAbs = indicateurRHRepository
                 .findTopByEmployeIdAndTypeOrderByDateCalculDesc(employeId, "ABSENTEISME");
+
         if (dernierAbs.isEmpty() || dernierAbs.get().getValeur() == null) {
             return 0.0;
         }
-        double taux = dernierAbs.get().getValeur();
-        double seuilEleve = parametreService.getDouble("score.absenteisme.seuil.eleve", 10.0);
-        double seuilMoyen = parametreService.getDouble("score.absenteisme.seuil.moyen", 5.0);
-        double valEleve   = parametreService.getDouble("score.absenteisme.valeur.eleve", 80.0);
-        double valMoyen   = parametreService.getDouble("score.absenteisme.valeur.moyen", 40.0);
-        double valFaible  = parametreService.getDouble("score.absenteisme.valeur.faible", 0.0);
 
-        if (taux > seuilEleve) return valEleve;
-        if (taux > seuilMoyen) return valMoyen;
-        return valFaible;
+        double taux = dernierAbs.get().getValeur();
+
+        double seuilMoyen = parametreService.getDouble("score.absenteisme.seuil.moyen", 5.0);
+        double seuilEleve = parametreService.getDouble("score.absenteisme.seuil.eleve", 10.0);
+
+        if (taux >= seuilEleve) {
+            return 100.0;
+        }
+
+        if (taux >= seuilMoyen) {
+            return 60.0;
+        }
+
+        return clamp((taux / seuilMoyen) * 30.0, 0, 30);
     }
 
     private String determinerNiveauRisque(double score) {
-        double seuilFaibleMoyen = parametreService.getDouble("score.turnover.seuil.faible.moyen", 20.0);
-        double seuilMoyenEleve  = parametreService.getDouble("score.turnover.seuil.moyen.eleve", 40.0);
-        double seuilEleveCritique = parametreService.getDouble("score.turnover.seuil.eleve.critique", 70.0);
+        double seuilFaibleMoyen = parametreService.getDouble("score.turnover.seuil.faible.moyen", 25.0);
+        double seuilMoyenEleve = parametreService.getDouble("score.turnover.seuil.moyen.eleve", 50.0);
+        double seuilEleveCritique = parametreService.getDouble("score.turnover.seuil.eleve.critique", 75.0);
 
-        if (score < seuilFaibleMoyen) return "FAIBLE";
-        if (score < seuilMoyenEleve) return "MOYEN";
-        if (score < seuilEleveCritique) return "ELEVE";
+        if (score < seuilFaibleMoyen) {
+            return "FAIBLE";
+        }
+
+        if (score < seuilMoyenEleve) {
+            return "MOYEN";
+        }
+
+        if (score < seuilEleveCritique) {
+            return "ELEVE";
+        }
+
         return "CRITIQUE";
     }
 
-    private String identifierFacteurs(double anciennete, double salaire, double performance,
-                                      double formation, double absenteisme) {
-        double seuilAnciennete = parametreService.getDouble("facteur.anciennete.seuil", 20.0);
-        double seuilSalaire    = parametreService.getDouble("facteur.salaire.seuil", 20.0);
-        double seuilPerformance = parametreService.getDouble("facteur.performance.seuil", 20.0);
-        double seuilFormation   = parametreService.getDouble("facteur.formation.seuil", 15.0);
-        double seuilAbsenteisme = parametreService.getDouble("facteur.absenteisme.seuil", 15.0);
-        StringBuilder sb = new StringBuilder();
-        if (anciennete >= seuilAnciennete) sb.append("Ancienneté critique; ");
-        if (salaire >= seuilSalaire) sb.append("Salaire bas; ");
-        if (performance >= seuilPerformance) sb.append("Performance faible; ");
-        if (formation >= seuilFormation) sb.append("Manque de formations; ");
-        if (absenteisme >= seuilAbsenteisme) sb.append("Absentéisme élevé; ");
-        return sb.length() > 0 ? sb.toString() : "Aucun facteur critique identifié";
+    private String identifierFacteurs(
+            double anciennete,
+            double salaire,
+            double performance,
+            double formation,
+            double absenteisme
+    ) {
+        List<String> facteurs = new ArrayList<>();
+
+        if (salaire >= 80) {
+            facteurs.add("Salaire proche ou inférieur au minimum de référence");
+        } else if (salaire >= 50) {
+            facteurs.add("Salaire relativement bas");
+        }
+
+        if (performance >= 70) {
+            facteurs.add("Performance faible");
+        } else if (performance >= 45) {
+            facteurs.add("Performance moyenne");
+        }
+
+        if (formation >= 80) {
+            facteurs.add("Manque de formations ou faible progression");
+        } else if (formation >= 50) {
+            facteurs.add("Progression formation insuffisante");
+        }
+
+        if (absenteisme >= 80) {
+            facteurs.add("Absentéisme élevé");
+        } else if (absenteisme >= 50) {
+            facteurs.add("Absentéisme moyen");
+        }
+
+        if (anciennete >= 70) {
+            facteurs.add("Période d’intégration sensible");
+        } else if (anciennete >= 40) {
+            facteurs.add("Risque lié à l’ancienneté ou au manque d’évolution");
+        }
+
+        if (facteurs.isEmpty()) {
+            return "Aucun facteur critique identifié";
+        }
+
+        return String.join("; ", facteurs);
     }
 
-    private String recommanderActions(double anciennete, double salaire, double performance,
-                                      double formation, double absenteisme, Employe employe) {
-        double seuilSalaireAction = parametreService.getDouble("action.salaire.seuil", 20.0);
-        double seuilFormationAction = parametreService.getDouble("action.formation.seuil", 15.0);
-        double seuilAncienneteAction = parametreService.getDouble("action.anciennete.seuil", 20.0);
-        int anneesAnciennetePourEvolution = parametreService.getInt("action.evolution.annees.min", 5);
-        int anneesAnciennetePourOnboarding = parametreService.getInt("action.onboarding.annees.max", 1);
-        double seuilAbsenteismeAction = parametreService.getDouble("action.absenteisme.seuil", 15.0);
+    private String recommanderActions(
+            double anciennete,
+            double salaire,
+            double performance,
+            double formation,
+            double absenteisme
+    ) {
+        List<String> actions = new ArrayList<>();
 
-        StringBuilder sb = new StringBuilder();
-        if (salaire >= seuilSalaireAction) sb.append("- Revoir la rémunération\n");
-        if (formation >= seuilFormationAction) sb.append("- Proposer des formations adaptées\n");
-        if (anciennete >= seuilAncienneteAction && employe.getDateEmbauche() != null &&
-                ChronoUnit.YEARS.between(employe.getDateEmbauche(), LocalDate.now()) > anneesAnciennetePourEvolution) {
-            sb.append("- Discuter des opportunités d'évolution\n");
+        if (salaire >= 80) {
+            actions.add("- Revoir la rémunération ou proposer des avantages");
+        } else if (salaire >= 50) {
+            actions.add("- Étudier une évolution salariale progressive");
         }
-        if (anciennete >= seuilAncienneteAction && employe.getDateEmbauche() != null &&
-                ChronoUnit.YEARS.between(employe.getDateEmbauche(), LocalDate.now()) < anneesAnciennetePourOnboarding) {
-            sb.append("- Renforcer l'onboarding et le suivi\n");
+
+        if (formation >= 70) {
+            actions.add("- Proposer un plan de formation personnalisé");
+        } else if (formation >= 50) {
+            actions.add("- Suivre la progression des formations en cours");
         }
-        if (absenteisme >= seuilAbsenteismeAction) sb.append("- Entretien RH pour comprendre les causes d'absence\n");
-        if (sb.length() == 0) sb.append("- Maintenir le suivi régulier");
-        return sb.toString();
+
+        if (performance >= 70) {
+            actions.add("- Prévoir un entretien manager et un plan d’accompagnement");
+        } else if (performance >= 45) {
+            actions.add("- Mettre en place un coaching ou des objectifs intermédiaires");
+        }
+
+        if (absenteisme >= 60) {
+            actions.add("- Organiser un entretien RH pour comprendre les causes d’absence");
+        }
+
+        if (anciennete >= 70) {
+            actions.add("- Renforcer l’onboarding et le suivi d’intégration");
+        } else if (anciennete >= 40) {
+            actions.add("- Discuter des opportunités d’évolution ou de mobilité interne");
+        }
+
+        if (actions.isEmpty()) {
+            actions.add("- Maintenir le suivi régulier");
+        }
+
+        return String.join("\n", actions);
+    }
+
+    private SystemeBI getSystemeBIActif() {
+        return systemeBIRepository.findAll()
+                .stream()
+                .max(Comparator.comparing(SystemeBI::getId))
+                .orElseThrow(() -> new RuntimeException("Aucun système BI trouvé. Créez au moins un SystemeBI."));
+    }
+
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 }

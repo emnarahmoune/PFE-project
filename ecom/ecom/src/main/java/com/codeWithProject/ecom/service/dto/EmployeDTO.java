@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import camundajar.impl.scala.annotation.meta.getter;
-
+import java.math.BigDecimal;
 @Data
 @Builder
 @NoArgsConstructor
@@ -31,7 +31,7 @@ public class EmployeDTO {
     // ── Informations professionnelles ─────────────
     private LocalDate dateEmbauche;
     private String poste;
-    private Double salaire;
+    private BigDecimal salaire;
     private String statut;
     private String departement;
     private Integer soldeConges;
@@ -61,7 +61,8 @@ public class EmployeDTO {
 
     // ── Statistiques ──────────────────────────────
     private Long anciennete;
-    private Double salaireAnnuel;
+
+private BigDecimal salaireAnnuel;
     private Integer nombreCompetences;
     private Integer nombreFormations;
     private Integer nombreDemandesConge;

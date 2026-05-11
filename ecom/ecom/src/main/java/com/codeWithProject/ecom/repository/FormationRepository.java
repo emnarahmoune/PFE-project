@@ -5,7 +5,7 @@ import com.codeWithProject.ecom.entity.Formation;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
+import java.util.Optional;
 import java.util.List;
 
 @Repository
@@ -21,6 +21,7 @@ public interface FormationRepository extends JpaRepository<Formation, Long> {
 
     List<Formation> findByTitreContainingIgnoreCase(String titre);
 
+Optional<Formation> findByTitreIgnoreCase(String titre);
     // =========================
     // 👤 FORMATIONS PAR EMPLOYÉ
     // =========================
@@ -117,4 +118,13 @@ List<Formation> findRecommendedByCompetenceIds(
         @Param("employeId") Long employeId,
         @Param("competenceIds") List<Long> competenceIds
 );
+
+
+@Query("""
+    SELECT DISTINCT f FROM Formation f
+    LEFT JOIN FETCH f.videos
+    LEFT JOIN FETCH f.supports
+    WHERE f.actif = true OR f.actif IS NULL
+""")
+List<Formation> findActiveWithDetails();
 }

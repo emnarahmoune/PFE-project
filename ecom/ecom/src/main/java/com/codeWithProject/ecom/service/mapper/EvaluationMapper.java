@@ -19,6 +19,9 @@ public class EvaluationMapper {
             return null;
         }
 
+        Employe employe = entity.getEmploye();
+        Employe evaluateur = entity.getEvaluateur();
+
         EvaluationDTO dto = EvaluationDTO.builder()
                 .id(entity.getId())
                 .dateEvaluation(entity.getDateEvaluation())
@@ -43,9 +46,14 @@ public class EvaluationMapper {
                 .statut(entity.getStatut())
 
                 .niveauPerformance(resolveNiveauPerformance(entity.getNote()))
-                .build();
 
-        Employe employe = entity.getEmploye();
+                // Photo employé évalué pour app-employee-avatar
+                .employePhotoUrl(getEmployePhotoUrl(employe))
+                .employePhotoProfil(getEmployePhotoProfil(employe))
+                .photoUrl(getEmployePhotoUrl(employe))
+                .photoProfil(getEmployePhotoProfil(employe))
+
+                .build();
 
         if (employe != null) {
             dto.setEmployeId(employe.getId());
@@ -55,8 +63,6 @@ public class EvaluationMapper {
             dto.setEmployePoste(employe.getPoste());
             dto.setEmployeDepartement(employe.getDepartement());
         }
-
-        Employe evaluateur = entity.getEvaluateur();
 
         if (evaluateur != null) {
             dto.setEvaluateurId(evaluateur.getId());
@@ -120,6 +126,46 @@ public class EvaluationMapper {
         return builder.build();
     }
 
+    private String getEmployePhotoUrl(Employe employe) {
+        if (employe == null) {
+            return null;
+        }
+
+        if (employe.getPhotoUrl() != null && !employe.getPhotoUrl().isBlank()) {
+            return employe.getPhotoUrl();
+        }
+
+        if (employe.getEmployePhotoUrl() != null && !employe.getEmployePhotoUrl().isBlank()) {
+            return employe.getEmployePhotoUrl();
+        }
+
+        if (employe.getEmployePhotoProfil() != null && !employe.getEmployePhotoProfil().isBlank()) {
+            return employe.getEmployePhotoProfil();
+        }
+
+        return null;
+    }
+
+    private String getEmployePhotoProfil(Employe employe) {
+        if (employe == null) {
+            return null;
+        }
+
+        if (employe.getEmployePhotoProfil() != null && !employe.getEmployePhotoProfil().isBlank()) {
+            return employe.getEmployePhotoProfil();
+        }
+
+        if (employe.getPhotoUrl() != null && !employe.getPhotoUrl().isBlank()) {
+            return employe.getPhotoUrl();
+        }
+
+        if (employe.getEmployePhotoUrl() != null && !employe.getEmployePhotoUrl().isBlank()) {
+            return employe.getEmployePhotoUrl();
+        }
+
+        return null;
+    }
+
     private String resolveNiveauPerformance(Double note) {
         if (note == null) {
             return "NON_EVALUE";
@@ -140,17 +186,16 @@ public class EvaluationMapper {
         return "FAIBLE";
     }
 
-
     private String normalizeStatut(String statut) {
-    if (statut == null || statut.isBlank()) {
-        return "PUBLIEE";
+        if (statut == null || statut.isBlank()) {
+            return "PUBLIEE";
+        }
+
+        String value = statut.trim().toUpperCase();
+
+        return switch (value) {
+            case "BROUILLON", "PUBLIEE", "VALIDEE", "ARCHIVEE" -> value;
+            default -> "PUBLIEE";
+        };
     }
-
-    String value = statut.trim().toUpperCase();
-
-    return switch (value) {
-        case "BROUILLON", "PUBLIEE", "VALIDEE", "ARCHIVEE" -> value;
-        default -> "PUBLIEE";
-    };
-}
 }

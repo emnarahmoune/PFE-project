@@ -201,43 +201,45 @@ public class WorkflowController {
     }
 
     private void enrichOneTaskWithPhoto(Map<String, Object> task) {
-        if (task == null) {
-            return;
-        }
-
-        log.info("TASK AVANT PHOTO = {}", task);
-
-        Employe employe = findEmployeFromTask(task);
-
-        if (employe == null) {
-            log.warn("Aucun employé trouvé pour task = {}", task);
-
-            task.putIfAbsent("photoUrl", null);
-            task.putIfAbsent("employePhotoProfil", null);
-            task.putIfAbsent("employePhotoUrl", null);
-            return;
-        }
-
-        String photo = employe.getPhotoUrl();
-
-        task.put("photoUrl", photo);
-        task.put("employePhotoProfil", photo);
-        task.put("employePhotoUrl", photo);
-
-        task.putIfAbsent("employeId", employe.getId());
-        task.putIfAbsent("employeNom", employe.getNom());
-        task.putIfAbsent("employePrenom", employe.getPrenom());
-        task.putIfAbsent("employeEmail", employe.getEmail());
-
-        log.info(
-                "PHOTO TROUVEE POUR EMPLOYE {} {} => {}",
-                employe.getPrenom(),
-                employe.getNom(),
-                photo
-        );
-
-        log.info("TASK APRES PHOTO = {}", task);
+    if (task == null) {
+        return;
     }
+
+    enrichTaskWithDemandeData(task);
+
+    log.info("TASK AVANT PHOTO = {}", task);
+
+    Employe employe = findEmployeFromTask(task);
+
+    if (employe == null) {
+        log.warn("Aucun employé trouvé pour task = {}", task);
+
+        task.put("photoUrl", null);
+        task.put("employePhotoProfil", null);
+        task.put("employePhotoUrl", null);
+        return;
+    }
+
+    String photo = employe.getPhotoUrl();
+
+    task.put("photoUrl", photo);
+    task.put("employePhotoProfil", photo);
+    task.put("employePhotoUrl", photo);
+
+    task.put("employeId", employe.getId());
+    task.put("employeNom", employe.getNom());
+    task.put("employePrenom", employe.getPrenom());
+    task.put("employeEmail", employe.getEmail());
+
+    log.info(
+            "PHOTO TROUVEE POUR EMPLOYE {} {} => {}",
+            employe.getPrenom(),
+            employe.getNom(),
+            photo
+    );
+
+    log.info("TASK APRES PHOTO = {}", task);
+}
 
     private Employe findEmployeFromTask(Map<String, Object> task) {
 
@@ -418,5 +420,91 @@ public class WorkflowController {
         }
 
         return email != null ? email.trim().toLowerCase() : null;
+ 
     }
+
+
+
+
+   private void enrichTaskWithDemandeData(Map<String, Object> task) {
+    if (task == null) {
+        return;
+    }
+
+    DemandeConge demande = findDemandeFromTask(task);
+
+    if (demande == null) {
+        task.putIfAbsent("urgente", false);
+        task.putIfAbsent("urgent", false);
+        task.putIfAbsent("isUrgent", false);
+        return;
+    }
+
+    boolean urgente = Boolean.TRUE.equals(demande.getUrgente());
+
+    task.put("urgente", urgente);
+    task.put("urgent", urgente);
+    task.put("isUrgent", urgente);
+
+    task.putIfAbsent("demandeId", demande.getId());
+    task.putIfAbsent("dateDebut", demande.getDateDebut());
+    task.putIfAbsent("dateFin", demande.getDateFin());
+    task.putIfAbsent("type", demande.getType());
+    task.putIfAbsent("typeConge", demande.getType());
+    task.putIfAbsent("commentaire", demande.getCommentaire());
+    task.putIfAbsent("statut", demande.getStatut());
+    task.putIfAbsent("nbJours", demande.getJoursOuvres());
+    task.putIfAbsent("joursOuvres", demande.getJoursOuvres());
+
+    /*
+     * IMPORTANT :
+     * Ne pas faire demande.getEmploye().getNom(), getPrenom(), getEmail ici.
+     * Ça peut casser à cause du lazy loading.
+     * On ne force que demandeId, puis findEmployeFromTask() recharge l'employé proprement
+     * avec employeRepository.
+     */
+}
+
+private DemandeConge findDemandeFromTask(Map<String, Object> task) {
+    Long demandeId = extractLong(task.get("demandeId"));
+
+    if (demandeId == null) {
+        demandeId = extractLong(task.get("demandeCongeId"));
+    }
+
+    if (demandeId == null) {
+        demandeId = extractLong(task.get("congeId"));
+    }
+
+    if (demandeId == null) {
+        demandeId = extractLong(task.get("idDemande"));
+    }
+
+    if (demandeId != null) {
+        return demandeCongeRepository.findById(demandeId).orElse(null);
+    }
+
+    String processInstanceId = extractString(task.get("processInstanceId"));
+
+    if (processInstanceId == null) {
+        processInstanceId = extractString(task.get("processId"));
+    }
+
+    if (processInstanceId == null) {
+        processInstanceId = extractString(task.get("instanceId"));
+    }
+
+    if (processInstanceId != null) {
+        final String finalProcessInstanceId = processInstanceId;
+
+        return demandeCongeRepository.findAll()
+                .stream()
+                .filter(d -> d.getProcessInstanceId() != null)
+                .filter(d -> d.getProcessInstanceId().equals(finalProcessInstanceId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    return null;
+}
 }

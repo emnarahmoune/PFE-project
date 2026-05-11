@@ -4,7 +4,8 @@ import com.codeWithProject.ecom.entity.*;
 import com.codeWithProject.ecom.service.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
+import java.math.BigDecimal;
+import java.math.BigDecimal;
 import java.util.stream.Collectors;
 
 @Component
@@ -25,14 +26,15 @@ public class EmployeMapper {
         dto.setAdresse(entity.getAdresse());
         dto.setDateEmbauche(entity.getDateEmbauche());
         dto.setPoste(entity.getPoste());
+
         dto.setSalaire(entity.getSalaire());
+
         dto.setStatut(entity.getStatut());
         dto.setDepartement(entity.getDepartement());
         dto.setSoldeConges(entity.getSoldeConges());
         dto.setActif(entity.getActif());
         dto.setRole(entity.getRole());
 
-        // ✅ IMPORTANT POUR AFFICHER LA PHOTO APRÈS ACTUALISATION
         dto.setPhotoUrl(entity.getPhotoUrl());
 
         dto.setAnciennete(entity.getAnciennete());
@@ -115,7 +117,6 @@ public class EmployeMapper {
             employe.setRole(dto.getRole().toUpperCase());
         }
 
-        // ✅ IMPORTANT SI TU CONVERTIS DTO -> ENTITY
         employe.setPhotoUrl(dto.getPhotoUrl());
 
         return employe;
@@ -126,5 +127,13 @@ public class EmployeMapper {
         dto.setNom(competence.getNom());
         dto.setNiveau("INTERMEDIAIRE");
         return dto;
+    }
+
+    private Double toDouble(BigDecimal value) {
+        return value == null ? null : value.doubleValue();
+    }
+
+    private BigDecimal toBigDecimal(Double value) {
+        return value == null ? BigDecimal.ZERO : BigDecimal.valueOf(value);
     }
 }

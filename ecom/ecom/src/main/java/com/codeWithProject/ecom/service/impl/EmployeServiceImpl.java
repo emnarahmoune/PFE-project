@@ -39,6 +39,7 @@ public class EmployeServiceImpl implements EmployeService {
     private final EvaluationRepository evaluationRepository;
     private final CompetenceRepository competenceRepository;
 
+    private final FormationRecommendationAutoService formationRecommendationAutoService;
     private final KeycloakAdminService keycloakAdminService;
     private final EmployeMapper mapper;
     private final PasswordEncoder passwordEncoder;
@@ -392,56 +393,65 @@ public class EmployeServiceImpl implements EmployeService {
     // COMPETENCES
     // =========================
 
-    @Override
-    public void addCompetence(Long userId, Long compId, int niveau) {
-        Employe employe = employeRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Employé introuvable avec id: " + userId));
+  @Override
+public void addCompetence(Long userId, Long compId, int niveau) {
+    Employe employe = employeRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("Employé introuvable avec id: " + userId));
 
-        Competence competence = competenceRepository.findById(compId)
-                .orElseThrow(() -> new RuntimeException("Compétence introuvable avec id: " + compId));
+    Competence competence = competenceRepository.findById(compId)
+            .orElseThrow(() -> new RuntimeException("Compétence introuvable avec id: " + compId));
 
-        Optional<EmployeCompetence> existing =
-                employeCompetenceRepository.findByEmploye_IdAndCompetence_Id(userId, compId);
+    Optional<EmployeCompetence> existing =
+            employeCompetenceRepository.findByEmploye_IdAndCompetence_Id(userId, compId);
 
-        if (existing.isPresent()) {
-            EmployeCompetence ec = existing.get();
-            ec.setNiveau(convertToLevel(niveau));
-            employeCompetenceRepository.save(ec);
-
-            log.info(
-                    "Compétence mise à jour: employeId={}, competenceId={}, niveau={}",
-                    userId,
-                    compId,
-                    ec.getNiveau()
-            );
-
-            return;
-        }
-
-        EmployeCompetence ec = new EmployeCompetence();
-        ec.setEmploye(employe);
-        ec.setCompetence(competence);
+    if (existing.isPresent()) {
+        EmployeCompetence ec = existing.get();
         ec.setNiveau(convertToLevel(niveau));
-
         employeCompetenceRepository.save(ec);
 
+        formationRecommendationAutoService.generateBoostRecommendationsForEmploye(employe);
+
         log.info(
-                "Compétence ajoutée: employeId={}, competenceId={}, niveau={}",
+                "Compétence mise à jour: employeId={}, competenceId={}, niveau={}",
                 userId,
                 compId,
                 ec.getNiveau()
         );
+
+        return;
     }
 
-    @Override
-    public void updateCompetence(Long userId, Long compId, int niveau) {
-        EmployeCompetence ec = employeCompetenceRepository
-                .findByEmploye_IdAndCompetence_Id(userId, compId)
-                .orElseThrow(() -> new RuntimeException("Compétence employé introuvable"));
+    EmployeCompetence ec = new EmployeCompetence();
+    ec.setEmploye(employe);
+    ec.setCompetence(competence);
+    ec.setNiveau(convertToLevel(niveau));
 
-        ec.setNiveau(convertToLevel(niveau));
-        employeCompetenceRepository.save(ec);
-    }
+    employeCompetenceRepository.save(ec);
+
+    formationRecommendationAutoService.generateBoostRecommendationsForEmploye(employe);
+
+    log.info(
+            "Compétence ajoutée: employeId={}, competenceId={}, niveau={}",
+            userId,
+            compId,
+            ec.getNiveau()
+    );
+}
+
+   @Override
+public void updateCompetence(Long userId, Long compId, int niveau) {
+    Employe employe = employeRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("Employé introuvable avec id: " + userId));
+
+    EmployeCompetence ec = employeCompetenceRepository
+            .findByEmploye_IdAndCompetence_Id(userId, compId)
+            .orElseThrow(() -> new RuntimeException("Compétence employé introuvable"));
+
+    ec.setNiveau(convertToLevel(niveau));
+    employeCompetenceRepository.save(ec);
+
+    formationRecommendationAutoService.generateBoostRecommendationsForEmploye(employe);
+}
 
     @Override
     public List<EmployeCompetence> getCompetencesEntity(Long id) {

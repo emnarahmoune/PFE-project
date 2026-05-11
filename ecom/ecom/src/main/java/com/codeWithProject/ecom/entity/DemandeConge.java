@@ -69,9 +69,8 @@ public class DemandeConge {
     @Column(name = "jours_ouvres")
     private Integer joursOuvres;
 
-    @Column(name = "urgente")
-    @Builder.Default
-    private Boolean urgente = false;
+    @Column(name = "urgente", nullable = false)
+private Boolean urgente = false;
 
 
     @Column(name = "task_id",length = 100)
@@ -329,5 +328,13 @@ public void setCurrentTaskId(String currentTaskId) {
     this.currentTaskId = currentTaskId;
 }
 
+
+public Boolean getUrgente() {
+    return urgente;
+}
+
+public void setUrgente(Boolean urgente) {
+    this.urgente = urgente;
+}
 
 }

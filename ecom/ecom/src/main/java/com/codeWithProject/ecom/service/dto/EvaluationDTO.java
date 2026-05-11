@@ -24,6 +24,11 @@ public class EvaluationDTO {
 
     private LocalDate dateEvaluation;
     private String periode;
+private String employePhotoUrl;
+private String employePhotoProfil;
+private String photoUrl;
+private String photoProfil;
+    
 
     /**
      * Note globale sur 10 côté backend.

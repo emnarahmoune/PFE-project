@@ -37,7 +37,7 @@ public class WorkflowService {
 
     // ==================== MANAGER ====================
 
-  @Transactional(readOnly = true)
+@Transactional(readOnly = true)
 public List<Map<String, Object>> getManagerTasks(String managerEmail) {
     Employe employe = employeRepository.findByEmail(managerEmail)
             .orElseThrow(() -> new BusinessException("Employé non trouvé: " + managerEmail));
@@ -46,7 +46,7 @@ public List<Map<String, Object>> getManagerTasks(String managerEmail) {
         throw new BusinessException("Accès non autorisé: vous n'avez pas le rôle manager");
     }
 
-    List<Task> tasks = taskService.createTaskQuery()
+    List<Map<String, Object>> tasks = taskService.createTaskQuery()
             .taskAssignee(managerEmail)
             .active()
             .orderByTaskCreateTime()
@@ -55,27 +55,31 @@ public List<Map<String, Object>> getManagerTasks(String managerEmail) {
             .stream()
             /*
              * Le manager ne doit pas gérer sa propre demande.
-             * Sa demande doit aller côté RH/admin.
              */
             .filter(task -> !isOwnRequest(task, managerEmail))
+            .map(this::mapTaskToMap)
+            /*
+             * IMPORTANT :
+             * On filtre avec le statut réel en base.
+             * Si l'employé annule, Camunda peut garder une tâche active,
+             * mais la demande SQL devient ANNULE.
+             */
+            .filter(this::isPendingManagerTaskMap)
             .collect(Collectors.toList());
 
     log.info(
-            "Manager {} a {} tâche(s) en attente après exclusion de ses propres demandes",
+            "Manager {} a {} tâche(s) en attente après filtrage des demandes annulées",
             managerEmail,
             tasks.size()
     );
 
-    return tasks.stream()
-            .map(this::mapTaskToMap)
-            .collect(Collectors.toList());
+    return tasks;
 }
-
     // ==================== ADMIN RH ====================
 
 @Transactional(readOnly = true)
 public List<Map<String, Object>> getRHTasks(String adminEmail) {
-    List<Task> tasks = taskService.createTaskQuery()
+    List<Map<String, Object>> result = taskService.createTaskQuery()
             .active()
             .orderByTaskCreateTime()
             .desc()
@@ -83,24 +87,31 @@ public List<Map<String, Object>> getRHTasks(String adminEmail) {
             .stream()
             .filter(task -> {
                 String name = task.getName();
-                return name != null && name.toLowerCase().contains("rh");
+
+                if (name == null) {
+                    return false;
+                }
+
+                String normalized = name.toLowerCase();
+
+                return normalized.contains("rh")
+                        || normalized.contains("admin")
+                        || normalized.contains("ressources humaines")
+                        || normalized.contains("validation");
             })
-            /*
-             * L'admin connecté ne voit pas sa propre demande.
-             * Mais les autres admins RH la verront.
-             */
             .filter(task -> !isOwnRequest(task, adminEmail))
+            .map(this::mapTaskToMap)
+            // ✅ IMPORTANT : ne pas afficher les demandes annulées / terminées côté admin à valider
+            .filter(this::isPendingRhTaskMap)
             .collect(Collectors.toList());
 
     log.info(
-            "Admin RH {} voit {} tâche(s) RH après exclusion de ses propres demandes",
+            "Admin RH {} voit {} tâche(s) RH après filtrage des demandes annulées/terminées",
             adminEmail,
-            tasks.size()
+            result.size()
     );
 
-    return tasks.stream()
-            .map(this::mapTaskToMap)
-            .collect(Collectors.toList());
+    return result;
 }
 
     // ==================== MAPPING ====================
@@ -154,35 +165,48 @@ public List<Map<String, Object>> getRHTasks(String adminEmail) {
         return taskInfo;
     }
 
-    private Map<String, Object> mapDemandeToMap(DemandeConge d) {
-        Map<String, Object> map = new HashMap<>();
+   private Map<String, Object> mapDemandeToMap(DemandeConge d) {
+    Map<String, Object> map = new HashMap<>();
 
-        map.put("taskId", d.getCurrentTaskId());
-        map.put("taskName", "Validation RH");
-        map.put("createTime", d.getDateSoumission());
-        map.put("processInstanceId", d.getProcessInstanceId());
-        map.put("employeId", d.getEmploye() != null ? d.getEmploye().getId() : null);
-        map.put("nbJours", d.getJoursOuvres());
-        map.put("demandeId", d.getId());
-        map.put("dateDebut", d.getDateDebut() != null ? d.getDateDebut().toString() : null);
-        map.put("dateFin", d.getDateFin() != null ? d.getDateFin().toString() : null);
-        map.put("type", d.getType());
-        map.put("commentaire", d.getCommentaire());
-        map.put("statut", d.getStatut());
-        map.put("urgente", Boolean.TRUE.equals(d.getUrgente()));
-        map.put("dateDemande", d.getDateDemande() != null ? d.getDateDemande().toString() : null);
-        map.put("dateSoumission", d.getDateSoumission() != null ? d.getDateSoumission().toString() : null);
+    boolean urgente = Boolean.TRUE.equals(d.getUrgente());
 
-        if (d.getEmploye() != null) {
-            map.put("employeNom", d.getEmploye().getNom());
-            map.put("employePrenom", d.getEmploye().getPrenom());
-            map.put("employeEmail", d.getEmploye().getEmail());
-            map.put("employeDepartement", d.getEmploye().getDepartement());
-        }
+    map.put("taskId", d.getCurrentTaskId());
+    map.put("taskName", "Validation RH");
+    map.put("createTime", d.getDateSoumission());
+    map.put("processInstanceId", d.getProcessInstanceId());
 
-        return map;
+    map.put("employeId", d.getEmploye() != null ? d.getEmploye().getId() : null);
+    map.put("nbJours", d.getJoursOuvres());
+    map.put("joursOuvres", d.getJoursOuvres());
+    map.put("demandeId", d.getId());
+
+    map.put("dateDebut", d.getDateDebut() != null ? d.getDateDebut().toString() : null);
+    map.put("dateFin", d.getDateFin() != null ? d.getDateFin().toString() : null);
+
+    map.put("type", d.getType());
+    map.put("typeConge", d.getType());
+    map.put("commentaire", d.getCommentaire());
+    map.put("statut", d.getStatut());
+
+    map.put("urgente", urgente);
+    map.put("urgent", urgente);
+    map.put("isUrgent", urgente);
+
+    map.put("dateDemande", d.getDateDemande() != null ? d.getDateDemande().toString() : null);
+    map.put("dateSoumission", d.getDateSoumission() != null ? d.getDateSoumission().toString() : null);
+
+    if (d.getEmploye() != null) {
+        map.put("employeNom", d.getEmploye().getNom());
+        map.put("employePrenom", d.getEmploye().getPrenom());
+        map.put("employeEmail", d.getEmploye().getEmail());
+        map.put("employeDepartement", d.getEmploye().getDepartement());
+        map.put("photoUrl", d.getEmploye().getPhotoUrl());
+        map.put("employePhotoProfil", d.getEmploye().getPhotoUrl());
+        map.put("employePhotoUrl", d.getEmploye().getPhotoUrl());
     }
 
+    return map;
+}
 
 
 
@@ -622,4 +646,73 @@ public void envoyerDirectementVersRhSiManagerOuAdmin(DemandeConge demande, Emplo
     demandeRepository.saveAndFlush(demande);
 }
 
+
+private Long extractLong(Object value) {
+    if (value == null) {
+        return null;
+    }
+
+    if (value instanceof Long longValue) {
+        return longValue;
+    }
+
+    if (value instanceof Integer integerValue) {
+        return integerValue.longValue();
+    }
+
+    if (value instanceof Number numberValue) {
+        return numberValue.longValue();
+    }
+
+    try {
+        return Long.parseLong(String.valueOf(value).trim());
+    } catch (Exception e) {
+        return null;
+    }
+}
+
+
+private boolean isPendingRhTaskMap(Map<String, Object> taskMap) {
+    if (taskMap == null) {
+        return false;
+    }
+
+    Object statutObj = taskMap.get("statut");
+
+    if (statutObj == null) {
+        /*
+         * Si on n'a pas réussi à lire la demande en base,
+         * on garde la tâche pour éviter de masquer une vraie tâche RH.
+         */
+        return true;
+    }
+
+    String statut = String.valueOf(statutObj).trim().toUpperCase();
+
+    return "EN_ATTENTE_RH".equals(statut)
+            || "EN_ATTENTE_ADMIN".equals(statut);
+}
+
+
+
+private boolean isPendingManagerTaskMap(Map<String, Object> taskMap) {
+    if (taskMap == null) {
+        return false;
+    }
+
+    Object statutObj = taskMap.get("statut");
+
+    if (statutObj == null) {
+        /*
+         * Si on n'a pas pu lire la demande en base,
+         * on garde la tâche pour éviter de masquer une vraie tâche.
+         */
+        return true;
+    }
+
+    String statut = String.valueOf(statutObj).trim().toUpperCase();
+
+    return "EN_ATTENTE".equals(statut)
+            || "EN_ATTENTE_MANAGER".equals(statut);
+}
 }

@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 /**
  * DTO pour l'entité DemandeConge
  */
@@ -54,4 +56,17 @@ private String employePhotoProfil;
     private Boolean managerApprouve;
     private Boolean rhApprouve;
     private String processInstanceId;
+
+
+
+
+
+    public Boolean getUrgente() {
+        return urgente;
+    }
+
+    public void setUrgente(Boolean urgente) {
+        this.urgente = urgente;
+    }
+
 }
