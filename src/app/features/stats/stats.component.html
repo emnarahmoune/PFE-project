@@ -1,0 +1,104 @@
+<div class="stats-container">
+  <div class="page-header">
+    <div>
+      <h2>📊 Statistiques des congés</h2>
+      <p>Suivez les demandes, les validations et le taux d’approbation de votre équipe.</p>
+    </div>
+
+    <button
+      type="button"
+      class="btn-refresh"
+      (click)="refresh()"
+      [disabled]="loading">
+      <span>⟳</span>
+      Actualiser
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="loading-spinner">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <div *ngIf="!loading" class="stats-grid">
+    <mat-card class="stat-card total">
+      <mat-card-content>
+        <div class="stat-icon">📋</div>
+        <div class="stat-value">{{ stats.totalDemandes }}</div>
+        <div class="stat-label">Total demandes</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card approved">
+      <mat-card-content>
+        <div class="stat-icon">✅</div>
+        <div class="stat-value">{{ stats.demandesApprouvees }}</div>
+        <div class="stat-label">Approuvées</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card rejected">
+      <mat-card-content>
+        <div class="stat-icon">❌</div>
+        <div class="stat-value">{{ stats.demandesRejetees }}</div>
+        <div class="stat-label">Rejetées</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card pending">
+      <mat-card-content>
+        <div class="stat-icon">⏳</div>
+        <div class="stat-value">{{ stats.demandesEnAttente }}</div>
+        <div class="stat-label">En attente</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card rate">
+      <mat-card-content>
+        <div class="stat-icon">📈</div>
+        <div class="stat-value">{{ stats.tauxApprobation }}%</div>
+        <div class="stat-label">Taux d'approbation</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <mat-card class="recent-requests" *ngIf="!loading">
+    <mat-card-header>
+      <mat-card-title>📅 Demandes récentes</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="table-scroll" *ngIf="demandesRecentes.length > 0">
+        <table class="requests-table">
+          <thead>
+            <tr>
+              <th>Employé</th>
+              <th>Nombre de jours</th>
+              <th>Date</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let demande of demandesRecentes; trackBy: trackByDemande">
+              <td>{{ demande.employe }}</td>
+              <td>{{ demande.nbJours }} jour(s)</td>
+              <td>{{ demande.date | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <span class="status" [ngClass]="getStatusClass(demande.statut)">
+                  {{ demande.statut }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="empty-state" *ngIf="demandesRecentes.length === 0">
+        <div class="empty-icon">📭</div>
+        <h3>Aucune demande récente</h3>
+        <p>Aucune demande de congé récente à afficher.</p>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

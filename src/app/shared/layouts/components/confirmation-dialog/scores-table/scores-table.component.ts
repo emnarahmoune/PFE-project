@@ -1,7 +1,7 @@
 // src/app/shared/components/scores-table/scores-table.component.ts
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ScoreTurnover } from '../../../../../features/admin/scores/models/score-turnover.model';
+import { ScoreTurnover } from '../../../../../core/models/score-turnover.model';
 
 @Component({
   selector: 'app-scores-table',

@@ -1,0 +1,416 @@
+<!-- =========================================================
+     ADMIN - LISTE MANAGERS + ÉQUIPES
+========================================================= -->
+<div class="hr-app" *ngIf="isListMode()">
+
+  <header class="top-header">
+    <div class="title">
+      <h1>🧠 Intelligence RH</h1>
+      <p>Analyse dynamique des équipes et managers</p>
+    </div>
+
+    <div class="actions">
+      <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+
+        <input
+          type="text"
+          placeholder="Rechercher un manager..."
+          [(ngModel)]="searchTerm"
+          (input)="applyFilters()" />
+      </div>
+
+      <button class="btn-refresh" type="button" (click)="refresh()">
+        <span>⟳</span>
+        Actualiser
+      </button>
+    </div>
+  </header>
+
+  <div class="kpi-row">
+    <ng-container *ngIf="!teamsLoaded; else kpiLoaded">
+      <div class="kpi-card skeleton" *ngFor="let item of [1,2,3,4]">
+        <div class="kpi-icon"></div>
+        <div class="kpi-value"></div>
+        <div class="kpi-label"></div>
+        <div class="kpi-sub"></div>
+      </div>
+    </ng-container>
+
+    <ng-template #kpiLoaded>
+      <div class="kpi-card">
+        <div class="kpi-icon">👥</div>
+        <div class="kpi-value">{{ totalManagers }}</div>
+        <div class="kpi-label">Managers</div>
+        <div class="kpi-sub">Actifs dans l'organisation</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon">🧑‍💻</div>
+        <div class="kpi-value">{{ totalEmployees }}</div>
+        <div class="kpi-label">Employés</div>
+        <div class="kpi-sub">Collaborateurs actifs</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon">📁</div>
+        <div class="kpi-value">{{ totalTeams }}</div>
+        <div class="kpi-label">Équipes</div>
+        <div class="kpi-sub">Équipes constituées</div>
+      </div>
+
+      <div class="kpi-card highlight">
+        <div class="kpi-icon">🏆</div>
+        <div class="kpi-value">{{ biggestTeam?.manager?.prenom || '-' }}</div>
+        <div class="kpi-label">Équipe dominante</div>
+        <div class="kpi-sub">{{ biggestTeam?.equipe?.length || 0 }} membres</div>
+      </div>
+    </ng-template>
+  </div>
+
+  <div class="layout">
+
+    <div class="panel-left">
+      <div class="filters-header">
+        <div class="filters">
+          <button
+            type="button"
+            *ngFor="let dept of ['ALL', 'RH', 'Technique', 'Finance']"
+            (click)="selectedDept = dept; applyFilters()"
+            [class.active]="selectedDept === dept">
+            {{ dept === 'ALL' ? 'Tous' : dept }}
+          </button>
+        </div>
+
+        <div class="sort-selector">
+          <span>Trier par :</span>
+
+          <select [(ngModel)]="sortMode" (change)="applyFilters()">
+            <option value="nameAsc">📛 A → Z</option>
+            <option value="nameDesc">📛 Z → A</option>
+            <option value="teamDesc">👥 Équipe décroissante</option>
+            <option value="teamAsc">👥 Équipe croissante</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="loading-modern" *ngIf="loading">
+        <div class="loader"></div>
+        <p>Chargement des managers...</p>
+      </div>
+
+      <div class="manager-list" *ngIf="!loading && filteredManagers.length > 0">
+        <article
+          class="manager-card"
+          *ngFor="let item of filteredManagers; trackBy: trackByManager"
+          [class.expanded]="item.expanded">
+
+          <div class="manager-main" (click)="toggleEquipe(item)">
+            <div class="manager-avatar-shell">
+              <app-employee-avatar
+                [employee]="item.manager"
+                size="md"
+                shape="circle">
+              </app-employee-avatar>
+            </div>
+
+            <div class="manager-info">
+              <h3>{{ getManagerFullName(item.manager) }}</h3>
+
+              <p>
+                {{ item.manager.poste || 'Manager' }}
+                <span *ngIf="item.manager.matricule"> • {{ item.manager.matricule }}</span>
+              </p>
+
+              <div class="chips">
+                <span
+                  class="dept-chip"
+                  [style.background]="getAvatarColor(item.manager.departement ?? '') + '20'"
+                  [style.color]="getAvatarColor(item.manager.departement ?? '')">
+                  {{ item.manager.departement || 'Sans département' }}
+                </span>
+
+                <span class="team-chip">
+                  {{ item.equipe.length }} membre{{ item.equipe.length > 1 ? 's' : '' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="manager-actions">
+              <a
+                class="detail-btn"
+                [routerLink]="['/admin/managers', item.manager.id]"
+                (click)="$event.stopPropagation()">
+                Détail
+              </a>
+
+              <button class="expand-btn" type="button">
+                {{ item.expanded ? '↑' : '↓' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="team-panel" *ngIf="item.expanded">
+            <div class="team-loading" *ngIf="item.loading">
+              Chargement de l’équipe...
+            </div>
+
+            <div class="team-empty" *ngIf="!item.loading && item.equipe.length === 0">
+              Aucun employé rattaché à ce manager.
+            </div>
+
+            <div class="team-grid" *ngIf="!item.loading && item.equipe.length > 0">
+              <div
+                class="employee-mini-card"
+                *ngFor="let emp of item.equipe; trackBy: trackByEmploye">
+
+                <app-employee-avatar
+                  [employee]="emp"
+                  size="sm"
+                  shape="circle">
+                </app-employee-avatar>
+
+                <div class="employee-mini-info">
+                  <strong>{{ getEmployeFullName(emp) }}</strong>
+                  <span>{{ emp.poste || 'Employé' }}</span>
+                </div>
+
+                <button
+                  class="conges-btn"
+                  type="button"
+                  (click)="voirHistoriqueConges(emp)">
+                  📅 Congés
+                </button>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="empty-modern" *ngIf="!loading && filteredManagers.length === 0">
+        <div class="empty-illustration">👥</div>
+        <h3>Aucun manager trouvé</h3>
+        <p>Essayez de modifier votre recherche ou vos filtres.</p>
+      </div>
+    </div>
+
+    <aside class="panel-right">
+      <div class="insight-card">
+        <h3>Vue rapide</h3>
+
+        <div class="insight-row">
+          <span>Managers affichés</span>
+          <strong>{{ filteredManagers.length }}</strong>
+        </div>
+
+        <div class="insight-row">
+          <span>Total employés</span>
+          <strong>{{ totalEmployees }}</strong>
+        </div>
+
+        <div class="insight-row">
+          <span>Équipe dominante</span>
+          <strong>{{ biggestTeam?.manager?.prenom || '-' }}</strong>
+        </div>
+      </div>
+
+      <div class="hint-card" *ngIf="hasNoExpandedManager">
+        <span>💡</span>
+        Cliquez sur un manager pour afficher son équipe.
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- =========================================================
+     ADMIN - DETAIL MANAGER
+========================================================= -->
+<div class="manager-detail-modern" *ngIf="isDetailMode()">
+
+  <div class="hero-banner" *ngIf="manager">
+    <div class="banner-overlay"></div>
+
+    <div class="banner-content">
+      <button class="back-btn" type="button" routerLink="/admin/managers">
+        ← Retour
+      </button>
+
+      <div class="manager-head">
+        <div class="manager-avatar-shell large">
+          <app-employee-avatar
+            [employee]="manager"
+            size="lg"
+            shape="circle">
+          </app-employee-avatar>
+        </div>
+
+        <div class="manager-head-info">
+          <h1>{{ manager.prenom }} {{ manager.nom }}</h1>
+
+          <div class="meta">
+            <span class="poste">
+              {{ manager.poste || 'Poste non renseigné' }}
+            </span>
+
+            <span
+              class="dept"
+              [style.background]="getAvatarColor(manager.departement ?? '') + '20'"
+              [style.color]="getAvatarColor(manager.departement ?? '')">
+              {{ manager.departement || 'Sans département' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-wrapper">
+    <div class="loading-modern" *ngIf="loading">
+      <div class="loader"></div>
+      <p>Chargement de l'équipe...</p>
+    </div>
+
+    <div class="equipe-modern" *ngIf="!loading && equipe.length > 0">
+      <div class="section-title">
+        <span class="icon">👥</span>
+        <h2>Équipe</h2>
+
+        <span class="count">
+          {{ equipe.length }} membre{{ equipe.length > 1 ? 's' : '' }}
+        </span>
+      </div>
+
+      <div class="employe-grid-modern">
+        <div class="employe-card-modern" *ngFor="let emp of equipe">
+          <div class="card-inner">
+            <app-employee-avatar
+              [employee]="emp"
+              size="md"
+              shape="circle">
+            </app-employee-avatar>
+
+            <div class="employe-info">
+              <div class="name">
+                {{ emp.prenom }} {{ emp.nom }}
+              </div>
+
+              <div class="details">
+                {{ emp.poste || 'Employé' }}
+                <span *ngIf="emp.matricule"> • {{ emp.matricule }}</span>
+              </div>
+            </div>
+
+            <button
+              class="conges-btn"
+              type="button"
+              (click)="voirHistoriqueConges(emp)">
+              📅 Congés
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="empty-modern" *ngIf="!loading && equipe.length === 0">
+      <div class="empty-illustration">📭</div>
+      <h3>Aucun membre dans l'équipe</h3>
+      <p>Ce manager n'a pas encore d'employés rattachés.</p>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     MODAL HISTORIQUE CONGÉS INTÉGRÉE
+========================================================= -->
+<div class="modal-backdrop" *ngIf="showCongesModal" (click)="closeCongesModal()">
+  <div class="modal-shell" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <div class="modal-icon">📅</div>
+
+        <div class="modal-title-text">
+          <h2>Congés de {{ modalEmployeNom }}</h2>
+          <p>Historique des demandes de congé</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="close-btn"
+        aria-label="Fermer"
+        (click)="closeCongesModal()">
+        ✕
+      </button>
+    </div>
+
+    <div class="modal-content">
+      <div *ngIf="loadingConges" class="loading-state">
+        <div class="spinner-small"></div>
+        <span>Chargement des demandes...</span>
+      </div>
+
+      <div class="table-wrapper" *ngIf="!loadingConges && conges.length > 0">
+        <table class="conges-table">
+          <thead>
+            <tr>
+              <th>Période</th>
+              <th>Type</th>
+              <th class="center">Jours</th>
+              <th>Statut</th>
+              <th>Décision</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let c of conges">
+              <td class="date-range">
+                <span>{{ c.dateDebut | date:'dd/MM/yyyy' }}</span>
+                <span class="date-arrow">→</span>
+                <span>{{ c.dateFin | date:'dd/MM/yyyy' }}</span>
+              </td>
+
+              <td>
+                <span class="type-chip">{{ c.type }}</span>
+              </td>
+
+              <td class="center">
+                <span class="days-chip">{{ c.joursOuvres || 0 }} j</span>
+              </td>
+
+              <td>
+                <span
+                  class="status-badge"
+                  [ngClass]="'status-' + (c.statut?.toLowerCase() ?? '')">
+                  {{ c.statut }}
+                </span>
+              </td>
+
+              <td>
+                <span class="decision-date">
+                  {{ c.dateDecision ? (c.dateDecision | date:'dd/MM/yyyy') : '-' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="!loadingConges && conges.length === 0" class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>Aucune demande</h3>
+        <p>Aucune demande de congé trouvée pour cet employé.</p>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button
+        type="button"
+        class="btn-secondary"
+        (click)="closeCongesModal()">
+        Fermer
+      </button>
+    </div>
+
+  </div>
+</div>

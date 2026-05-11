@@ -1,54 +1,160 @@
 // src/app/app.routes.ts
+
 import { Routes } from '@angular/router';
+
 import { AuthLayoutComponent } from './shared/layouts/auth-layout/auth-layout.component';
-import { AdminLayoutComponent } from './shared/layouts/admin-layout/admin-layout.component';
-import { LoginComponent } from './features/auth/pages/login/login.component';
+import { AppLayoutComponent } from './shared/layouts/app/app-layout.component';
+
+import { LoginComponent } from './features/login/login.component';
+
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
-import { ManagerLayoutComponent } from './shared/layouts/manager-layout/manager-layout.component';
 
 export const routes: Routes = [
-  { path: '', redirectTo: '/auth/login', pathMatch: 'full' },
+  {
+    path: '',
+    redirectTo: '/auth/login',
+    pathMatch: 'full'
+  },
 
-  // ==================== ROUTES PUBLIQUES ====================
+  // ==================== AUTH ====================
   {
     path: 'auth',
     component: AuthLayoutComponent,
     children: [
-      { path: 'login', component: LoginComponent },
-      { path: '', redirectTo: 'login', pathMatch: 'full' }
+      {
+        path: 'login',
+        component: LoginComponent
+      },
+      {
+        path: '',
+        redirectTo: 'login',
+        pathMatch: 'full'
+      }
     ]
   },
 
-  // ==================== ROUTES ADMIN ====================
+  // ==================== ADMIN ====================
   {
     path: 'admin',
-    component: AdminLayoutComponent,
-    canActivate: [authGuard],
+    component: AppLayoutComponent,
+    canActivate: [authGuard, roleGuard],
+    data: {
+      roles: ['ADMIN_RH', 'admin_rh', 'admin', 'rh'],
+      layoutRole: 'ADMIN'
+    },
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      },
 
       {
         path: 'dashboard',
-        loadComponent: () => import('./features/admin/dashboard-admin/dashboard-admin.component')
-          .then(m => m.DashboardAdminComponent)
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component')
+            .then(m => m.DashboardComponent)
       },
+
+      // ==================== EMPLOYÉS ====================
       {
         path: 'employes',
-        loadChildren: () => import('./features/admin/gestion-employes/employes.routes')
-          .then(m => m.employesRoutes)
+        loadComponent: () =>
+          import('./features/employes/employes.component')
+            .then(m => m.EmployesComponent),
+        data: { employeMode: 'ADMIN_LISTE' }
       },
+      {
+        path: 'employes/nouveau',
+        loadComponent: () =>
+          import('./features/employes/employes.component')
+            .then(m => m.EmployesComponent),
+        data: { employeMode: 'ADMIN_NOUVEAU' }
+      },
+      {
+        path: 'employes/:id/edit',
+        loadComponent: () =>
+          import('./features/employes/employes.component')
+            .then(m => m.EmployesComponent),
+        data: { employeMode: 'ADMIN_MODIFIER' }
+      },
+      {
+        path: 'employes/:id',
+        loadComponent: () =>
+          import('./features/employes/employes.component')
+            .then(m => m.EmployesComponent),
+        data: { employeMode: 'ADMIN_DETAIL' }
+      },
+
+      // ==================== COMPÉTENCES ====================
       {
         path: 'competences',
-        loadChildren: () => import('./features/admin/gestion-competences/competences.routes')
-          .then(m => m.competencesRoutes)
+        loadComponent: () =>
+          import('./features/competences/competences.component')
+            .then(m => m.CompetencesComponent),
+        data: { competenceMode: 'ADMIN_LISTE' }
       },
       {
-        path: 'formations',
-        loadChildren: () => import('./features/admin/gestion-formations/formations.routes')
-          .then(m => m.formationsRoutes)
+        path: 'competences/nouveau',
+        loadComponent: () =>
+          import('./features/competences/competences.component')
+            .then(m => m.CompetencesComponent),
+        data: { competenceMode: 'ADMIN_NOUVEAU' }
       },
-      // Gestion des congés (validation RH)
+      {
+        path: 'competences/:id/edit',
+        loadComponent: () =>
+          import('./features/competences/competences.component')
+            .then(m => m.CompetencesComponent),
+        data: { competenceMode: 'ADMIN_MODIFIER' }
+      },
+      {
+        path: 'competences/:id',
+        loadComponent: () =>
+          import('./features/competences/competences.component')
+            .then(m => m.CompetencesComponent),
+        data: { competenceMode: 'ADMIN_DETAIL' }
+      },
+
+      // ==================== FORMATIONS ====================
+      {
+        path: 'formations',
+        loadComponent: () =>
+          import('./features/formations/formations.component')
+            .then(m => m.FormationsComponent),
+        data: { formationMode: 'ADMIN_LISTE' }
+      },
+      {
+        path: 'formations/new',
+        loadComponent: () =>
+          import('./features/formations/formations.component')
+            .then(m => m.FormationsComponent),
+        data: { formationMode: 'ADMIN_NOUVEAU' }
+      },
+      {
+        path: 'formations/:id/edit',
+        loadComponent: () =>
+          import('./features/formations/formations.component')
+            .then(m => m.FormationsComponent),
+        data: { formationMode: 'ADMIN_MODIFIER' }
+      },
+      {
+        path: 'formations/:id/participants',
+        loadComponent: () =>
+          import('./features/formations/formations.component')
+            .then(m => m.FormationsComponent),
+        data: { formationMode: 'ADMIN_PARTICIPANTS' }
+      },
+      {
+        path: 'formations/:id',
+        loadComponent: () =>
+          import('./features/formations/formations.component')
+            .then(m => m.FormationsComponent),
+        data: { formationMode: 'ADMIN_DETAIL' }
+      },
+
+      // ==================== CONGÉS ADMIN RH ====================
       {
         path: 'conges',
         redirectTo: 'conges/validation-rh',
@@ -56,125 +162,304 @@ export const routes: Routes = [
       },
       {
         path: 'conges/validation-rh',
-        loadComponent: () => import('./features/admin/gestion-conges/pages/validation-rh/validation-rh.component')
-          .then(m => m.ValidationRhComponent)
+        loadComponent: () =>
+          import('./features/conges/conges.component')
+            .then(m => m.CongesComponent),
+        data: { congeMode: 'ADMIN_RH_VALIDATION' }
       },
+
+      // ==================== SCORES ====================
       {
         path: 'scores',
-        loadComponent: () => import('./features/admin/scores/admin-scores.component')
-          .then(m => m.AdminScoresComponent)
+        loadComponent: () =>
+          import('./features/scores/scores.component')
+            .then(m => m.ScoresComponent),
+        data: { scoresMode: 'ADMIN_SCORES' }
       },
-          
-      // Assignation des managers
+
+      // ==================== RECRUTEMENT INTERNE ====================
+      {
+        path: 'recrutement',
+        loadComponent: () =>
+          import('./features/recrutement/recrutement.component')
+            .then(m => m.RecrutementComponent),
+        data: { recrutementMode: 'ADMIN_RECRUTEMENT' }
+      },
+
+      // ==================== ASSIGNATION MANAGER ====================
       {
         path: 'manager-assignment',
-        loadComponent: () => import('./features/admin/gestion-employes/pages/employe-list/employe-list.component')
-          .then(m => m.EmployeListComponent)
+        loadComponent: () =>
+          import('./features/employes/employes.component')
+            .then(m => m.EmployesComponent),
+        data: { employeMode: 'ADMIN_LISTE' }
       },
-      // Liste des managers avec équipes
+
+      // ==================== MANAGERS / ÉQUIPES ====================
       {
         path: 'managers',
-        loadComponent: () => import('./features/admin/gestion-employes/pages/manager-list/manager-list.component')
-          .then(m => m.ManagerListComponent)
+        loadComponent: () =>
+          import('./features/managers/managers.component')
+            .then(m => m.ManagersComponent),
+        data: { managersMode: 'ADMIN_MANAGER_LISTE' }
       },
-  
-      // Détail d'un manager
       {
         path: 'managers/:id',
-        loadComponent: () => import('./features/admin/gestion-employes/pages/manager-detail/manager-detail.component')
-          .then(m => m.ManagerDetailComponent)
+        loadComponent: () =>
+          import('./features/managers/managers.component')
+            .then(m => m.ManagersComponent),
+        data: { managersMode: 'ADMIN_MANAGER_DETAIL' }
       },
-      // ========== PROFIL ADMINISTRATEUR RH ==========
-  {
-  path: 'profil',
-  loadComponent: () => import('./features/admin/profil/AdminProfilComponent')
-    .then(m => m.AdminProfilComponent),
-  canActivate: [roleGuard],
-  data: { roles: ['ADMIN_RH', 'admin_rh', 'rh', 'admin'] }  // élargi
-},
-{
-  path: 'evaluations',
-  loadComponent: () =>
-    import('./features/admin/evaluation-list/evaluation-list')
-      .then(m => m.EvaluationListComponent)
-}
+
+      // ==================== PROFIL ADMIN ====================
+      {
+        path: 'profil',
+        loadComponent: () =>
+          import('./features/profil/profil.component')
+            .then(m => m.ProfilComponent),
+        canActivate: [roleGuard],
+        data: {
+          roles: ['ADMIN_RH', 'admin_rh', 'rh', 'admin'],
+          profilMode: 'ADMIN_PROFIL'
+        }
+      },
+
+      // ==================== ÉVALUATIONS ADMIN ====================
+      {
+        path: 'evaluations',
+        loadComponent: () =>
+          import('./features/evaluations/evaluations.component')
+            .then(m => m.EvaluationsComponent),
+        data: { evaluationMode: 'ADMIN_LISTE' }
+      }
     ]
   },
 
-  // ==================== ROUTES MANAGER ====================
+  // ==================== MANAGER ====================
   {
     path: 'manager',
-    component: ManagerLayoutComponent,
+    component: AppLayoutComponent,
     canActivate: [authGuard, roleGuard],
-    data: { roles: ['manager'] },
+    data: {
+      roles: ['manager', 'MANAGER'],
+      layoutRole: 'MANAGER'
+    },
     children: [
-      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      },
 
       {
         path: 'dashboard',
-        loadComponent: () => import('./features/manager/page/dashboard-manager/dashboard-manager.component')
-          .then(m => m.DashboardManagerComponent)
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component')
+            .then(m => m.DashboardComponent)
       },
+
+      // ==================== ÉQUIPE MANAGER ====================
       {
         path: 'equipe',
-        loadComponent: () => import('./features/manager/page/equipe/equipe.component')
-          .then(m => m.EquipeComponent)
+        loadComponent: () =>
+          import('./features/employes/employes.component')
+            .then(m => m.EmployesComponent),
+        data: { employeMode: 'MANAGER_EQUIPE' }
       },
+
+      // ==================== CONGÉS MANAGER ====================
       {
         path: 'conges',
-        loadComponent: () => import('./features/manager/page/conges/approbation-conge/approbation-conge.component')
-          .then(m => m.ApprobationCongeComponent)
-      },
-      {
-        path: 'stats',
-        loadComponent: () => import('./features/manager/page/stats/stats.component')
-          .then(m => m.StatsComponent)
-      },
-      {
-        path: 'alertes',
-        loadComponent: () => import('./features/manager/page/alertes/alertes.component')
-          .then(m => m.AlertesComponent)
-      },
-      {
-        path: 'employe/:id',
-        loadComponent: () => import('./features/manager/page/employe-detail/employe-detail.component')
-          .then(m => m.EmployeDetailComponent)
+        loadComponent: () =>
+          import('./features/conges/conges.component')
+            .then(m => m.CongesComponent),
+        data: { congeMode: 'MANAGER_VALIDATION' }
       },
       {
         path: 'employe/:id/conges',
-        loadComponent: () => import('./features/manager/page/employe-conges/employe-conges.component')
-          .then(m => m.EmployeCongesComponent)
+        loadComponent: () =>
+          import('./features/conges/conges.component')
+            .then(m => m.CongesComponent),
+        data: { congeMode: 'MANAGER_HISTORIQUE_EMPLOYE' }
       },
+
+      // ==================== STATS MANAGER ====================
+      {
+        path: 'stats',
+        loadComponent: () =>
+          import('./features/stats/stats.component')
+            .then(m => m.StatsComponent)
+      },
+
+      // ==================== DÉTAIL EMPLOYÉ MANAGER ====================
+      {
+        path: 'employe/:id',
+        loadComponent: () =>
+          import('./features/employes/employes.component')
+            .then(m => m.EmployesComponent),
+        data: { employeMode: 'MANAGER_DETAIL' }
+      },
+
+      // ==================== INDICATEURS MANAGER ====================
       {
         path: 'indicateurs',
-        loadComponent: () => import('./features/manager/page/indicateurs/indicateurs.component')
-          .then(m => m.IndicateursComponent)
+        loadComponent: () =>
+          import('./features/indicateurs/indicateurs.component')
+            .then(m => m.IndicateursComponent)
       },
-    {
+
+      // ==================== PROFIL MANAGER ====================
+      {
         path: 'profil',
-        loadComponent: () => import('./features/manager/page/profil/manager-profil.component')
-          .then(m => m.ManagerProfilComponent),
+        loadComponent: () =>
+          import('./features/profil/profil.component')
+            .then(m => m.ProfilComponent),
         canActivate: [roleGuard],
-        data: { roles: ['manager'] }
+        data: {
+          roles: ['manager', 'MANAGER'],
+          profilMode: 'MANAGER_PROFIL'
+        }
       },
-     {
-  path: 'evaluations',
-  loadComponent: () =>
-    import('./features/manager/page/evaluations/pages/evaluations-manager/manager-evaluations')
-      .then(m => m.ManagerEvaluationsComponent)
-}
+
+      // ==================== ÉVALUATIONS MANAGER ====================
+      {
+        path: 'evaluations',
+        loadComponent: () =>
+          import('./features/evaluations/evaluations.component')
+            .then(m => m.EvaluationsComponent),
+        data: { evaluationMode: 'MANAGER_LISTE' }
+      }
     ]
   },
-  
 
-  // ==================== ROUTES EMPLOYEE ====================
+  // ==================== EMPLOYEE ====================
   {
     path: 'employee',
+    component: AppLayoutComponent,
     canActivate: [authGuard],
-    loadChildren: () => import('./features/employee/employee.routes')
-      .then(m => m.employeeRoutes)
+    data: {
+      layoutRole: 'EMPLOYE'
+    },
+    children: [
+      {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+      },
+
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component')
+            .then(m => m.DashboardComponent),
+        data: {
+          forceRole: 'EMPLOYE'
+        }
+      },
+
+      {
+        path: 'espace-personnel',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component')
+            .then(m => m.DashboardComponent),
+        data: {
+          forceRole: 'EMPLOYE'
+        }
+      },
+
+      // ==================== PROFIL EMPLOYÉ ====================
+      {
+        path: 'mon-profil',
+        loadComponent: () =>
+          import('./features/profil/profil.component')
+            .then(m => m.ProfilComponent),
+        data: {
+          profilMode: 'EMPLOYE_PROFIL'
+        }
+      },
+
+      // ==================== CONGÉS EMPLOYÉ ====================
+      {
+        path: 'mes-conges',
+        loadComponent: () =>
+          import('./features/conges/conges.component')
+            .then(m => m.CongesComponent),
+        data: { congeMode: 'EMPLOYE_LISTE' }
+      },
+      {
+        path: 'mes-conges/nouveau',
+        loadComponent: () =>
+          import('./features/conges/conges.component')
+            .then(m => m.CongesComponent),
+        data: { congeMode: 'EMPLOYE_NOUVEAU' }
+      },
+      {
+        path: 'mes-conges/:id/modifier',
+        loadComponent: () =>
+          import('./features/conges/conges.component')
+            .then(m => m.CongesComponent),
+        data: { congeMode: 'EMPLOYE_MODIFIER' }
+      },
+      {
+        path: 'mes-conges/:id',
+        loadComponent: () =>
+          import('./features/conges/conges.component')
+            .then(m => m.CongesComponent),
+        data: { congeMode: 'EMPLOYE_DETAIL' }
+      },
+
+      // ==================== FORMATIONS EMPLOYÉ ====================
+      {
+        path: 'mes-formations',
+        loadComponent: () =>
+          import('./features/formations/formations.component')
+            .then(m => m.FormationsComponent),
+        data: { formationMode: 'EMPLOYE_MES_FORMATIONS' }
+      },
+
+      // ==================== NOTIFICATIONS EMPLOYÉ ====================
+      {
+        path: 'notifications',
+        loadComponent: () =>
+          import('./features/notifications/notifications.component')
+            .then(m => m.NotificationsComponent),
+        data: {
+          notificationMode: 'EMPLOYE_NOTIFICATIONS'
+        }
+      },
+
+      // ==================== COMPÉTENCES EMPLOYÉ ====================
+      {
+        path: 'competences',
+        loadComponent: () =>
+          import('./features/competences/competences.component')
+            .then(m => m.CompetencesComponent),
+        data: { competenceMode: 'EMPLOYE_MES_COMPETENCES' }
+      },
+
+      // ==================== RECRUTEMENT INTERNE EMPLOYÉ ====================
+      {
+        path: 'offres-internes',
+        loadComponent: () =>
+          import('./features/recrutement/recrutement.component')
+            .then(m => m.RecrutementComponent),
+        data: { recrutementMode: 'EMPLOYE_RECRUTEMENT' }
+      },
+
+      // ==================== ÉVALUATIONS EMPLOYÉ ====================
+      {
+        path: 'mes-evaluations',
+        loadComponent: () =>
+          import('./features/evaluations/evaluations.component')
+            .then(m => m.EvaluationsComponent),
+        data: { evaluationMode: 'EMPLOYE_MES_EVALUATIONS' }
+      }
+    ]
   },
 
-  // Redirection par défaut (page non trouvée)
-  { path: '**', redirectTo: '/auth/login' }
+  // ==================== FALLBACK ====================
+  {
+    path: '**',
+    redirectTo: '/auth/login'
+  }
 ];

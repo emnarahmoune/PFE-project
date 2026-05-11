@@ -1,0 +1,1035 @@
+<!-- src/app/features/employes/employes.component.html -->
+
+<!-- =========================================================
+     ADMIN - LISTE EMPLOYÉS
+========================================================= -->
+<div class="emp-page" *ngIf="mode === 'ADMIN_LISTE'">
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 class="page-title">Gestion des employés</h1>
+      <p class="page-subtitle">{{ employes.length }} collaborateurs enregistrés</p>
+    </div>
+
+    <div class="page-header-right">
+      <button class="btn-outline" type="button" (click)="loadEmployes()">
+        Actualiser
+      </button>
+
+      <button class="btn-primary" type="button" (click)="goToCreate()">
+        Nouvel employé
+      </button>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-icon kpi-blue">👥</div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ employes.length }}</span>
+        <span class="kpi-label">Total employés</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon kpi-green">✅</div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ getCount('ACTIF') }}</span>
+        <span class="kpi-label">Actifs</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon kpi-amber">🏖️</div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ getCount('CONGE') }}</span>
+        <span class="kpi-label">En congé</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon kpi-red">⛔</div>
+      <div class="kpi-body">
+        <span class="kpi-value">{{ getCount('INACTIF') }}</span>
+        <span class="kpi-label">Inactifs</span>
+      </div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-icon kpi-purple">💰</div>
+      <div class="kpi-body">
+        <span class="kpi-value kpi-value-sm">{{ formatTnd(getMasseSalariale()) }}</span>
+        <span class="kpi-label">Masse salariale</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="filters-card">
+    <input
+      class="search-input"
+      type="text"
+      placeholder="Rechercher par nom, matricule, email, poste..."
+      [(ngModel)]="searchText"
+      (input)="applyFilter()">
+
+    <select class="filter-select" [(ngModel)]="selectedStatut" (change)="applyFilter()">
+      <option *ngFor="let s of statuts" [value]="s">{{ s }}</option>
+    </select>
+
+    <select class="filter-select" [(ngModel)]="selectedDepartement" (change)="applyFilter()">
+      <option *ngFor="let d of departements" [value]="d">{{ d }}</option>
+    </select>
+
+    <button class="btn-ghost" type="button" (click)="resetFilters()">
+      Réinitialiser
+    </button>
+  </div>
+
+  <div class="loading-card" *ngIf="loading">
+    Chargement des employés...
+  </div>
+
+  <div class="employee-grid" *ngIf="!loading && getPagedData().length > 0">
+    <article
+      class="employee-admin-card"
+      *ngFor="let emp of getPagedData()"
+      (click)="viewDetail(emp.id!)">
+
+      <div class="card-accent" [style.background]="getAvatarColor(emp.departement ?? '')"></div>
+
+      <div class="card-inner">
+        <div class="card-head">
+          <div class="emp-avatar-shell">
+            <app-employee-avatar
+              [employee]="emp"
+              size="lg"
+              shape="circle">
+            </app-employee-avatar>
+          </div>
+
+          <div class="emp-status" [ngClass]="'status-' + (emp.statut || '').toLowerCase()">
+            <span class="status-dot"></span>
+            {{ emp.statut }}
+          </div>
+        </div>
+
+        <div class="card-body">
+          <h3 class="emp-name">{{ emp.prenom }} {{ emp.nom }}</h3>
+          <p class="emp-role">{{ emp.poste }}</p>
+
+          <div class="emp-chips">
+            <span class="chip chip-dept" [style.color]="getAvatarColor(emp.departement ?? '')">
+              {{ emp.departement }}
+            </span>
+
+            <span class="chip chip-mono">
+              {{ emp.matricule }}
+            </span>
+          </div>
+        </div>
+
+        <div class="card-foot">
+          <div class="emp-salary">
+            {{ formatTnd(emp.salaire) }}
+          </div>
+
+          <div class="card-actions" (click)="$event.stopPropagation()">
+            <button
+              class="act-btn act-edit"
+              type="button"
+              (click)="goToEdit(emp.id!)"
+              title="Modifier">
+              ✏️
+            </button>
+
+            <button
+              class="act-btn act-assign"
+              type="button"
+              [disabled]="isManager(emp)"
+              (click)="openAssignModal(emp)"
+              [title]="isManager(emp) ? 'Un manager ne peut pas avoir de manager' : 'Assigner un manager'">
+              👤
+            </button>
+
+            <button
+              class="act-btn act-delete"
+              type="button"
+              (click)="deleteEmployeFromList(emp.id!, (emp.prenom ?? '') + ' ' + (emp.nom ?? ''))"
+              title="Supprimer">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="empty-state" *ngIf="!loading && getPagedData().length === 0">
+    <div class="empty-icon">👥</div>
+    <p class="empty-title">Aucun employé trouvé</p>
+    <p class="empty-sub">Essayez d'ajuster vos filtres</p>
+
+    <button class="btn-ghost" type="button" (click)="resetFilters()">
+      Effacer les filtres
+    </button>
+  </div>
+
+  <div class="pagination" *ngIf="!loading && getTotalPages() > 1">
+    <button
+      class="page-btn"
+      type="button"
+      [disabled]="currentPage === 0"
+      (click)="currentPage = currentPage - 1">
+      ←
+    </button>
+
+    <div class="page-pills">
+      <button
+        *ngFor="let p of [].constructor(getTotalPages()); let i = index"
+        class="page-num"
+        type="button"
+        [class.page-active]="i === currentPage"
+        (click)="currentPage = i"
+        [style.display]="(i < 3 || i >= getTotalPages() - 2 || Math.abs(i - currentPage) <= 1) ? '' : 'none'">
+        {{ i + 1 }}
+      </button>
+    </div>
+
+    <button
+      class="page-btn"
+      type="button"
+      [disabled]="currentPage >= getTotalPages() - 1"
+      (click)="currentPage = currentPage + 1">
+      →
+    </button>
+
+    <span class="page-total">
+      Page {{ currentPage + 1 }} / {{ getTotalPages() }}
+    </span>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="showAssignModal" (click)="closeAssignModal()">
+    <div class="modal-dialog" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <div>
+          <h3>Assigner un manager</h3>
+          <p>
+            {{ selectedEmploye?.prenom }} {{ selectedEmploye?.nom }}
+          </p>
+        </div>
+
+        <button class="modal-close" type="button" (click)="closeAssignModal()">×</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="current-manager">
+          Manager actuel : <strong>{{ getCurrentManagerName() }}</strong>
+        </div>
+
+        <label class="field-label">Nouveau manager</label>
+        <select class="field-input" [(ngModel)]="selectedManagerId">
+          <option [ngValue]="null">Sélectionner un manager</option>
+          <option *ngFor="let manager of getManagersForModal()" [ngValue]="manager.id">
+            {{ manager.prenom }} {{ manager.nom }} - {{ manager.email }}
+          </option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-ghost" type="button" (click)="closeAssignModal()">
+          Annuler
+        </button>
+
+        <button
+          class="btn-outline"
+          type="button"
+          *ngIf="hasCurrentManager()"
+          (click)="unassignManager()">
+          Désassigner
+        </button>
+
+        <button class="btn-primary" type="button" (click)="assignManager()">
+          Assigner
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     ADMIN - FORMULAIRE AJOUT / MODIFICATION
+========================================================= -->
+<div class="form-shell" *ngIf="mode === 'ADMIN_NOUVEAU' || mode === 'ADMIN_MODIFIER'">
+
+  <div class="back-bar">
+    <button class="back-btn" type="button" (click)="onCancel()">
+      <span>←</span>
+      <span>{{ isEditMode ? 'Fiche employé' : 'Équipe' }}</span>
+    </button>
+  </div>
+
+  <div class="form-header">
+    <div class="form-header-left">
+      <span class="header-tag">{{ isEditMode ? 'Modification' : 'Nouveau membre' }}</span>
+
+      <h1 class="form-title">
+        {{ isEditMode ? 'Modifier l\'employé' : 'Ajouter un employé' }}
+      </h1>
+
+      <p class="form-subtitle">
+        {{ isEditMode ? 'Tous les champs sont éditables et seront sauvegardés.' : 'Remplissez les informations du nouveau membre d\'équipe.' }}
+      </p>
+    </div>
+
+    <div class="step-indicator">
+      <div class="step-dot active"></div>
+      <div class="step-line"></div>
+      <div class="step-dot" [class.active]="isStepTwoVisible()"></div>
+      <div class="step-line"></div>
+      <div class="step-dot" [class.active]="isStepThreeVisible()"></div>
+    </div>
+  </div>
+
+  <div class="loader-wrap" *ngIf="loading">
+    <div class="loader-ring"></div>
+    <p class="loader-text">Chargement des données…</p>
+  </div>
+
+  <form
+    [formGroup]="employeForm"
+    (ngSubmit)="onSubmit()"
+    *ngIf="!loading"
+    class="form-body"
+    autocomplete="off">
+
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-num">1</span>
+        <span class="section-title">Identité</span>
+        <span class="section-desc">Informations de base</span>
+      </div>
+
+      <div class="section-fields">
+        <div class="field-group">
+          <label class="field-label">Matricule <span class="req">*</span></label>
+          <input class="field-input" formControlName="matricule" placeholder="EMP-001" [class.invalid]="hasErr('matricule')">
+          <span class="field-error" *ngIf="hasErr('matricule')">{{ getErr('matricule') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Nom <span class="req">*</span></label>
+          <input class="field-input" formControlName="nom" placeholder="Dupont" [class.invalid]="hasErr('nom')">
+          <span class="field-error" *ngIf="hasErr('nom')">{{ getErr('nom') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Prénom <span class="req">*</span></label>
+          <input class="field-input" formControlName="prenom" placeholder="Jean" [class.invalid]="hasErr('prenom')">
+          <span class="field-error" *ngIf="hasErr('prenom')">{{ getErr('prenom') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Email <span class="req">*</span></label>
+          <input class="field-input" type="email" formControlName="email" placeholder="email@domaine.com" [class.invalid]="hasErr('email')">
+          <span class="field-error" *ngIf="hasErr('email')">{{ getErr('email') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Téléphone</label>
+          <input class="field-input" formControlName="telephone" placeholder="+216 XX XXX XXX" [class.invalid]="hasErr('telephone')">
+          <span class="field-error" *ngIf="hasErr('telephone')">{{ getErr('telephone') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-num">2</span>
+        <span class="section-title">Informations professionnelles</span>
+        <span class="section-desc">Poste, département et salaire</span>
+      </div>
+
+      <div class="section-fields">
+        <div class="field-group">
+          <label class="field-label">Date d’embauche <span class="req">*</span></label>
+          <input class="field-input" type="date" formControlName="dateEmbauche" [class.invalid]="hasErr('dateEmbauche')">
+          <span class="field-error" *ngIf="hasErr('dateEmbauche')">{{ getErr('dateEmbauche') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Poste <span class="req">*</span></label>
+          <select class="field-input" formControlName="poste" [class.invalid]="hasErr('poste')">
+            <option value="">Sélectionner</option>
+            <option *ngFor="let p of postes" [value]="p">{{ p }}</option>
+          </select>
+          <span class="field-error" *ngIf="hasErr('poste')">{{ getErr('poste') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Département <span class="req">*</span></label>
+          <select class="field-input" formControlName="departement" [class.invalid]="hasErr('departement')">
+            <option value="">Sélectionner</option>
+            <option *ngFor="let d of formDepartements" [value]="d">{{ d }}</option>
+          </select>
+          <span class="field-error" *ngIf="hasErr('departement')">{{ getErr('departement') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Salaire <span class="req">*</span></label>
+          <input class="field-input" type="number" formControlName="salaire" [class.invalid]="hasErr('salaire')">
+          <span class="field-error" *ngIf="hasErr('salaire')">{{ getErr('salaire') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Solde congés <span class="req">*</span></label>
+          <input class="field-input" type="number" formControlName="soldeConges" [class.invalid]="hasErr('soldeConges')">
+          <span class="field-error" *ngIf="hasErr('soldeConges')">{{ getErr('soldeConges') }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="section-header">
+        <span class="section-num">3</span>
+        <span class="section-title">Compte et hiérarchie</span>
+        <span class="section-desc">Rôle, statut et manager</span>
+      </div>
+
+      <div class="section-fields">
+        <div class="field-group">
+          <label class="field-label">Rôle <span class="req">*</span></label>
+          <select class="field-input" formControlName="role" [class.invalid]="hasErr('role')">
+            <option [ngValue]="null">Sélectionner</option>
+            <option *ngFor="let role of rolesList" [value]="role.value">
+              {{ role.label }}
+            </option>
+          </select>
+          <span class="field-error" *ngIf="hasErr('role')">{{ getErr('role') }}</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Manager</label>
+          <select class="field-input" formControlName="managerId" [disabled]="isManagerSelected">
+            <option [ngValue]="null">
+              {{ isManagerSelected ? 'Un manager ne peut pas avoir de manager' : 'Aucun manager' }}
+            </option>
+
+            <option *ngFor="let manager of filteredManagersList" [ngValue]="manager.id">
+              {{ manager.prenom }} {{ manager.nom }}
+            </option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Statut</label>
+
+          <div class="status-switch">
+            <button
+              type="button"
+              class="status-choice"
+              [class.active]="employeForm.get('statut')?.value === 'ACTIF'"
+              (click)="setFormStatut('ACTIF')">
+              Actif
+            </button>
+
+            <button
+              type="button"
+              class="status-choice"
+              [class.active]="employeForm.get('statut')?.value === 'INACTIF'"
+              (click)="setFormStatut('INACTIF')">
+              Inactif
+            </button>
+
+            <button
+              type="button"
+              class="status-choice"
+              [class.active]="employeForm.get('statut')?.value === 'CONGE'"
+              (click)="setFormStatut('CONGE')">
+              Congé
+            </button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Service ID</label>
+          <input class="field-input" type="number" formControlName="serviceId">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn-ghost" type="button" (click)="onCancel()">
+        Annuler
+      </button>
+
+      <button class="btn-primary" type="submit" [disabled]="submitting">
+        {{ submitting ? 'Sauvegarde...' : isEditMode ? 'Enregistrer les modifications' : 'Créer l\'employé' }}
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<!-- =========================================================
+     ADMIN - DETAIL EMPLOYÉ
+========================================================= -->
+<div class="page-shell" *ngIf="mode === 'ADMIN_DETAIL'">
+
+  <div class="back-row">
+    <button class="back-btn" type="button" (click)="goBack()">
+      ← Équipe
+    </button>
+
+    <span class="breadcrumb">
+      / {{ employe?.prenom }} {{ employe?.nom }}
+    </span>
+  </div>
+
+  <div class="loader-wrap" *ngIf="loading">
+    <div class="loader-ring"></div>
+    <p class="loader-txt">Chargement de la fiche…</p>
+  </div>
+
+  <ng-container *ngIf="!loading && employe">
+
+    <div class="hero-card">
+      <div class="hero-stripe" [style.background]="getAdminAvatarColor()"></div>
+
+      <div class="hero-body">
+        <div class="hero-avatar-shell">
+          <app-employee-avatar
+            [employee]="employe"
+            size="lg"
+            shape="circle">
+          </app-employee-avatar>
+        </div>
+
+        <div class="hero-info">
+          <div class="hero-tags">
+            <span class="tag-dept">
+              {{ employe.departement || 'Département non renseigné' }}
+            </span>
+
+            <span class="badge-pill" [ngClass]="'badge-' + (employe.statut || '').toLowerCase()">
+              {{ employe.statut || '—' }}
+            </span>
+          </div>
+
+          <h1 class="hero-name">
+            {{ employe.prenom }} {{ employe.nom }}
+          </h1>
+
+          <p class="hero-poste">
+            {{ employe.poste || 'Poste non renseigné' }}
+          </p>
+
+          <code class="hero-matricule">
+            {{ employe.matricule || 'Matricule non renseigné' }}
+          </code>
+        </div>
+
+        <div class="hero-actions">
+          <button class="btn-primary" type="button" (click)="editEmploye()">
+            Modifier
+          </button>
+
+          <button class="btn-danger" type="button" (click)="toggleStatut()">
+            {{ employe.statut === 'ACTIF' ? 'Désactiver' : 'Activer' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Salaire annuel</div>
+        <div class="stat-value">{{ getSalaireFormate() }}</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">Ancienneté</div>
+        <div class="stat-value">{{ getAnciennete() }}</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">Solde congés</div>
+        <div class="stat-value">{{ employe.soldeConges ?? '—' }}</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-label">Profil complété</div>
+        <div class="stat-value">{{ profileCompletion }}%</div>
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width.%]="profileCompletion"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-layout">
+      <div class="detail-card">
+        <h2>Informations professionnelles</h2>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Matricule</span>
+            <span class="value">{{ employe.matricule || 'Non renseigné' }}</span>
+          </div>
+
+          <div class="info-item">
+            <span class="label">Email</span>
+            <span class="value">{{ employe.email || 'Non renseigné' }}</span>
+          </div>
+
+          <div class="info-item">
+            <span class="label">Téléphone</span>
+            <span class="value">{{ employe.telephone || 'Non renseigné' }}</span>
+          </div>
+
+          <div class="info-item">
+            <span class="label">Département</span>
+            <span class="value">{{ employe.departement || 'Non renseigné' }}</span>
+          </div>
+
+          <div class="info-item">
+            <span class="label">Date d’embauche</span>
+            <span class="value">{{ getDateEmbaucheFormatee() }}</span>
+          </div>
+
+          <div class="info-item">
+            <span class="label">Rôle</span>
+            <span class="value">{{ getRoleLabel(employe.role) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="manager-header">
+          <h2>Manager</h2>
+
+          <button
+            class="btn-outline"
+            type="button"
+            *ngIf="!editManagerMode"
+            (click)="editManagerMode = true">
+            Modifier
+          </button>
+        </div>
+
+        <div *ngIf="!editManagerMode">
+          <p class="manager-name">
+            {{ getManagerNom(employe.managerId) }}
+          </p>
+        </div>
+
+        <form [formGroup]="managerForm" *ngIf="editManagerMode">
+          <select class="field-input" formControlName="managerId">
+            <option [ngValue]="null">Aucun manager</option>
+            <option *ngFor="let manager of managersList" [ngValue]="manager.id">
+              {{ manager.prenom }} {{ manager.nom }}
+            </option>
+          </select>
+
+          <div class="manager-actions">
+            <button class="btn-ghost" type="button" (click)="cancelEditManager()">
+              Annuler
+            </button>
+
+            <button class="btn-primary" type="button" [disabled]="updatingManager" (click)="updateManager()">
+              Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="tabs-card">
+      <div class="tabs">
+        <button
+          class="tab-btn"
+          *ngFor="let tab of tabs"
+          [class.active]="activeTab === tab.id"
+          (click)="activeTab = tab.id">
+          <span>{{ tab.icon }}</span>
+          {{ tab.label }}
+        </button>
+      </div>
+
+      <div class="tab-content" *ngIf="activeTab === 'competences'">
+        <h3>Compétences</h3>
+
+        <div class="mini-list" *ngIf="employe.competences?.length; else emptyCompetences">
+          <div class="mini-item" *ngFor="let c of employe.competences">
+            <strong>{{ c.nom }}</strong>
+            <span>{{ c.niveau }}</span>
+          </div>
+        </div>
+
+        <ng-template #emptyCompetences>
+          <p class="empty-inline">Aucune compétence renseignée.</p>
+        </ng-template>
+      </div>
+
+      <div class="tab-content" *ngIf="activeTab === 'formations'">
+        <h3>Formations</h3>
+
+        <div class="mini-list" *ngIf="employe.formations?.length; else emptyFormations">
+          <div class="mini-item" *ngFor="let f of employe.formations">
+            <strong>{{ f.titre }}</strong>
+            <span>{{ f.statut || '—' }} · {{ f.progression }}%</span>
+          </div>
+        </div>
+
+        <ng-template #emptyFormations>
+          <p class="empty-inline">Aucune formation renseignée.</p>
+        </ng-template>
+      </div>
+
+      <div class="tab-content" *ngIf="activeTab === 'conges'">
+        <h3>Congés</h3>
+
+        <div class="mini-list" *ngIf="employe.conges?.length; else emptyConges">
+          <div class="mini-item" *ngFor="let c of employe.conges">
+            <strong>{{ c.type }}</strong>
+            <span>{{ c.dateDebut | date:'dd/MM/yyyy' }} → {{ c.dateFin | date:'dd/MM/yyyy' }} · {{ c.statut }}</span>
+          </div>
+        </div>
+
+        <ng-template #emptyConges>
+          <p class="empty-inline">Aucun congé renseigné.</p>
+        </ng-template>
+      </div>
+
+      <div class="tab-content" *ngIf="activeTab === 'evaluations'">
+        <h3>Évaluations</h3>
+
+        <div class="mini-list" *ngIf="employe.evaluations?.length; else emptyEvaluations">
+          <div class="mini-item" *ngFor="let e of employe.evaluations">
+            <strong>Note : {{ e.note }}/20</strong>
+            <span>{{ e.dateEvaluation | date:'dd/MM/yyyy' }} · {{ e.commentaire || 'Sans commentaire' }}</span>
+          </div>
+        </div>
+
+        <ng-template #emptyEvaluations>
+          <p class="empty-inline">Aucune évaluation renseignée.</p>
+        </ng-template>
+      </div>
+    </div>
+
+  </ng-container>
+</div>
+
+<!-- =========================================================
+     MANAGER - MON ÉQUIPE
+========================================================= -->
+<div class="equipe-page" *ngIf="mode === 'MANAGER_EQUIPE'">
+
+  <section class="page-hero">
+    <div class="hero-left">
+      <div class="hero-icon">
+        <span>👥</span>
+      </div>
+
+      <div>
+        <h1>Mon équipe</h1>
+        <p>Suivez vos collaborateurs, leurs indicateurs RH et les signaux de risque.</p>
+      </div>
+    </div>
+
+    <div class="hero-count">
+      <strong>{{ filteredEmployes.length }}</strong>
+      <span>collaborateur(s)</span>
+    </div>
+  </section>
+
+  <section class="toolbar-card">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+
+      <input
+        type="text"
+        placeholder="Rechercher par nom, poste, département ou email..."
+        [(ngModel)]="searchTerm"
+        (input)="filterEmployes()">
+    </div>
+
+    <select class="sort-select" [(ngModel)]="sortBy" (change)="sortEmployes()">
+      <option *ngFor="let option of sortOptions" [value]="option.value">
+        {{ option.label }}
+      </option>
+    </select>
+  </section>
+
+  <div *ngIf="loading" class="skeleton-grid">
+    <div class="skeleton-card" *ngFor="let i of [1,2,3,4,5,6]">
+      <div class="skeleton-top">
+        <div class="skeleton-avatar"></div>
+        <div class="skeleton-badge"></div>
+      </div>
+
+      <div class="skeleton-line title"></div>
+      <div class="skeleton-line medium"></div>
+
+      <div class="skeleton-metrics">
+        <div></div>
+        <div></div>
+      </div>
+
+      <div class="skeleton-line short"></div>
+    </div>
+  </div>
+
+  <section *ngIf="!loading && filteredEmployes.length > 0" class="cards-grid">
+
+    <article
+      *ngFor="let emp of filteredEmployes; trackBy: trackByEmployeId"
+      class="employee-card"
+      (click)="goToManagerDetail(emp.id!)">
+
+      <div class="card-header">
+        <app-employee-avatar
+          [employee]="emp"
+          size="lg"
+          shape="circle">
+        </app-employee-avatar>
+
+        <span class="status-badge" [ngClass]="getStatutClass(emp.statut)">
+          {{ emp.statut || 'Non défini' }}
+        </span>
+      </div>
+
+      <div class="employee-main">
+        <h3>{{ getFullName(emp) }}</h3>
+
+        <p class="poste">
+          <span>💼</span>
+          {{ emp.poste || 'Poste non défini' }}
+        </p>
+      </div>
+
+      <div class="indicators">
+        <div class="indicator" [ngClass]="getAbsenteismeClass(emp.absenteisme)">
+          <span class="indicator-icon">📉</span>
+
+          <strong>
+            {{ emp.absenteisme != null ? (emp.absenteisme | number:'1.1-1') + '%' : '—' }}
+          </strong>
+
+          <span>Absentéisme</span>
+          <small>Taux d’absence</small>
+        </div>
+
+        <div class="indicator" [ngClass]="getScoreClass(emp.scoreTurnover)">
+          <span class="indicator-icon">⚠️</span>
+
+          <strong>
+            {{ emp.scoreTurnover != null ? emp.scoreTurnover : '—' }}
+          </strong>
+
+          <span>Risque turnover</span>
+          <small>Score 0-100</small>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <span class="dept-pill">{{ emp.departement || 'Sans département' }}</span>
+
+        <span class="date-text">
+          {{ emp.dateEmbauche ? (emp.dateEmbauche | date:'MMM y') : 'Date inconnue' }}
+        </span>
+      </div>
+
+    </article>
+
+  </section>
+
+  <section *ngIf="!loading && filteredEmployes.length === 0" class="empty-state">
+    <div class="empty-icon">👥</div>
+
+    <h3>Aucun collaborateur trouvé</h3>
+
+    <p *ngIf="searchTerm">
+      Essayez avec un autre nom, poste, département ou email.
+    </p>
+
+    <p *ngIf="!searchTerm">
+      Les employés vous seront assignés par l’administrateur RH.
+    </p>
+  </section>
+
+  <div *ngIf="loadingIndicators && !loading" class="indicators-loading">
+    Mise à jour des indicateurs RH...
+  </div>
+
+</div>
+
+<!-- =========================================================
+     MANAGER - DETAIL EMPLOYÉ
+========================================================= -->
+<div class="employee-detail-page" *ngIf="mode === 'MANAGER_DETAIL'">
+
+  <button class="back-button" type="button" (click)="goBack()">
+    <span>←</span>
+    Revenir à la page précédente
+  </button>
+
+  <div class="skeleton-detail" *ngIf="loading">
+    <div class="skeleton-header">
+      <div class="sk-avatar"></div>
+      <div class="sk-content">
+        <div class="sk-line title"></div>
+        <div class="sk-line short"></div>
+      </div>
+    </div>
+
+    <div class="sk-grid">
+      <div class="sk-box" *ngFor="let i of [1,2,3,4,5,6]"></div>
+    </div>
+  </div>
+
+  <div class="error-card" *ngIf="error && !loading">
+    <div class="error-icon">⚠️</div>
+    <h3>Impossible de charger l’employé</h3>
+    <p>Vérifiez que vous avez les droits d’accès ou que cet employé appartient bien à votre équipe.</p>
+
+    <div class="error-actions">
+      <button class="btn-secondary" type="button" (click)="goBack()">
+        ← Retour précédent
+      </button>
+
+      <a routerLink="/manager/equipe" class="btn-primary">
+        Voir mon équipe
+      </a>
+    </div>
+  </div>
+
+  <section class="employee-profile" *ngIf="managerEmploye && !loading">
+
+    <div class="profile-hero-card">
+      <div class="employee-identity">
+
+        <div class="employee-avatar-shell">
+          <app-employee-avatar
+            [employee]="managerEmploye"
+            size="lg"
+            shape="circle">
+          </app-employee-avatar>
+        </div>
+
+        <div class="identity-text">
+          <div class="identity-top">
+            <h1>{{ getFullName(managerEmploye) }}</h1>
+
+            <span class="status-badge" [ngClass]="getManagerStatusClass(managerEmploye.statut)">
+              {{ managerEmploye.statut || 'Non défini' }}
+            </span>
+          </div>
+
+          <p class="role">
+            <span>💼</span>
+            {{ managerEmploye.poste || 'Poste non défini' }}
+          </p>
+
+          <div class="identity-meta">
+            <span>{{ managerEmploye.departement || 'Sans département' }}</span>
+            <span>Matricule : {{ managerEmploye.matricule || 'Non défini' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <a [routerLink]="['/manager/employe', managerEmploye.id, 'conges']" class="btn-primary">
+          📋 Voir ses congés
+        </a>
+      </div>
+    </div>
+
+    <div class="detail-layout">
+      <div class="detail-card info-card">
+        <div class="card-title">
+          <div class="card-icon">👤</div>
+          <div>
+            <h2>Informations professionnelles</h2>
+            <p>Données principales de l’employé</p>
+          </div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="label">Matricule</span>
+            <span class="value">{{ managerEmploye.matricule || 'Non renseigné' }}</span>
+          </div>
+
+          <div class="info-item">
+            <span class="label">Email</span>
+            <span class="value">{{ managerEmploye.email || 'Non renseigné' }}</span>
+          </div>
+
+          <div class="info-item">
+            <span class="label">Téléphone</span>
+            <span class="value">{{ managerEmploye.telephone || 'Non renseigné' }}</span>
+          </div>
+
+          <div class="info-item">
+            <span class="label">Département</span>
+            <span class="value">{{ managerEmploye.departement || 'Non renseigné' }}</span>
+          </div>
+
+          <div class="info-item">
+            <span class="label">Date d’embauche</span>
+            <span class="value">
+              {{ managerEmploye.dateEmbauche ? (managerEmploye.dateEmbauche | date:'dd/MM/yyyy') : 'Non renseignée' }}
+            </span>
+          </div>
+
+          <div class="info-item">
+            <span class="label">Ancienneté</span>
+            <span class="value">{{ getAnciennete() }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-card indicators-card">
+        <div class="card-title">
+          <div class="card-icon">📊</div>
+          <div>
+            <h2>Indicateurs RH</h2>
+            <p>Absentéisme et risque turnover</p>
+          </div>
+        </div>
+
+        <div class="indicators detail-indicators">
+          <div class="indicator" [ngClass]="getAbsenteismeClass(absenteisme)">
+            <span class="indicator-icon">📉</span>
+
+            <strong>
+              {{ absenteisme != null ? (absenteisme | number:'1.1-1') + '%' : '—' }}
+            </strong>
+
+            <span>Absentéisme</span>
+
+            <small>
+              {{ absenteismeDate ? (absenteismeDate | date:'dd/MM/yyyy') : 'Dernier calcul' }}
+            </small>
+          </div>
+
+          <div class="indicator" [ngClass]="getScoreClass(scoreTurnover)">
+            <span class="indicator-icon">⚠️</span>
+
+            <strong>
+              {{ scoreTurnover != null ? scoreTurnover : '—' }}
+            </strong>
+
+            <span>Risque turnover</span>
+
+            <small>
+              {{ scoreTurnoverNiveau || 'Score 0-100' }}
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</div>

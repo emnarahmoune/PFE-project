@@ -91,21 +91,38 @@ private async cleanUrlAfterAuth(): Promise<void> {
   console.log('🧹 Nettoyage URL après Keycloak');
 
   const user = this.getUser();
-  const backendRole = (
+
+  const backendRole = String(
     user?.role ||
     user?.typeEmploye ||
     user?.type_employe ||
+    user?.typeUtilisateur ||
     ''
-  ).toString().toLowerCase();
+  ).toLowerCase();
+
+  const keycloakRoles = this.getUserRoles().map(role =>
+    String(role).toLowerCase()
+  );
 
   console.log('👤 User backend:', user);
   console.log('👤 Rôle backend:', backendRole);
+  console.log('👤 Rôles Keycloak:', keycloakRoles);
 
   let targetPath = '/employee/dashboard';
 
-  if (backendRole === 'admin_rh' || backendRole === 'admin') {
+  if (
+    backendRole === 'admin_rh' ||
+    backendRole === 'admin' ||
+    backendRole === 'rh' ||
+    keycloakRoles.includes('admin_rh') ||
+    keycloakRoles.includes('admin') ||
+    keycloakRoles.includes('rh')
+  ) {
     targetPath = '/admin/dashboard';
-  } else if (backendRole === 'manager') {
+  } else if (
+    backendRole === 'manager' ||
+    keycloakRoles.includes('manager')
+  ) {
     targetPath = '/manager/dashboard';
   } else {
     targetPath = '/employee/dashboard';

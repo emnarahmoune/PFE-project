@@ -13,8 +13,7 @@ export interface Evaluation {
   employeEmail?: string;
   employePoste?: string;
   employeDepartement?: string;
-  employePhotoUrl?: string;
-  employePhotoProfil?: string;
+  
 
   evaluateurId?: number;
   evaluateurNom?: string;
@@ -51,6 +50,11 @@ export interface Evaluation {
 
   createdAt?: string;
   updatedAt?: string;
+
+  employePhotoUrl?: string;
+employePhotoProfil?: string;
+photoUrl?: string;
+photoProfil?: string;
 }
 
 export interface EvaluationRequest {

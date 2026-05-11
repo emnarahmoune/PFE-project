@@ -1,0 +1,960 @@
+<!-- src/app/features/formations/formations.component.html -->
+
+<!-- =========================================================
+     ADMIN LISTE
+========================================================= -->
+<div class="formations-saas" *ngIf="mode === 'ADMIN_LISTE'">
+
+  <div class="hero-section">
+    <div class="hero-content">
+      <div>
+        <h1>🎓 Catalogue des formations</h1>
+        <p>Découvrez et gérez l'ensemble des programmes de développement professionnel</p>
+      </div>
+
+      <div class="hero-actions">
+        <button class="btn-primary" type="button" (click)="goToCreate()">
+          <span>+</span>
+          Nouvelle formation
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-dashboard">
+    <div class="stat-block">
+      <div class="stat-icon purple">📚</div>
+      <div class="stat-info">
+        <span class="stat-number">{{ stats.total || 0 }}</span>
+        <span class="stat-name">Total formations</span>
+        <span class="stat-trend">dont {{ stats.actives || 0 }} actives</span>
+      </div>
+    </div>
+
+    <div class="stat-block">
+      <div class="stat-icon blue">⏱️</div>
+      <div class="stat-info">
+        <span class="stat-number">{{ stats.dureeMoyenne || 0 }}h</span>
+        <span class="stat-name">Durée moyenne</span>
+      </div>
+    </div>
+
+    <div class="stat-block">
+      <div class="stat-icon green">👥</div>
+      <div class="stat-info">
+        <span class="stat-number">{{ stats.totalParticipants || 0 }}</span>
+        <span class="stat-name">Participants</span>
+        <span class="stat-trend">{{ stats.participantsMoyens || 0 }} par formation</span>
+      </div>
+    </div>
+
+    <div class="stat-block">
+      <div class="stat-icon orange">🏷️</div>
+      <div class="stat-info">
+        <span class="stat-number">
+          {{
+            (stats.informatique || 0)
+            + (stats.technique || 0)
+            + (stats.softSkills || 0)
+            + (stats.management || 0)
+            + (stats.langues || 0)
+            + (stats.securite || 0)
+          }}
+        </span>
+        <span class="stat-name">Répartition par domaine</span>
+
+        <div class="stat-tags">
+          <span *ngIf="stats.informatique > 0" class="tag">Info {{ stats.informatique }}</span>
+          <span *ngIf="stats.technique > 0" class="tag">Tech {{ stats.technique }}</span>
+          <span *ngIf="stats.softSkills > 0" class="tag">Soft {{ stats.softSkills }}</span>
+          <span *ngIf="stats.management > 0" class="tag">Mgmt {{ stats.management }}</span>
+          <span *ngIf="stats.langues > 0" class="tag">Lang {{ stats.langues }}</span>
+          <span *ngIf="stats.securite > 0" class="tag">Sec {{ stats.securite }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-toolbar">
+    <div class="search-box">
+      <input
+        type="text"
+        [(ngModel)]="searchText"
+        (input)="applyFilter()"
+        placeholder="Rechercher une formation...">
+      <span class="search-icon">🔍</span>
+    </div>
+
+    <div class="domain-filters">
+      <button
+        *ngFor="let domaine of domainesFilter"
+        type="button"
+        class="filter-chip"
+        [class.active]="selectedDomaine === domaine"
+        (click)="filterByDomaine(domaine)">
+        {{ getDomaineLabel(domaine) }}
+      </button>
+    </div>
+
+    <button class="reset-btn" type="button" (click)="resetFilters()">
+      <span>↺</span>
+      Réinitialiser
+    </button>
+
+    <div class="view-toggle">
+      <button
+        class="toggle-btn"
+        type="button"
+        [class.active]="viewMode === 'grid'"
+        (click)="viewMode = 'grid'">
+        📱 Grille
+      </button>
+
+      <button
+        class="toggle-btn"
+        type="button"
+        [class.active]="viewMode === 'table'"
+        (click)="viewMode = 'table'">
+        📋 Tableau
+      </button>
+    </div>
+  </div>
+
+  <div class="loading-area" *ngIf="loading">
+    <div class="spinner"></div>
+    <span>Chargement...</span>
+  </div>
+
+  <div class="formations-grid" *ngIf="!loading && viewMode === 'grid'">
+    <div class="formation-card" *ngFor="let f of filteredFormations">
+      <div class="card-header" [style.border-left-color]="getDomaineColor(f.domaine)">
+        <h3 class="card-title">{{ f.titre }}</h3>
+
+        <button
+          type="button"
+          mat-icon-button
+          [matMenuTriggerFor]="cardMenu"
+          class="menu-dots">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+
+        <mat-menu #cardMenu="matMenu" class="actions-menu">
+          <button mat-menu-item (click)="goToDetail(f.id)">
+            <mat-icon>visibility</mat-icon>
+            <span>Détails</span>
+          </button>
+
+          <button mat-menu-item (click)="goToEdit(f.id)">
+            <mat-icon>edit</mat-icon>
+            <span>Modifier</span>
+          </button>
+
+          <button mat-menu-item (click)="goToParticipants(f.id)">
+            <mat-icon>groups</mat-icon>
+            <span>Participants</span>
+          </button>
+
+          <button mat-menu-item (click)="toggleFormationActifFromList(f)">
+            <mat-icon>{{ f.actif ? 'pause' : 'play_arrow' }}</mat-icon>
+            <span>{{ f.actif ? 'Désactiver' : 'Activer' }}</span>
+          </button>
+
+          <button mat-menu-item class="danger" (click)="deleteFormationFromList(f)">
+            <mat-icon>delete</mat-icon>
+            <span>Supprimer</span>
+          </button>
+        </mat-menu>
+      </div>
+
+      <div class="card-body">
+        <span class="domain-badge" [style.background]="getDomaineColor(f.domaine)">
+          {{ getDomaineLabel(f.domaine) }}
+        </span>
+
+        <p class="formation-description">
+          {{ f.description || 'Aucune description' }}
+        </p>
+
+        <div class="card-meta">
+          <span>⏱️ {{ f.dureeHeures || 0 }} h</span>
+          <span>👥 {{ f.nombreParticipants || 0 }} participant(s)</span>
+        </div>
+
+        <div class="card-footer">
+          <span class="status-pill" [class.active]="f.actif">
+            {{ f.actif ? 'Active' : 'Inactive' }}
+          </span>
+
+          <button class="btn-outline" type="button" (click)="goToDetail(f.id)">
+            Voir détails
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrapper" *ngIf="!loading && viewMode === 'table'">
+    <div class="table-row table-head">
+      <span>Titre</span>
+      <span>Domaine</span>
+      <span>Durée</span>
+      <span>Participants</span>
+      <span>Statut</span>
+      <span>Actions</span>
+    </div>
+
+    <div class="table-row" *ngFor="let f of filteredFormations">
+      <span>{{ f.titre }}</span>
+      <span>{{ getDomaineLabel(f.domaine) }}</span>
+      <span>{{ f.dureeHeures || 0 }}h</span>
+      <span>{{ f.nombreParticipants || 0 }}</span>
+      <span>{{ f.actif ? 'Active' : 'Inactive' }}</span>
+
+      <span class="table-actions">
+        <button type="button" (click)="goToDetail(f.id)">Voir</button>
+        <button type="button" (click)="goToEdit(f.id)">Modifier</button>
+      </span>
+    </div>
+  </div>
+
+  <div class="empty-grid" *ngIf="!loading && filteredFormations.length === 0">
+    <div class="empty-icon">🎓</div>
+    <h3>Aucune formation trouvée</h3>
+    <p>Essayez de modifier les filtres ou créez une nouvelle formation.</p>
+  </div>
+</div>
+
+<!-- =========================================================
+     ADMIN FORMULAIRE
+========================================================= -->
+<div class="formation-container" *ngIf="mode === 'ADMIN_NOUVEAU' || mode === 'ADMIN_MODIFIER'">
+
+  <div class="header">
+    <button mat-icon-button type="button" class="back-btn" (click)="cancelForm()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="title">
+      <h2>{{ isEditMode ? 'Modifier la formation' : 'Créer une formation' }}</h2>
+      <p class="subtitle">
+        {{ isEditMode ? 'Mettez à jour les informations de la formation' : 'Ajoutez une nouvelle formation' }}
+      </p>
+    </div>
+  </div>
+
+  <div class="loading-box" *ngIf="loading">
+    <mat-spinner diameter="42"></mat-spinner>
+    <p>Chargement de la formation...</p>
+  </div>
+
+  <div class="form-card" *ngIf="!loading">
+    <form [formGroup]="formationForm" (ngSubmit)="onSubmit()">
+
+      <div class="section-title">
+        <mat-icon>school</mat-icon>
+        <div>
+          <h3>Informations générales</h3>
+          <p>Renseignez les informations principales de la formation</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <label class="field">
+          <span>Titre</span>
+          <input type="text" formControlName="titre">
+        </label>
+
+        <label class="field">
+          <span>Domaine</span>
+          <select formControlName="domaine">
+            <option value="">Sélectionner</option>
+            <option *ngFor="let d of domaines" [value]="d.value">
+              {{ d.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Durée (heures)</span>
+          <input type="number" formControlName="dureeHeures">
+        </label>
+      </div>
+
+      <label class="field full">
+        <span>Description</span>
+        <textarea formControlName="description" rows="4"></textarea>
+      </label>
+
+      <label class="toggle-row">
+        <input type="checkbox" formControlName="actif">
+        <span>Formation active</span>
+      </label>
+
+      <div class="resources-section" formArrayName="videos">
+        <div class="section-header">
+          <div>
+            <h3>Vidéos de formation</h3>
+            <p>Ajoutez une ou plusieurs vidéos YouTube</p>
+          </div>
+
+          <button class="btn-outline" type="button" (click)="addVideo()">
+            Ajouter vidéo
+          </button>
+        </div>
+
+        <div class="empty-resources" *ngIf="videosArray.length === 0">
+          <p>Aucune vidéo ajoutée</p>
+          <button class="btn-ghost" type="button" (click)="addVideo()">
+            Ajouter la première vidéo
+          </button>
+        </div>
+
+        <div
+          class="resource-card"
+          *ngFor="let video of videosArray.controls; let i = index"
+          [formGroupName]="i">
+
+          <div class="resource-title">
+            <strong>Vidéo {{ i + 1 }}</strong>
+
+            <button type="button" class="icon-danger" (click)="removeVideo(i)">
+              Supprimer
+            </button>
+          </div>
+
+          <label class="field full">
+            <span>Titre de la vidéo</span>
+            <input type="text" formControlName="titre">
+          </label>
+
+          <label class="field full">
+            <span>URL YouTube</span>
+            <input type="text" formControlName="urlYoutube">
+          </label>
+        </div>
+      </div>
+
+      <div class="resources-section" formArrayName="supports">
+        <div class="section-header">
+          <div>
+            <h3>Supports PDF</h3>
+            <p>Ajoutez les documents liés à la formation</p>
+          </div>
+
+          <button class="btn-outline" type="button" (click)="addSupport()">
+            Ajouter support
+          </button>
+        </div>
+
+        <div class="empty-resources" *ngIf="supportsArray.length === 0">
+          <p>Aucun support ajouté</p>
+          <button class="btn-ghost" type="button" (click)="addSupport()">
+            Ajouter le premier support
+          </button>
+        </div>
+
+        <div
+          class="resource-card"
+          *ngFor="let support of supportsArray.controls; let i = index"
+          [formGroupName]="i">
+
+          <div class="resource-title">
+            <strong>Support {{ i + 1 }}</strong>
+
+            <button type="button" class="icon-danger" (click)="removeSupport(i)">
+              Supprimer
+            </button>
+          </div>
+
+          <label class="field full">
+            <span>Titre du support</span>
+            <input type="text" formControlName="titre">
+          </label>
+
+          <label class="field full">
+            <span>URL fichier</span>
+            <input type="text" formControlName="fichierUrl">
+          </label>
+
+          <label class="upload-pdf">
+            <span>Importer PDF</span>
+            <input type="file" accept="application/pdf" (change)="uploadSupportPdf($event, i)">
+          </label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-ghost" type="button" (click)="cancelForm()">
+          Annuler
+        </button>
+
+        <button class="btn-primary" type="submit" [disabled]="submitting">
+          {{ submitting ? 'Sauvegarde...' : isEditMode ? 'Modifier' : 'Créer' }}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<!-- =========================================================
+     ADMIN DETAIL
+========================================================= -->
+<div class="formation-detail-container" *ngIf="mode === 'ADMIN_DETAIL' && formation">
+
+  <div class="header">
+    <button mat-icon-button type="button" class="back-button" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="title-section">
+      <h1>{{ formation?.titre }}</h1>
+
+      <div class="badges">
+        <span class="domain-badge" [style.background]="getDomaineColor(formation?.domaine)">
+          {{ getDomaineLabel(formation?.domaine) }}
+        </span>
+
+        <span class="status-pill" [class.active]="formation?.actif">
+          {{ formation?.actif ? 'Active' : 'Inactive' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-outline" type="button" (click)="goToEditCurrent()">
+        Modifier
+      </button>
+
+      <button class="btn-outline" type="button" (click)="toggleStatut()">
+        {{ formation?.actif ? 'Désactiver' : 'Activer' }}
+      </button>
+
+      <button class="btn-danger" type="button" (click)="deleteFormation()">
+        Supprimer
+      </button>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <div class="info-card">
+      <h3>Informations</h3>
+
+      <div class="info-row">
+        <span class="info-label">Durée</span>
+        <span class="info-value">
+          {{ formation?.dureeHeures ? formation.dureeHeures + ' h' : 'Non définie' }}
+        </span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Date de création</span>
+        <span class="info-value">
+          {{ formation?.dateCreation | date:'dd/MM/yyyy' }}
+        </span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Participants</span>
+        <span class="info-value">{{ participants.length || 0 }}</span>
+      </div>
+
+      <div class="description">
+        <h3>Description</h3>
+        <p>{{ formation?.description || 'Aucune description' }}</p>
+      </div>
+    </div>
+
+    <div class="stats-card">
+      <h3>Statistiques</h3>
+
+      <div class="stat-item">
+        <span class="stat-label">Taux de complétion</span>
+        <div class="stat-bar">
+          <mat-progress-bar mode="determinate" [value]="getCompletionRate()"></mat-progress-bar>
+          <span class="stat-value">{{ getCompletionRate() }}%</span>
+        </div>
+      </div>
+
+      <div class="stat-item">
+        <span class="stat-label">Satisfaction moyenne</span>
+        <div class="stat-bar">
+          <mat-progress-bar mode="determinate" [value]="getAvgSatisfaction() * 20"></mat-progress-bar>
+          <span class="stat-value">{{ getAvgSatisfaction() }}/5</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="participants-card">
+    <div class="participants-head">
+      <div>
+        <h3>Participants</h3>
+        <p>{{ participants.length || 0 }} participant(s) inscrit(s)</p>
+      </div>
+
+      <button class="btn-outline" type="button" (click)="goToParticipants()">
+        Voir tous
+      </button>
+    </div>
+
+    <div class="participants-list">
+      <div class="participant-row header-row">
+        <span>Nom</span>
+        <span>Poste</span>
+        <span>Département</span>
+        <span>Statut</span>
+        <span>Actions</span>
+      </div>
+
+      <div class="participant-row" *ngFor="let p of participants">
+        <span>{{ p.prenom }} {{ p.nom }}</span>
+        <span>{{ p.poste || '—' }}</span>
+        <span>{{ p.departement || '—' }}</span>
+        <span>{{ p.statut || '—' }}</span>
+
+        <span>
+          <button class="btn-danger small" type="button" (click)="retirerParticipant(p)">
+            Retirer
+          </button>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-box" *ngIf="mode === 'ADMIN_DETAIL' && loading">
+  <mat-spinner diameter="42"></mat-spinner>
+  <p>Chargement de la formation...</p>
+</div>
+
+<!-- =========================================================
+     ADMIN PARTICIPANTS
+========================================================= -->
+<div class="container" *ngIf="mode === 'ADMIN_PARTICIPANTS'">
+
+  <div class="hero">
+    <button class="back-btn" type="button" (click)="goBack()">
+      ←
+    </button>
+
+    <div>
+      <h1>Participants de la formation</h1>
+      <p>Liste des collaborateurs inscrits</p>
+    </div>
+  </div>
+
+  <div class="loading-box" *ngIf="loading">
+    <mat-spinner diameter="42"></mat-spinner>
+    <p>Chargement des participants...</p>
+  </div>
+
+  <div class="card" *ngIf="!loading">
+    <div class="card-top">
+      <h3>{{ participants.length }} participant(s)</h3>
+    </div>
+
+    <div class="table-wrapper">
+      <div class="row header-row">
+        <span>Employé</span>
+        <span>Email</span>
+        <span>Poste</span>
+        <span>Département</span>
+      </div>
+
+      <div class="row" *ngFor="let p of participants">
+        <div class="employee-cell">
+          <app-employee-avatar [employee]="p" size="md" shape="circle"></app-employee-avatar>
+
+          <div>
+            <strong>{{ p.prenom }} {{ p.nom }}</strong>
+            <small>{{ p.matricule || '—' }}</small>
+          </div>
+        </div>
+
+        <span>{{ p.email || '—' }}</span>
+        <span>{{ p.poste || '—' }}</span>
+        <span>{{ p.departement || '—' }}</span>
+      </div>
+
+      <div class="empty-grid" *ngIf="participants.length === 0">
+        <div class="empty-icon">👥</div>
+        <h3>Aucun participant</h3>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     EMPLOYÉ - MES FORMATIONS
+========================================================= -->
+<!-- =========================================================
+     EMPLOYÉ - MES FORMATIONS
+========================================================= -->
+<div class="mes-formations container" *ngIf="mode === 'EMPLOYE_MES_FORMATIONS'">
+
+  <h2 class="section-title">📚 Mes formations</h2>
+
+  <div *ngIf="!formationsSuivies || formationsSuivies.length === 0" class="empty">
+    Aucune formation suivie
+  </div>
+
+  <div class="grid-formations" *ngIf="formationsSuivies && formationsSuivies.length > 0">
+
+    <div
+      *ngFor="let ef of formationsSuivies; let i = index"
+      class="training-card">
+
+      <!-- COVER -->
+      <div class="card-cover">
+        <div class="overlay"></div>
+
+        <h3 class="title">
+          {{
+            ef?.formation?.titre
+            || ef?.titre
+            || 'Formation sans titre'
+          }}
+        </h3>
+
+        <span class="badge">
+          {{
+            ef?.formation?.domaine
+            || ef?.domaine
+            || 'Formation'
+          }}
+        </span>
+      </div>
+
+      <!-- BODY -->
+      <div class="training-body">
+
+        <p class="formation-description">
+          {{
+            ef?.formation?.description
+            || ef?.description
+            || 'Aucune description disponible.'
+          }}
+        </p>
+
+        <p class="formation-duration">
+          ⏱️
+          {{
+            ef?.formation?.dureeHeures
+            || ef?.dureeHeures
+            || 0
+          }}
+          heures
+        </p>
+
+        <p class="progress-text">
+          Progression : {{ ef?.progression || 0 }}%
+        </p>
+
+        <div class="progress-container">
+          <div
+            class="progress-bar"
+            [style.width.%]="ef?.progression || 0">
+          </div>
+        </div>
+
+        <div *ngIf="(ef?.progression || 0) === 100" class="success-message">
+          🎉 Formation terminée avec succès
+        </div>
+
+        <!-- CERTIFICAT -->
+        <button
+          class="btn-primary btn-certificate"
+          *ngIf="(ef?.progression || 0) === 100 && (ef?.formation?.id || ef?.id)"
+          type="button"
+          (click)="generateCertificate(ef?.formation?.id || ef?.id)">
+          🎓 Générer certificat
+        </button>
+
+        <!-- VOIR CONTENU -->
+        <button
+          class="btn-primary"
+          type="button"
+          *ngIf="ef?.formation?.id || ef?.id"
+          (click)="handleFormationButton(ef, i)">
+
+          <span *ngIf="selectedFormationIndex !== i && (ef?.progression || 0) < 100">
+            ▶ Voir contenu
+          </span>
+
+          <span *ngIf="selectedFormationIndex !== i && (ef?.progression || 0) === 100">
+            🔁 Revoir la formation
+          </span>
+
+          <span *ngIf="selectedFormationIndex === i">
+            ✖ Fermer
+          </span>
+        </button>
+
+        <!-- VIDEOS -->
+        <div *ngIf="selectedFormationIndex === i" class="video-section">
+
+          <h4>🎬 Contenu</h4>
+
+          <p *ngIf="!videos || videos.length === 0">
+            Aucune vidéo disponible
+          </p>
+
+          <div *ngFor="let v of videos" class="video-card">
+
+            <h5>
+              {{ v?.titre || 'Vidéo sans titre' }}
+            </h5>
+
+            <iframe
+              *ngIf="v?.urlYoutube && getYoutubeEmbedUrl(v.urlYoutube)"
+              width="100%"
+              height="200"
+              [src]="getYoutubeEmbedUrl(v.urlYoutube)"
+              frameborder="0"
+              allowfullscreen>
+            </iframe>
+
+            <a
+              *ngIf="v?.urlYoutube && !getYoutubeEmbedUrl(v.urlYoutube)"
+              [href]="v.urlYoutube"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-outline">
+              🔗 Ouvrir la vidéo / recherche
+            </a>
+
+            <p *ngIf="!v?.urlYoutube">
+              ⚠️ URL vidéo indisponible
+            </p>
+
+            <button
+              *ngIf="!v.completedView"
+              class="btn-secondary"
+              type="button"
+              (click)="completeVideo(v, ef)">
+              ✔ Marquer comme terminé
+            </button>
+
+            <button
+              *ngIf="v.completedView"
+              class="btn-secondary done"
+              type="button"
+              disabled>
+              ✅ Terminé
+            </button>
+
+          </div>
+
+          <div *ngIf="(ef?.progression || 0) === 100" class="success-message bottom-success">
+            🎉 Formation terminée avec succès
+          </div>
+
+          <button
+            class="btn-primary btn-certificate"
+            *ngIf="(ef?.progression || 0) === 100 && (ef?.formation?.id || ef?.id)"
+            type="button"
+            (click)="generateCertificate(ef?.formation?.id || ef?.id)">
+            🎓 Générer certificat
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       RECOMMANDATIONS IA
+  ========================================================= -->
+  <section class="ai-recommendations-section">
+
+    <div class="ai-recommendations-header">
+      <div>
+        <h2>🤖 Formations recommandées par l’IA</h2>
+        <p>
+          Recommandations générées automatiquement selon vos compétences,
+          votre poste et les postes disponibles.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="btn-outline"
+        (click)="loadRecommendationsIA()"
+        [disabled]="recommendationsLoading">
+        {{ recommendationsLoading ? 'Actualisation...' : 'Actualiser' }}
+      </button>
+    </div>
+
+    <div *ngIf="recommendationsLoading" class="ai-state-card">
+      Chargement des recommandations IA...
+    </div>
+
+    <div *ngIf="!recommendationsLoading && recommendationsError" class="ai-state-card error">
+      {{ recommendationsError }}
+    </div>
+
+    <div
+      *ngIf="!recommendationsLoading && !recommendationsError && recommandations.length === 0"
+      class="ai-state-card">
+      Aucune recommandation IA disponible pour le moment.
+    </div>
+
+    <!-- RECOMMANDATIONS PAR POSTE -->
+    <div
+      class="ai-recommendation-group"
+      *ngIf="!recommendationsLoading && recommandationsPoste.length > 0">
+
+      <div class="ai-group-title">
+        <h3>🎯 Recommandations par poste</h3>
+        <span>{{ recommandationsPoste.length }} formation(s)</span>
+      </div>
+
+      <div class="ai-recommendations-grid">
+
+        <article
+          class="ai-recommendation-card"
+          *ngFor="let rec of recommandationsPoste; trackBy: trackRecommendation">
+
+          <div class="ai-card-top">
+            <div>
+              <h4>{{ rec.formationTitle || 'Formation recommandée' }}</h4>
+              <span>{{ getRecommendationProvider(rec) }}</span>
+            </div>
+
+            <strong>
+              {{ getRecommendationScore(rec) }}%
+            </strong>
+          </div>
+
+          <p *ngIf="rec.description" class="ai-description">
+            {{ rec.description }}
+          </p>
+
+          <p *ngIf="rec.reason" class="ai-reason">
+            {{ rec.reason }}
+          </p>
+
+          <div class="ai-meta">
+            <span>{{ getRecommendationTypeLabel(rec.type) }}</span>
+            <span *ngIf="rec.poste">Poste : {{ rec.poste }}</span>
+          </div>
+
+          <p *ngIf="rec.matchedSkills" class="ai-skills">
+            Compétences ciblées :
+            <strong>{{ rec.matchedSkills }}</strong>
+          </p>
+
+          <div class="ai-actions">
+
+            <button
+              type="button"
+              class="btn-primary"
+              (click)="inscrireRecommendation(rec)">
+              S’inscrire
+            </button>
+
+            <a
+              *ngIf="rec.url"
+              [href]="rec.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-outline">
+              Source externe
+            </a>
+
+            <button
+              *ngIf="!rec.url"
+              type="button"
+              class="btn-outline"
+              disabled>
+              Lien indisponible
+            </button>
+
+          </div>
+
+        </article>
+
+      </div>
+    </div>
+
+    <!-- BOOST COMPETENCES -->
+    <div
+      class="ai-recommendation-group"
+      *ngIf="!recommendationsLoading && recommandationsSkill.length > 0">
+
+      <div class="ai-group-title">
+        <h3>⚡ Boost de compétences</h3>
+        <span>{{ recommandationsSkill.length }} formation(s)</span>
+      </div>
+
+      <div class="ai-recommendations-grid">
+
+        <article
+          class="ai-recommendation-card boost"
+          *ngFor="let rec of recommandationsSkill; trackBy: trackRecommendation">
+
+          <div class="ai-card-top">
+            <div>
+              <h4>{{ rec.formationTitle || 'Formation recommandée' }}</h4>
+              <span>{{ getRecommendationProvider(rec) }}</span>
+            </div>
+
+            <strong>
+              {{ getRecommendationScore(rec) }}%
+            </strong>
+          </div>
+
+          <p *ngIf="rec.description" class="ai-description">
+            {{ rec.description }}
+          </p>
+
+          <p *ngIf="rec.reason" class="ai-reason">
+            {{ rec.reason }}
+          </p>
+
+          <div class="ai-meta">
+            <span>{{ getRecommendationTypeLabel(rec.type) }}</span>
+            <span *ngIf="rec.poste">Poste : {{ rec.poste }}</span>
+          </div>
+
+          <p *ngIf="rec.matchedSkills" class="ai-skills">
+            Compétences ciblées :
+            <strong>{{ rec.matchedSkills }}</strong>
+          </p>
+
+          <div class="ai-actions">
+
+            <button
+              type="button"
+              class="btn-primary"
+              (click)="inscrireRecommendation(rec)">
+              S’inscrire
+            </button>
+
+            <a
+              *ngIf="rec.url"
+              [href]="rec.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn-outline">
+              Source externe
+            </a>
+
+            <button
+              *ngIf="!rec.url"
+              type="button"
+              class="btn-outline"
+              disabled>
+              Lien indisponible
+            </button>
+
+          </div>
+
+        </article>
+
+      </div>
+    </div>
+
+  </section>
+</div>

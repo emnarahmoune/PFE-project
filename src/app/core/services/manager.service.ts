@@ -6,9 +6,9 @@ import { Observable, map } from 'rxjs';
 import { EventInput } from '@fullcalendar/core';
 
 import { environment } from '../../../environments/environment';
-import { Employe } from '../../features/admin/gestion-employes/models/employe.model';
+import { Employe } from '../models/employe.model';
 import { DemandeConge, SoldeConges } from '../../features/employee/models/conge.model';
-import { ScoreTurnover } from '../../features/admin/scores/models/score-turnover.model';
+import { ScoreTurnover } from '../models/score-turnover.model';
 
 export interface ManagerStats {
   employes?: number;
@@ -93,6 +93,7 @@ export class ManagerService {
 
   private apiUrl = `${environment.apiUrl}/employes`;
   private managerApiUrl = `${environment.apiUrl}/manager`;
+  private scoresApiUrl = `${environment.apiUrl}/scores-turnover`;
 
   constructor(private http: HttpClient) {}
 
@@ -178,24 +179,49 @@ export class ManagerService {
     );
   }
 
+  // ======================================================
+  // SCORES TURNOVER
+  // ======================================================
+
   getDernierScoreTurnover(
     employeId: number
   ): Observable<{ success: boolean; data: { score: number; niveauRisque: string } }> {
-    return this.http.get<{ success: boolean; data: any }>(
-      `${environment.apiUrl}/scores-turnover/employe/${employeId}/dernier`
+    return this.http.get<{ success: boolean; data: { score: number; niveauRisque: string } }>(
+      `${this.scoresApiUrl}/employe/${employeId}/dernier`
     );
   }
 
   getDerniersScores(): Observable<{ success: boolean; data: ScoreTurnover[] }> {
     return this.http.get<{ success: boolean; data: ScoreTurnover[] }>(
-      `${environment.apiUrl}/scores-turnover/derniers`
+      `${this.scoresApiUrl}/derniers`
     );
   }
 
-  recalculerScoreTurnover(employeId: number): Observable<any> {
-    return this.http.post(
-      `${environment.apiUrl}/scores-turnover/calculer/employe/${employeId}?systemeBIId=1`,
+  recalculerScoreTurnover(
+    employeId: number
+  ): Observable<{ success: boolean; data: ScoreTurnover; message?: string }> {
+    return this.http.post<{ success: boolean; data: ScoreTurnover; message?: string }>(
+      `${this.scoresApiUrl}/calculer/employe/${employeId}`,
       {}
+    );
+  }
+
+  recalculerTousScoresTurnover(): Observable<{ success: boolean; data: ScoreTurnover[]; message?: string }> {
+    return this.http.post<{ success: boolean; data: ScoreTurnover[]; message?: string }>(
+      `${this.scoresApiUrl}/calculer/tous`,
+      {}
+    );
+  }
+
+  getStatsScoresTurnover(): Observable<{ success: boolean; data: any; message?: string }> {
+    return this.http.get<{ success: boolean; data: any; message?: string }>(
+      `${this.scoresApiUrl}/stats/tableau-bord`
+    );
+  }
+
+  getRepartitionRisquesTurnover(): Observable<{ success: boolean; data: Record<string, number>; message?: string }> {
+    return this.http.get<{ success: boolean; data: Record<string, number>; message?: string }>(
+      `${this.scoresApiUrl}/stats/repartition-risques`
     );
   }
 

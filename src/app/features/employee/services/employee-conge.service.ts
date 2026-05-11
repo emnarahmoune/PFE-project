@@ -19,25 +19,54 @@ export class EmployeeCongeService {
     return this.api.get<CongeResponse>(`${this.endpoint}/${id}`);
   }
 
-  soumettreDemande(demande: DemandeConge): Observable<CongeResponse> {
-    const demandeFormatted = {
-      ...demande,
-      dateDebut: this.formatDateForBackend(demande.dateDebut),
-      dateFin: this.formatDateForBackend(demande.dateFin),
-      dateDemande: this.formatDateForBackend(demande.dateDemande),
-      dateDecision: this.formatDateForBackend(demande.dateDecision)
-    };
-    return this.api.post<CongeResponse>(this.endpoint, demandeFormatted);
-  }
+soumettreDemande(demande: DemandeConge): Observable<CongeResponse> {
+  const urgenteValue =
+    demande.urgente === true ||
+    String((demande as any).urgent).toLowerCase() === 'true' ||
+    String((demande as any).isUrgent).toLowerCase() === 'true';
 
-  modifierDemande(id: number, demande: DemandeConge): Observable<CongeResponse> {
-    const demandeFormatted = {
-      ...demande,
-      dateDebut: this.formatDateForBackend(demande.dateDebut),
-      dateFin: this.formatDateForBackend(demande.dateFin)
-    };
-    return this.api.put<CongeResponse>(this.endpoint, id, demandeFormatted);
-  }
+  const demandeFormatted = {
+    type: demande.type,
+    dateDebut: this.formatDateForBackend(demande.dateDebut),
+    dateFin: this.formatDateForBackend(demande.dateFin),
+    commentaire: demande.commentaire || '',
+
+    urgente: urgenteValue,
+    urgent: urgenteValue,
+    isUrgent: urgenteValue
+  };
+
+  console.log('PAYLOAD CREATION BACKEND = ', demandeFormatted);
+
+  return this.api.post<CongeResponse>(this.endpoint, demandeFormatted);
+}
+
+modifierDemande(id: number, demande: DemandeConge): Observable<CongeResponse> {
+  const urgenteValue =
+    demande.urgente === true ||
+    String((demande as any).urgent).toLowerCase() === 'true' ||
+    String((demande as any).isUrgent).toLowerCase() === 'true';
+
+  const demandeFormatted = {
+    type: demande.type,
+    dateDebut: this.formatDateForBackend(demande.dateDebut),
+    dateFin: this.formatDateForBackend(demande.dateFin),
+    commentaire: demande.commentaire || '',
+
+    // ✅ Important
+    urgente: urgenteValue,
+    urgent: urgenteValue,
+    isUrgent: urgenteValue
+  };
+
+  console.log('PAYLOAD MODIFICATION BACKEND = ', demandeFormatted);
+
+  return this.api.put<CongeResponse>(
+    this.endpoint,
+    id,
+    demandeFormatted
+  );
+}
 
   annulerConge(id: number): Observable<CongeResponse> {
     return this.api.put<CongeResponse>(`${this.endpoint}/annuler`, id, {});
@@ -82,10 +111,19 @@ export class EmployeeCongeService {
   }
 
   // ===== UTILITAIRES =====
-  private formatDateForBackend(date: string | Date | undefined): string | undefined {
-    if (!date) return undefined;
-    const d = new Date(date);
-    return d.toISOString().split('T')[0];
+private formatDateForBackend(date: string | Date | undefined): string | undefined {
+  if (!date) return undefined;
+
+  const d = new Date(date);
+
+  if (Number.isNaN(d.getTime())) {
+    return undefined;
   }
-  
+
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+} 
 }

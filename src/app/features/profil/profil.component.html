@@ -1,0 +1,730 @@
+<div class="profil-container" *ngIf="!isEmployeeMode()">
+  <div class="profil-header animate-fade-in">
+    <div class="header-title">
+      <div class="icon-wrapper">
+        <mat-icon class="header-icon">account_circle</mat-icon>
+      </div>
+
+      <div>
+        <h1>Mon profil</h1>
+        <p>Gérez vos informations personnelles et votre sécurité</p>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <div class="loading-spinner">
+      <mat-spinner diameter="50" color="primary"></mat-spinner>
+    </div>
+    <p class="loading-text">Chargement de votre profil...</p>
+  </div>
+
+  <div *ngIf="!loading && profileData" class="profil-grid animate-slide-up">
+    <div class="profil-sidebar">
+      <mat-card class="profile-card glass-effect">
+        <div class="profile-cover"></div>
+
+        <div class="profile-avatar-wrapper">
+          <div *ngIf="currentPhotoUrl; else noPhotoAdminManager" class="profile-photo-container">
+            <img
+              [src]="getPhotoUrl(currentPhotoUrl)"
+              class="profile-photo"
+              alt="Photo profil"
+              (error)="onImageError()">
+          </div>
+
+          <ng-template #noPhotoAdminManager>
+            <div class="profile-avatar">{{ getUserInitials() }}</div>
+          </ng-template>
+
+          <button
+            class="edit-avatar-btn"
+            type="button"
+            matTooltip="Changer la photo"
+            (click)="fileInput.click()">
+            <mat-icon>photo_camera</mat-icon>
+          </button>
+
+          <input
+            type="file"
+            #fileInput
+            accept="image/jpeg,image/png,image/gif"
+            hidden
+            (change)="onFileSelected($event)">
+        </div>
+
+        <div class="photo-actions">
+          <button
+            *ngIf="selectedFile"
+            mat-raised-button
+            color="accent"
+            type="button"
+            [disabled]="uploadProgress"
+            (click)="uploadPhoto()">
+            <mat-icon *ngIf="!uploadProgress">save</mat-icon>
+            <mat-spinner diameter="20" *ngIf="uploadProgress"></mat-spinner>
+            <span *ngIf="!uploadProgress">Confirmer</span>
+          </button>
+
+          <button
+            *ngIf="currentPhotoUrl || profileData.photoUrl"
+            mat-stroked-button
+            color="warn"
+            type="button"
+            (click)="deletePhoto()">
+            <mat-icon>delete</mat-icon>
+            Supprimer
+          </button>
+        </div>
+
+        <div *ngIf="photoPreview" class="photo-preview">
+          <p>Aperçu :</p>
+          <img [src]="photoPreview" class="preview-img" alt="Aperçu photo">
+        </div>
+
+        <div class="profile-info">
+          <h2>{{ getFullName() }}</h2>
+          <span class="role-badge">{{ getRoleLabel() }}</span>
+          <p class="position">{{ getPosteLabel() }}</p>
+        </div>
+
+        <div class="profile-stats">
+          <div class="stat-item">
+            <mat-icon>badge</mat-icon>
+            <div>
+              <span class="stat-label">Matricule</span>
+              <span class="stat-value">{{ profileData.matricule || 'Non défini' }}</span>
+            </div>
+          </div>
+
+          <div class="stat-item">
+            <mat-icon>work</mat-icon>
+            <div>
+              <span class="stat-label">Département</span>
+              <span class="stat-value">{{ profileData.departement || 'Non spécifié' }}</span>
+            </div>
+          </div>
+
+          <div class="stat-item" *ngIf="isManagerMode()">
+            <mat-icon>groups</mat-icon>
+            <div>
+              <span class="stat-label">Employés gérés</span>
+              <span class="stat-value">{{ profileData.nombreEmployesGeres || 0 }}</span>
+            </div>
+          </div>
+
+          <div class="stat-item" *ngIf="isManagerMode()">
+            <mat-icon>workspace_premium</mat-icon>
+            <div>
+              <span class="stat-label">Ancienneté manager</span>
+              <span class="stat-value">{{ getAncienneteLabel() }}</span>
+            </div>
+          </div>
+
+          <div class="stat-item" *ngIf="isManagerMode()">
+            <mat-icon>calendar_today</mat-icon>
+            <div>
+              <span class="stat-label">Date nomination</span>
+              <span class="stat-value">
+                {{ getDateNomination() ? (getDateNomination() | date:'dd MMM yyyy') : 'Non définie' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="stat-item" *ngIf="isAdminMode()">
+            <mat-icon>calendar_today</mat-icon>
+            <div>
+              <span class="stat-label">Date d'embauche</span>
+              <span class="stat-value">
+                {{ getDateEmbauche() ? (getDateEmbauche() | date:'dd MMM yyyy') : 'Non définie' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="stat-item" *ngIf="isAdminMode()">
+            <mat-icon>timeline</mat-icon>
+            <div>
+              <span class="stat-label">Ancienneté</span>
+              <span class="stat-value">{{ getAncienneteLabel() }}</span>
+            </div>
+          </div>
+
+          <div class="stat-item">
+            <mat-icon [class]="statutClass">check_circle</mat-icon>
+            <div>
+              <span class="stat-label">Statut compte</span>
+              <span class="stat-value status-badge" [class]="statutClass">
+                {{ getStatusText() }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </mat-card>
+    </div>
+
+    <div class="profil-main">
+      <mat-card class="form-card glass-effect">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>person</mat-icon>
+            Informations personnelles
+          </mat-card-title>
+          <mat-card-subtitle>
+            Modifiez vos coordonnées et informations professionnelles
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <form [formGroup]="profileForm" class="profile-form">
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Nom *</mat-label>
+                <input matInput formControlName="nom" [readonly]="!editMode">
+                <mat-error *ngIf="profileForm.get('nom')?.hasError('required')">
+                  Nom requis
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Prénom *</mat-label>
+                <input matInput formControlName="prenom" [readonly]="!editMode">
+                <mat-error *ngIf="profileForm.get('prenom')?.hasError('required')">
+                  Prénom requis
+                </mat-error>
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Email *</mat-label>
+                <input matInput formControlName="email" type="email" [readonly]="!editMode">
+                <mat-error *ngIf="profileForm.get('email')?.hasError('required')">
+                  Email requis
+                </mat-error>
+                <mat-error *ngIf="profileForm.get('email')?.hasError('email')">
+                  Email invalide
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Téléphone</mat-label>
+                <input matInput formControlName="telephone" [readonly]="!editMode">
+                <mat-error *ngIf="profileForm.get('telephone')?.hasError('pattern')">
+                  Format invalide
+                </mat-error>
+              </mat-form-field>
+            </div>
+
+            <div class="form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Poste</mat-label>
+                <input matInput formControlName="poste" [readonly]="!editMode">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Département</mat-label>
+                <input matInput formControlName="departement" [readonly]="!editMode">
+              </mat-form-field>
+            </div>
+
+            <div class="form-actions">
+              <button
+                mat-stroked-button
+                type="button"
+                color="primary"
+                (click)="toggleEditMode()"
+                *ngIf="!editMode">
+                <mat-icon>edit</mat-icon>
+                Modifier
+              </button>
+
+              <button
+                mat-button
+                type="button"
+                (click)="toggleEditMode()"
+                *ngIf="editMode">
+                Annuler
+              </button>
+
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                *ngIf="editMode"
+                [disabled]="submitting || profileForm.invalid"
+                (click)="saveProfile()">
+                <mat-spinner diameter="20" *ngIf="submitting"></mat-spinner>
+                <mat-icon *ngIf="!submitting">save</mat-icon>
+                <span *ngIf="!submitting">Enregistrer</span>
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="form-card glass-effect security-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>lock</mat-icon>
+            Sécurité
+          </mat-card-title>
+          <mat-card-subtitle>
+            Gérez votre mot de passe
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          <div class="alert success" *ngIf="passwordSuccess">
+            {{ passwordSuccess }}
+          </div>
+
+          <div class="alert error" *ngIf="passwordError">
+            {{ passwordError }}
+          </div>
+
+          <button
+            *ngIf="!passwordEditMode"
+            mat-stroked-button
+            color="primary"
+            type="button"
+            (click)="togglePasswordEdit()">
+            <mat-icon>vpn_key</mat-icon>
+            Changer mon mot de passe
+          </button>
+
+          <form
+            *ngIf="passwordEditMode"
+            [formGroup]="passwordForm"
+            class="password-form">
+
+            <mat-form-field appearance="outline">
+              <mat-label>Ancien mot de passe</mat-label>
+              <input
+                matInput
+                [type]="hideOld ? 'password' : 'text'"
+                formControlName="oldPassword">
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                (click)="hideOld = !hideOld">
+                <mat-icon>{{ hideOld ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('oldPassword')?.hasError('required')">
+                Requis
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Nouveau mot de passe</mat-label>
+              <input
+                matInput
+                [type]="hideNew ? 'password' : 'text'"
+                formControlName="newPassword">
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                (click)="hideNew = !hideNew">
+                <mat-icon>{{ hideNew ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('newPassword')?.hasError('required')">
+                Requis
+              </mat-error>
+              <mat-error *ngIf="passwordForm.get('newPassword')?.hasError('minlength')">
+                Minimum 8 caractères
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Confirmer le mot de passe</mat-label>
+              <input
+                matInput
+                [type]="hideConfirm ? 'password' : 'text'"
+                formControlName="confirmPassword">
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                (click)="hideConfirm = !hideConfirm">
+                <mat-icon>{{ hideConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('confirmPassword')?.hasError('required')">
+                Requis
+              </mat-error>
+              <mat-error *ngIf="passwordForm.hasError('mismatch')">
+                Les mots de passe ne correspondent pas
+              </mat-error>
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button
+                mat-button
+                type="button"
+                (click)="togglePasswordEdit()">
+                Annuler
+              </button>
+
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                [disabled]="submitting || loadingPassword || passwordForm.invalid"
+                (click)="changePassword()">
+                <mat-spinner diameter="20" *ngIf="submitting || loadingPassword"></mat-spinner>
+                <mat-icon *ngIf="!submitting && !loadingPassword">check</mat-icon>
+                <span *ngIf="!submitting && !loadingPassword">Enregistrer</span>
+              </button>
+            </div>
+          </form>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     EMPLOYÉ
+========================================================= -->
+
+<div class="profil-modern" *ngIf="isEmployeeMode()">
+  <div class="page-header">
+    <div>
+      <h1>Mon profil</h1>
+      <p>Consultez et gérez vos informations personnelles, professionnelles et votre photo</p>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="glass-card">
+    <div class="card-body">
+      <p class="info-value">Chargement de votre profil...</p>
+    </div>
+  </div>
+
+  <div class="profil-grid employee-grid" *ngIf="!loading && profileData">
+    <div class="glass-card">
+      <div class="card-header">
+        <div class="header-title">
+          <mat-icon>person_outline</mat-icon>
+          <span>Informations personnelles</span>
+        </div>
+
+        <button
+          mat-icon-button
+          type="button"
+          (click)="toggleEditMode()"
+          *ngIf="!editMode"
+          class="edit-btn"
+          matTooltip="Modifier">
+          <mat-icon>edit</mat-icon>
+        </button>
+      </div>
+
+      <div class="card-body">
+        <div *ngIf="!editMode" class="info-display">
+          <div class="info-row">
+            <div class="info-label">
+              <mat-icon>badge</mat-icon>
+              Nom
+            </div>
+            <div class="info-value">{{ profileData.nom }}</div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">
+              <mat-icon>person</mat-icon>
+              Prénom
+            </div>
+            <div class="info-value">{{ profileData.prenom }}</div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">
+              <mat-icon>email</mat-icon>
+              Email
+            </div>
+            <div class="info-value">{{ profileData.email }}</div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">
+              <mat-icon>phone</mat-icon>
+              Téléphone
+            </div>
+            <div class="info-value">{{ profileData.telephone || 'Non renseigné' }}</div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">
+              <mat-icon>home</mat-icon>
+              Adresse
+            </div>
+            <div class="info-value">{{ profileData.adresse || 'Non renseignée' }}</div>
+          </div>
+        </div>
+
+        <form [formGroup]="profileForm" *ngIf="editMode" (ngSubmit)="saveProfile()">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Téléphone</mat-label>
+            <input
+              matInput
+              formControlName="telephone"
+              placeholder="+33 6 12 34 56 78">
+            <mat-icon matSuffix>phone</mat-icon>
+            <mat-error *ngIf="profileForm.get('telephone')?.hasError('pattern')">
+              Format invalide
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Adresse</mat-label>
+            <textarea
+              matInput
+              formControlName="adresse"
+              rows="3"></textarea>
+          </mat-form-field>
+
+          <div class="form-actions">
+            <button
+              mat-button
+              type="button"
+              (click)="toggleEditMode()">
+              Annuler
+            </button>
+
+            <button
+              mat-raised-button
+              color="primary"
+              type="submit"
+              [disabled]="submitting || profileForm.invalid">
+              <mat-icon *ngIf="!submitting">save</mat-icon>
+              <span *ngIf="!submitting">Enregistrer</span>
+            </button>
+          </div>
+        </form>
+
+        <mat-divider class="my-4"></mat-divider>
+
+        <div class="security-section">
+          <h3>
+            <mat-icon>lock_outline</mat-icon>
+            Sécurité
+          </h3>
+
+          <button
+            *ngIf="!passwordEditMode"
+            mat-stroked-button
+            type="button"
+            (click)="togglePasswordEdit()"
+            class="security-btn">
+            <mat-icon>vpn_key</mat-icon>
+            Changer mon mot de passe
+          </button>
+
+          <form
+            *ngIf="passwordEditMode"
+            [formGroup]="passwordForm"
+            class="password-form">
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Ancien mot de passe</mat-label>
+              <input
+                matInput
+                [type]="hideOld ? 'password' : 'text'"
+                formControlName="oldPassword">
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                (click)="hideOld = !hideOld">
+                <mat-icon>{{ hideOld ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('oldPassword')?.hasError('required')">
+                Requis
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Nouveau mot de passe</mat-label>
+              <input
+                matInput
+                [type]="hideNew ? 'password' : 'text'"
+                formControlName="newPassword">
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                (click)="hideNew = !hideNew">
+                <mat-icon>{{ hideNew ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('newPassword')?.hasError('required')">
+                Requis
+              </mat-error>
+              <mat-error *ngIf="passwordForm.get('newPassword')?.hasError('minlength')">
+                Minimum 8 caractères
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Confirmer le mot de passe</mat-label>
+              <input
+                matInput
+                [type]="hideConfirm ? 'password' : 'text'"
+                formControlName="confirmPassword">
+              <button
+                mat-icon-button
+                matSuffix
+                type="button"
+                (click)="hideConfirm = !hideConfirm">
+                <mat-icon>{{ hideConfirm ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+              <mat-error *ngIf="passwordForm.get('confirmPassword')?.hasError('required')">
+                Requis
+              </mat-error>
+              <mat-error *ngIf="passwordForm.hasError('mismatch')">
+                Les mots de passe ne correspondent pas
+              </mat-error>
+            </mat-form-field>
+
+            <div class="form-actions">
+              <button
+                mat-button
+                type="button"
+                (click)="togglePasswordEdit()">
+                Annuler
+              </button>
+
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                [disabled]="submitting || passwordForm.invalid"
+                (click)="changePassword()">
+                <mat-icon *ngIf="!submitting">check</mat-icon>
+                <span *ngIf="!submitting">Enregistrer</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card">
+      <div class="card-header">
+        <div class="header-title">
+          <mat-icon>work_outline</mat-icon>
+          <span>Informations professionnelles</span>
+        </div>
+
+        <div
+          class="status-badge"
+          [class.active]="profileData.statut === 'ACTIF'"
+          [class.inactive]="profileData.statut === 'INACTIF'">
+          {{ profileData.statut === 'INACTIF' ? 'Inactif' : 'Actif' }}
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="identity-row">
+          <div class="profile-photo-zone">
+            <div class="avatar-large" [class.has-photo]="!!currentPhotoUrl">
+              <img
+                *ngIf="currentPhotoUrl"
+                [src]="currentPhotoUrl"
+                alt="Photo de profil"
+                class="avatar-photo"
+                (error)="onImageError()">
+
+              <span *ngIf="!currentPhotoUrl">{{ getUserInitials() }}</span>
+            </div>
+
+            <div class="photo-actions">
+              <label class="photo-btn upload-btn">
+                <mat-icon>photo_camera</mat-icon>
+                Changer
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif"
+                  hidden
+                  (change)="onFileSelected($event)">
+              </label>
+
+              <button
+                *ngIf="selectedFile"
+                type="button"
+                class="photo-btn upload-btn"
+                [disabled]="uploadProgress"
+                (click)="uploadPhoto()">
+                <mat-icon>save</mat-icon>
+                Confirmer
+              </button>
+
+              <button
+                *ngIf="currentPhotoUrl || profileData.photoUrl"
+                type="button"
+                class="photo-btn delete-btn"
+                (click)="deletePhoto()">
+                <mat-icon>delete_outline</mat-icon>
+                Supprimer
+              </button>
+            </div>
+
+            <div *ngIf="photoPreview" class="photo-preview">
+              <img [src]="photoPreview" class="preview-img" alt="Aperçu photo">
+            </div>
+          </div>
+
+          <div class="identity-info">
+            <h2>{{ profileData.prenom }} {{ profileData.nom }}</h2>
+            <p>{{ profileData.poste || 'Employé' }}</p>
+            <span class="role-badge">{{ getRoleLabel() }}</span>
+          </div>
+        </div>
+
+        <div class="professional-info">
+          <div class="info-row">
+            <div class="info-label">
+              <mat-icon>badge</mat-icon>
+              Matricule
+            </div>
+            <div class="info-value">{{ profileData.matricule || 'Non renseigné' }}</div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">
+              <mat-icon>business</mat-icon>
+              Département
+            </div>
+            <div class="info-value">{{ profileData.departement || 'Non renseigné' }}</div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">
+              <mat-icon>calendar_today</mat-icon>
+              Date d'embauche
+            </div>
+            <div class="info-value">
+              {{ profileData.dateEmbauche ? (profileData.dateEmbauche | date:'dd MMM yyyy') : 'Non renseignée' }}
+            </div>
+          </div>
+
+          <div class="info-row">
+            <div class="info-label">
+              <mat-icon>event_available</mat-icon>
+              Solde congés
+            </div>
+            <div class="info-value">{{ profileData.soldeConges ?? 0 }} jour(s)</div>
+          </div>
+
+          <div class="info-row" *ngIf="profileData.managerNom">
+            <div class="info-label">
+              <mat-icon>supervisor_account</mat-icon>
+              Manager
+            </div>
+            <div class="info-value">{{ profileData.managerNom }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

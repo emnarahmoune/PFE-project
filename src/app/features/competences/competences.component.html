@@ -1,0 +1,537 @@
+<!-- src/app/features/competences/competences.component.html -->
+
+<!-- ======================================================
+     ADMIN LISTE
+====================================================== -->
+<div class="competence-saas" *ngIf="mode === 'ADMIN_LISTE'">
+
+  <div class="hero-section">
+    <div class="hero-content">
+      <div>
+        <h1>🎓 Catalogue des compétences</h1>
+        <p>Gérez les compétences techniques, soft skills, linguistiques et managériales</p>
+      </div>
+
+      <div class="hero-actions">
+        <button class="btn-primary" type="button" (click)="goToCreate()">
+          <span>+</span>
+          Nouvelle compétence
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+
+    <div class="stats-dashboard">
+      <div class="stat-block">
+        <div class="stat-icon purple">📚</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ stats.total || 0 }}</span>
+          <span class="stat-name">Total compétences</span>
+        </div>
+      </div>
+
+      <div class="stat-block">
+        <div class="stat-icon blue">⚙️</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ stats.technique || 0 }}</span>
+          <span class="stat-name">Techniques</span>
+        </div>
+      </div>
+
+      <div class="stat-block">
+        <div class="stat-icon pink">🤝</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ stats.softSkill || 0 }}</span>
+          <span class="stat-name">Soft skills</span>
+        </div>
+      </div>
+
+      <div class="stat-block">
+        <div class="stat-icon green">🌐</div>
+        <div class="stat-info">
+          <span class="stat-number">{{ autresDomaines || 0 }}</span>
+          <span class="stat-name">Autres domaines</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-toolbar">
+      <div class="search-box">
+        <input
+          type="text"
+          [(ngModel)]="searchText"
+          (input)="applyFilter()"
+          placeholder="Rechercher une compétence...">
+        <span class="search-icon">🔍</span>
+      </div>
+
+      <div class="domain-filters">
+        <button
+          *ngFor="let cat of categories"
+          class="filter-chip"
+          type="button"
+          [class.active]="selectedCategorie === cat.value"
+          (click)="setCategorie(cat.value)">
+          {{ cat.icon }} {{ cat.label }}
+        </button>
+      </div>
+
+      <div class="filter-group">
+        <button class="reset-btn" type="button" (click)="resetFilters()">
+          <span>↺</span>
+          Réinitialiser
+        </button>
+
+        <button class="icon-btn" type="button" (click)="refresh()" title="Rafraîchir">
+          <span>⟳</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="loading-area" *ngIf="loading">
+      <div class="spinner"></div>
+      <span>Chargement des compétences...</span>
+    </div>
+
+    <div class="competence-grid" *ngIf="!loading">
+
+      <div class="competence-card" *ngFor="let comp of getPagedData()">
+
+        <div class="card-header" [style.border-left-color]="getCategoryColor(comp.categorie)">
+          <div class="card-icon">
+            {{ getCategoryIcon(comp.categorie) }}
+          </div>
+
+          <h3 class="card-title">{{ comp.nom }}</h3>
+
+          <div class="card-menu">
+            <button
+              type="button"
+              mat-icon-button
+              [matMenuTriggerFor]="cardMenu"
+              class="menu-dots">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+
+            <mat-menu #cardMenu="matMenu" class="actions-menu">
+              <button mat-menu-item (click)="viewDetails(comp.id!)">
+                <mat-icon>visibility</mat-icon>
+                <span>Détails</span>
+              </button>
+
+              <button mat-menu-item (click)="goToEdit(comp.id!)">
+                <mat-icon>edit</mat-icon>
+                <span>Modifier</span>
+              </button>
+
+              <button mat-menu-item (click)="deleteCompetence(comp.id!, comp.nom)">
+                <mat-icon>delete_outline</mat-icon>
+                <span>Supprimer</span>
+              </button>
+            </mat-menu>
+          </div>
+        </div>
+
+        <p class="card-desc" *ngIf="comp.description">
+          {{ comp.description | slice:0:100 }}{{ comp.description.length > 100 ? '…' : '' }}
+        </p>
+
+        <div class="card-meta">
+          <span class="meta-item">
+            <span class="emoji">👥</span>
+            {{ comp.nombreEmployes || 0 }} employé(s)
+          </span>
+
+          <span
+            class="domain-badge"
+            [style.background]="getCategoryColor(comp.categorie) + '15'"
+            [style.color]="getCategoryColor(comp.categorie)">
+            {{ getCategoryLabel(comp.categorie) }}
+          </span>
+        </div>
+
+        <div class="level-section">
+          <div class="level-header">
+            <span>Niveau moyen</span>
+            <span class="level-value">{{ comp.niveauMoyen ?? 0 }}/4</span>
+          </div>
+
+          <div class="progress-track">
+            <div
+              class="progress-fill"
+              [style.width.%]="getNiveauMoyenPourcentage(comp.niveauMoyen)">
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="pagination" *ngIf="!loading && getTotalPages() > 1">
+      <button type="button" class="page-btn" [disabled]="currentPage === 0" (click)="previousPage()">
+        ←
+      </button>
+
+      <button
+        *ngFor="let page of getPages()"
+        type="button"
+        class="page-num"
+        [class.active]="page === currentPage"
+        [disabled]="page === -1"
+        (click)="page !== -1 && goToPage(page)">
+        {{ page === -1 ? '…' : page + 1 }}
+      </button>
+
+      <button type="button" class="page-btn" [disabled]="currentPage + 1 >= getTotalPages()" (click)="nextPage()">
+        →
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================================================
+     ADMIN FORM
+====================================================== -->
+<!-- =========================================================
+     ADMIN - FORMULAIRE AJOUT / MODIFICATION COMPÉTENCE
+========================================================= -->
+<div
+  class="form-container"
+  *ngIf="mode === 'ADMIN_NOUVEAU' || mode === 'ADMIN_MODIFIER'">
+
+  <!-- 🔙 BOUTON RETOUR -->
+  <div class="page-top-bar">
+    <button type="button" class="back-btn" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Retour
+    </button>
+  </div>
+
+  <mat-card>
+
+    <!-- 🔝 HEADER -->
+    <mat-card-header>
+      <mat-card-title>
+        {{ isEditMode ? 'Modifier la compétence' : 'Nouvelle compétence' }}
+      </mat-card-title>
+
+      <mat-card-subtitle>
+        {{
+          isEditMode
+            ? 'Modifiez les informations de la compétence'
+            : 'Créez une nouvelle compétence'
+        }}
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+
+      <!-- ⏳ LOADING -->
+      <div class="loading-container" *ngIf="loading">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Chargement de la compétence...</p>
+      </div>
+
+      <!-- 🧾 FORM -->
+      <form
+        [formGroup]="competenceForm"
+        (ngSubmit)="onSubmit()"
+        *ngIf="!loading"
+        class="competence-form">
+
+        <!-- 🔤 NOM -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nom de la compétence</mat-label>
+
+          <input
+            matInput
+            formControlName="nom"
+            placeholder="Ex: Java, Communication...">
+
+          <mat-icon matSuffix>school</mat-icon>
+
+          <mat-hint>Minimum 2 caractères, maximum 100</mat-hint>
+
+          <mat-error *ngIf="nom?.invalid && nom?.touched">
+            {{ getNomErrorMessage() }}
+          </mat-error>
+        </mat-form-field>
+
+        <!-- 📂 CATEGORIE -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Catégorie</mat-label>
+
+          <mat-select formControlName="categorie">
+
+            <mat-option *ngFor="let cat of categories" [value]="cat.value">
+              <div class="category-option">
+                <mat-icon>{{ cat.icon }}</mat-icon>
+                <span>{{ cat.label }}</span>
+              </div>
+            </mat-option>
+
+          </mat-select>
+
+          <mat-icon matSuffix>category</mat-icon>
+
+          <mat-error *ngIf="categorie?.invalid && categorie?.touched">
+            La catégorie est requise
+          </mat-error>
+        </mat-form-field>
+
+        <!-- 📝 DESCRIPTION -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Description</mat-label>
+
+          <textarea
+            matInput
+            formControlName="description"
+            rows="5"
+            placeholder="Décrivez la compétence...">
+          </textarea>
+
+          <mat-icon matSuffix>description</mat-icon>
+
+          <mat-hint>Minimum 10 caractères, maximum 500</mat-hint>
+
+          <mat-error *ngIf="description?.invalid && description?.touched">
+            {{ getDescriptionErrorMessage() }}
+          </mat-error>
+        </mat-form-field>
+
+        <!-- 👁️ APERÇU -->
+        <div class="preview-section" *ngIf="competenceForm.valid">
+
+          <h3>Aperçu</h3>
+
+          <div class="preview-card">
+
+            <div class="preview-header">
+
+              <span class="preview-title">
+                {{ competenceForm.get('nom')?.value || 'Nom' }}
+              </span>
+
+              <mat-chip
+                *ngIf="competenceForm.get('categorie')?.value"
+                color="primary"
+                selected>
+                {{ getCategorieLabel(competenceForm.get('categorie')?.value) }}
+              </mat-chip>
+
+            </div>
+
+            <p class="preview-description">
+              {{ competenceForm.get('description')?.value || 'Description...' }}
+            </p>
+
+          </div>
+
+        </div>
+
+        <!-- 🔘 ACTIONS -->
+        <div class="form-actions">
+
+          <button
+            type="button"
+            mat-stroked-button
+            (click)="onCancel()"
+            [disabled]="submitting">
+            <mat-icon>cancel</mat-icon>
+            Annuler
+          </button>
+
+          <button
+            type="submit"
+            mat-raised-button
+            color="primary"
+            [disabled]="competenceForm.invalid || submitting">
+
+            <mat-spinner diameter="20" *ngIf="submitting"></mat-spinner>
+
+            <mat-icon *ngIf="!submitting">save</mat-icon>
+
+            <span *ngIf="!submitting">
+              {{ isEditMode ? 'Modifier' : 'Créer' }}
+            </span>
+
+          </button>
+
+        </div>
+
+      </form>
+
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ℹ️ INFO -->
+  <mat-card class="info-card">
+    <h3>Information</h3>
+    <p>
+      Une compétence peut être technique, soft skill, linguistique ou managériale.
+      Elle pourra ensuite être associée aux employés avec un niveau.
+    </p>
+  </mat-card>
+
+</div>
+
+<!-- ======================================================
+     ADMIN DETAIL
+====================================================== -->
+<div class="detail-container" *ngIf="mode === 'ADMIN_DETAIL' && competence">
+
+  <div class="top-bar">
+    <button class="back-btn" type="button" (click)="goBack()">
+      ← Retour
+    </button>
+  </div>
+
+  <div class="header-card">
+    <div class="icon">📌</div>
+
+    <div class="info">
+      <h1>{{ competence.nom }}</h1>
+      <p>{{ competence.description }}</p>
+
+      <span class="badge" [ngClass]="getBadgeClass(competence.categorie)">
+        {{ competence.categorie?.replace('_', ' ') }}
+      </span>
+    </div>
+  </div>
+
+  <div class="stats-card">
+    <div class="stat">
+      👥
+      <div>
+        <h2>{{ competence.nombreEmployes || employes.length || 0 }}</h2>
+        <p>Employés associés</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="employees-card">
+    <h2>👥 Employés associés</h2>
+
+    <div *ngIf="employes.length === 0" class="empty">
+      Aucun employé associé
+    </div>
+
+    <div class="employee-list" *ngIf="employes.length > 0">
+
+      <div
+        class="employee-card"
+        *ngFor="let emp of employes"
+        (click)="goToEmploye(emp)">
+
+        <app-employee-avatar
+          [employee]="emp"
+          size="lg"
+          shape="circle">
+        </app-employee-avatar>
+
+        <div class="details">
+          <h3>{{ emp.prenom }} {{ emp.nom }}</h3>
+          <p>{{ emp.poste || 'Employé' }}</p>
+
+          <div class="progress">
+            <div
+              class="progress-bar"
+              [style.width.%]="getProgressValue(emp.niveau)">
+            </div>
+          </div>
+
+          <span class="level">
+            Niveau {{ getNiveauValue(emp.niveau) }}/4
+            <small *ngIf="emp.niveau">({{ emp.niveau }})</small>
+          </span>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div *ngIf="mode === 'ADMIN_DETAIL' && loading" class="loading">
+  Chargement...
+</div>
+
+<!-- ======================================================
+     EMPLOYEE MES COMPETENCES
+====================================================== -->
+<div class="page" *ngIf="mode === 'EMPLOYE_MES_COMPETENCES'">
+
+  <h1 class="title">Mes compétences</h1>
+
+  <div class="form-card">
+    <div class="select-wrapper">
+      <select [(ngModel)]="newCompetenceId" class="select">
+        <option [ngValue]="null" disabled>
+          Ajouter une compétence
+        </option>
+
+        <option *ngFor="let c of competencesDisponibles" [ngValue]="c.id">
+          {{ c.nom }}
+        </option>
+      </select>
+
+      <select [(ngModel)]="newLevel">
+        <option [value]="1">Débutant</option>
+        <option [value]="2">Intermédiaire</option>
+        <option [value]="3">Avancé</option>
+        <option [value]="4">Expert</option>
+      </select>
+
+      <button class="primary" type="button" (click)="addCompetence()">
+        Ajouter
+      </button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card" *ngFor="let c of competences">
+
+      <div class="top">
+        <h3>{{ c.nom }}</h3>
+
+        <button class="icon-btn danger-icon" type="button" (click)="deleteCompetenceEmployee(c.id, c.nom)">
+          🗑
+        </button>
+      </div>
+
+      <div class="level">
+        <span class="badge" [ngClass]="'lvl-' + c.niveau">
+          {{ getLevelLabel(c.niveau || 1) }}
+        </span>
+
+        <input
+          type="range"
+          min="1"
+          max="4"
+          [(ngModel)]="c.niveau">
+      </div>
+
+    </div>
+  </div>
+
+  <div class="modal" *ngIf="showConfirm">
+    <div class="modal-content">
+      <h3>Confirmation</h3>
+      <p>Supprimer "{{ selectedName }}" ?</p>
+
+      <div class="actions">
+        <button type="button" (click)="confirmDelete()">Oui</button>
+        <button type="button" (click)="cancelDelete()">Annuler</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="save" type="button" (click)="save()">
+    Enregistrer les modifications
+  </button>
+
+</div>

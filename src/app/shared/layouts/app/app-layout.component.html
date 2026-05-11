@@ -1,0 +1,205 @@
+<div class="layout" [class.dark-theme]="darkMode">
+
+  <aside class="sidebar"
+         [class.collapsed]="!isSidebarOpen"
+         [class.open]="isSidebarOpen">
+
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">◈</div>
+        <div class="logo-text" *ngIf="isSidebarOpen">PeopleOS</div>
+      </div>
+
+      <button class="collapse-btn"
+              type="button"
+              (click)="toggleSidebar()"
+              aria-label="Réduire le menu">
+        <i class="collapse-icon">{{ isSidebarOpen ? '◀' : '▶' }}</i>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a *ngFor="let item of getVisibleMenuItems()"
+         [routerLink]="item.path"
+         routerLinkActive="active"
+         class="nav-item"
+         [class.active]="isRouteActive(item.path || '')">
+
+        <mat-icon class="nav-icon">{{ item.icon }}</mat-icon>
+        <span class="nav-label" *ngIf="isSidebarOpen">{{ item.label }}</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info" *ngIf="isSidebarOpen">
+        <div class="user-avatar" [class.has-photo]="!!userPhotoUrl">
+          <img *ngIf="userPhotoUrl"
+               [src]="userPhotoUrl"
+               alt="Photo de profil"
+               class="avatar-img"
+               (error)="userPhotoUrl = null">
+
+          <span *ngIf="!userPhotoUrl">{{ getUserInitials() }}</span>
+        </div>
+
+        <div class="user-details">
+          <span class="user-name">{{ getUserName() }}</span>
+          <span class="user-role">{{ userRole }}</span>
+        </div>
+      </div>
+
+      <button class="logout-btn"
+              type="button"
+              (click)="logout()">
+        <mat-icon class="logout-icon">logout</mat-icon>
+        <span *ngIf="isSidebarOpen">Déconnexion</span>
+      </button>
+
+      <div class="version" *ngIf="isSidebarOpen">
+        © {{ currentYear }} PeopleOS v3.0
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle"
+                type="button"
+                (click)="toggleSidebar()"
+                aria-label="Menu">
+          <span>☰</span>
+        </button>
+
+        <div class="page-title-container">
+          <h1 class="page-title">{{ getCurrentPageTitle() }}</h1>
+          <div class="page-indicator"></div>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <button class="theme-toggle"
+                type="button"
+                (click)="toggleTheme()"
+                aria-label="Changer le thème">
+          <span>{{ darkMode ? '🌙' : '☀️' }}</span>
+        </button>
+
+        <button *ngIf="isEmployeeLayout()"
+                class="notification-btn"
+                type="button"
+                [matMenuTriggerFor]="notifMenu"
+                aria-label="Notifications">
+          🔔
+          <span class="notif-badge" *ngIf="notificationCount > 0">
+            {{ notificationCount }}
+          </span>
+        </button>
+
+        <mat-menu #notifMenu="matMenu" panelClass="notif-menu-panel">
+          <div class="notif-header" (click)="$event.stopPropagation()">
+            <span class="notif-title">Notifications</span>
+
+            <button mat-button
+                    type="button"
+                    class="mark-all-btn"
+                    *ngIf="notificationCount > 0"
+                    (click)="markAllNotificationsRead(); $event.stopPropagation()">
+              Tout marquer lu
+            </button>
+          </div>
+
+          <div class="notif-list" (click)="$event.stopPropagation()">
+            <div *ngFor="let notif of recentNotifications"
+                 class="notif-item"
+                 [class.unread]="!notif.lu">
+
+              <div class="notif-icon" [class.read]="notif.lu">
+                {{ notif.message.includes('approuvée') ? '✅' : notif.message.includes('refus') ? '❌' : '🔔' }}
+              </div>
+
+              <div class="notif-body">
+                <div class="notif-message">{{ notif.message }}</div>
+                <div class="notif-date">{{ notif.dateCreation | date:'dd/MM/yyyy HH:mm' }}</div>
+              </div>
+
+              <button *ngIf="!notif.lu"
+                      mat-icon-button
+                      type="button"
+                      class="read-btn"
+                      title="Marquer comme lue"
+                      (click)="markNotificationRead(notif.id); $event.stopPropagation()">
+                ✔
+              </button>
+            </div>
+
+            <div class="notif-empty" *ngIf="recentNotifications.length === 0">
+              Aucune notification
+            </div>
+          </div>
+
+          <div class="notif-footer" *ngIf="recentNotifications.length > 0">
+            <button type="button"
+                    class="view-all-notifs-btn"
+                    (click)="goToNotifications()">
+              Voir toutes
+            </button>
+          </div>
+        </mat-menu>
+
+        <div class="user-menu">
+          <div class="user-avatar small" [class.has-photo]="!!userPhotoUrl">
+            <img *ngIf="userPhotoUrl"
+                 [src]="userPhotoUrl"
+                 alt="Photo de profil"
+                 class="avatar-img"
+                 (error)="userPhotoUrl = null">
+
+            <span *ngIf="!userPhotoUrl">{{ getUserInitials() }}</span>
+          </div>
+
+          <span class="user-name">{{ getUserName() }}</span>
+
+          <button class="dropdown-btn"
+                  type="button"
+                  [matMenuTriggerFor]="userMenuPanel"
+                  aria-label="Menu utilisateur">
+            <mat-icon>expand_more</mat-icon>
+          </button>
+        </div>
+
+        <mat-menu #userMenuPanel="matMenu" class="user-dropdown-menu">
+          <button mat-menu-item type="button" (click)="goToProfile()">
+            <mat-icon>person_outline</mat-icon>
+            <span>Mon profil</span>
+          </button>
+
+          <button *ngIf="shouldShowReturnSpaceItem()"
+        mat-menu-item
+        type="button"
+        (click)="goBackToRoleSpace()">
+  <mat-icon>arrow_back</mat-icon>
+  <span>{{ getReturnSpaceLabel() }}</span>
+</button>
+
+<button *ngIf="!shouldShowReturnSpaceItem() && shouldShowPersonalSpaceItem()"
+        mat-menu-item
+        type="button"
+        (click)="goToPersonalSpace()">
+  <mat-icon>account_circle</mat-icon>
+  <span>Mon espace personnel</span>
+</button>
+
+          <button mat-menu-item type="button" (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Déconnexion</span>
+          </button>
+        </mat-menu>
+      </div>
+    </header>
+
+    <div class="content">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>

@@ -48,10 +48,9 @@ export class EmployeService {
   // ===== PROFIL CONNECTÉ ===
   // =========================
 
-  getMonProfil(): Observable<any> {
-    return this.api.get(`${this.endpoint}/mon-profil`)
-      .pipe(catchError(this.handleError('getMonProfil', {})));
-  }
+ getMonProfil(): Observable<any> {
+  return this.http.get<any>(`${environment.apiUrl}/employes/mon-profil`);
+}
 
   updateMonProfil(data: any): Observable<any> {
     return this.api.patch(`${this.endpoint}/mon-profil`, data)
@@ -211,4 +210,8 @@ export class EmployeService {
       return of(result);
     };
   }
+
+
+
+
 }

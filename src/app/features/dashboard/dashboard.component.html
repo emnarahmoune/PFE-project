@@ -1,0 +1,456 @@
+<div class="dashboard-pro">
+
+  <div class="dashboard-content">
+
+    <!-- =====================================================
+         ADMIN
+    ====================================================== -->
+    <ng-container *ngIf="isAdmin()">
+
+      <div class="welcome-card admin-welcome">
+        <h1>Bienvenue, {{ getAdminDisplayName() }} !</h1>
+        <p>Vous êtes connecté à l'espace administrateur du Portail RH.</p>
+      </div>
+
+      <div class="loader-overlay" *ngIf="loading">
+        <div class="loader-spinner"></div>
+        <span>Chargement des indicateurs BI...</span>
+      </div>
+
+      <div class="error-message" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+
+      <ng-container *ngIf="!loading && !errorMessage">
+
+        <div class="section">
+          <div class="section-header">
+            <h2>Indicateurs clés BI</h2>
+            <span class="section-subtitle">
+              Synthèse décisionnelle issue des vues BI RH
+            </span>
+          </div>
+
+          <div class="kpi-grid">
+            <div
+              class="kpi-tile"
+              *ngFor="let card of adminStatCards"
+              (click)="navigateTo(card.link)"
+            >
+              <div class="kpi-icon">{{ card.icon }}</div>
+
+              <div class="kpi-data">
+                <span class="kpi-value">{{ card.value }}</span>
+                <span class="kpi-label">{{ card.title }}</span>
+              </div>
+
+              <div class="kpi-trend" [class]="card.trend" *ngIf="card.change">
+                {{ card.change }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <h2>Finance & effectifs</h2>
+            <span class="section-subtitle">
+              Données salariales et répartition par département
+            </span>
+          </div>
+
+          <div class="finance-grid">
+
+            <div class="finance-card">
+              <div class="finance-icon">💰</div>
+
+              <div class="finance-info">
+                <span class="finance-label">Masse salariale</span>
+                <span class="finance-value">{{ getMasseSalarialeFormatee() }}</span>
+              </div>
+            </div>
+
+            <div class="finance-card">
+              <div class="finance-icon">📊</div>
+
+              <div class="finance-info">
+                <span class="finance-label">Salaire moyen</span>
+                <span class="finance-value">{{ getSalaireMoyenFormate() }}</span>
+              </div>
+            </div>
+
+            <div class="finance-card">
+              <div class="finance-icon">👥</div>
+
+              <div class="finance-info">
+                <span class="finance-label">Employés actifs</span>
+                <span class="finance-value">{{ biStats?.employesActifs || 0 }}</span>
+              </div>
+            </div>
+
+            <div class="finance-card wide">
+              <div class="finance-icon">🏢</div>
+
+              <div class="finance-info">
+                <span class="finance-label">Répartition par département</span>
+
+                <div class="dept-stats" *ngIf="getDepartements().length > 0; else noDept">
+                  <div class="dept-row" *ngFor="let dept of getDepartements()">
+                    <span class="dept-name">{{ dept }}</span>
+
+                    <div class="dept-bar-container">
+                      <div
+                        class="dept-bar"
+                        [style.width.%]="getTauxRemplissage(dept)">
+                      </div>
+                    </div>
+
+                    <span class="dept-number">{{ getDepartementCount(dept) }}</span>
+                  </div>
+                </div>
+
+                <ng-template #noDept>
+                  <div class="empty-message">
+                    Aucune donnée département disponible.
+                  </div>
+                </ng-template>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <h2>Activité récente & alertes</h2>
+            <span class="section-subtitle">
+              Suivi des derniers employés et alertes BI
+            </span>
+          </div>
+
+          <div class="activity-grid">
+
+            <div class="activity-card">
+              <div class="card-title-bar">
+                <span>👥 Derniers employés</span>
+                <a routerLink="/admin/employes" class="card-link">Voir tout →</a>
+              </div>
+
+              <div class="employee-list">
+
+                <div class="employee-item" *ngFor="let emp of recentEmployees">
+
+                  <app-employee-avatar
+                    [employee]="emp"
+                    size="md"
+                    shape="circle">
+                  </app-employee-avatar>
+
+                  <div class="employee-details">
+                    <div class="employee-name">
+                      {{ emp.prenom }} {{ emp.nom }}
+                    </div>
+
+                    <div class="employee-meta">
+                      {{ emp.poste || 'Poste non renseigné' }}
+                      <span *ngIf="emp.departement"> • {{ emp.departement }}</span>
+                    </div>
+                  </div>
+
+                  <div class="employee-date">
+                    {{ emp.dateEmbauche | date:'dd/MM/yy' }}
+                  </div>
+
+                </div>
+
+                <div class="empty-message" *ngIf="recentEmployees.length === 0">
+                  Aucun employé récent
+                </div>
+
+              </div>
+            </div>
+
+            <div class="activity-card">
+              <div class="card-title-bar">
+                <span>🔔 Alertes BI</span>
+                <span class="alert-badge">{{ alerts.length }}</span>
+              </div>
+
+              <div class="alert-list">
+
+                <div class="alert-item" *ngFor="let a of alerts">
+                  <div class="alert-icon" [class]="a.type">
+                    {{ getAlertEmoji(a.type) }}
+                  </div>
+
+                  <div class="alert-content">
+                    <div class="alert-message">
+                      {{ a.message }}
+                    </div>
+
+                    <div class="alert-time">
+                      {{ a.time }}
+                      <a *ngIf="a.lien" [routerLink]="a.lien" class="alert-link">
+                        Voir
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="empty-message" *ngIf="alerts.length === 0">
+                  Aucune alerte
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="section bi-section" *ngIf="powerBiAdminUrl">
+          <div class="section-header">
+            <h2>Dashboard Power BI RH</h2>
+            <span class="section-subtitle">
+              Rapport décisionnel global : effectifs, congés, performance, formations et risque RH
+            </span>
+          </div>
+
+          <div class="bi-frame-card">
+            <iframe
+              [src]="powerBiAdminUrl"
+              title="Dashboard Power BI Admin RH"
+              frameborder="0"
+              allowfullscreen="true">
+            </iframe>
+          </div>
+        </div>
+
+      </ng-container>
+    </ng-container>
+
+    <!-- =====================================================
+         MANAGER
+    ====================================================== -->
+    <ng-container *ngIf="isManager()">
+
+      <div class="welcome-card">
+        <h1>Bienvenue, {{ getManagerDisplayName() }} !</h1>
+        <p>Vous êtes connecté à l'espace manager du Portail RH.</p>
+      </div>
+
+      <div class="loader-overlay" *ngIf="loading">
+        <div class="loader-spinner"></div>
+        <span>Chargement du dashboard manager...</span>
+      </div>
+
+      <ng-container *ngIf="!loading">
+
+        <div class="cards">
+          <div class="card" *ngFor="let card of managerStatCards">
+            <h3>{{ card.emojiIcon }} {{ card.title }}</h3>
+            <strong>{{ card.value }}</strong>
+            <p *ngIf="card.change">{{ card.change }}</p>
+          </div>
+        </div>
+
+        <div>
+          <p class="section-label">Compétences & analyses</p>
+
+          <div class="bottom-grid">
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <div class="panel-title">Top compétences</div>
+                  <div class="panel-sub">Les plus répandues dans mon équipe</div>
+                </div>
+
+                <a class="panel-link" routerLink="/manager/equipe">
+                  Voir équipe →
+                </a>
+              </div>
+
+              <div class="comp-list" *ngIf="topCompetences.length > 0; else noCompetences">
+                <div class="comp-item" *ngFor="let c of topCompetences">
+                  <div class="comp-head">
+                    <span class="comp-name">{{ c.nom }}</span>
+                    <span class="comp-cnt">{{ c.count }}</span>
+                  </div>
+
+                  <div class="comp-bar">
+                    <div class="comp-bar-fill" [style.width.%]="c.pourcentage"></div>
+                  </div>
+                </div>
+              </div>
+
+              <ng-template #noCompetences>
+                <div class="empty">
+                  Aucune donnée compétence disponible
+                </div>
+              </ng-template>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <div class="panel-title">Congés</div>
+                  <div class="panel-sub">Demandes à traiter</div>
+                </div>
+
+                <a class="panel-link" routerLink="/manager/conges">
+                  Gérer →
+                </a>
+              </div>
+
+              <div class="chart-wrap">
+                <div class="chart-icon">🏖️</div>
+
+                <p>
+                  {{ getCongesEnAttenteReel() }} demande(s) en attente
+                </p>
+
+                <small>
+                  {{ getManagerCongesCharges() }} demande(s) chargée(s)
+                </small>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <div class="panel-title">Équipe</div>
+                  <div class="panel-sub">Suivi des collaborateurs</div>
+                </div>
+
+                <a class="panel-link" routerLink="/manager/equipe">
+                  Voir →
+                </a>
+              </div>
+
+              <div class="chart-wrap">
+                <div class="chart-icon">👥</div>
+                <p>Équipe manager</p>
+                <small>{{ getManagerTotalEmployes() }} employé(s)</small>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="bi-section" *ngIf="powerBiManagerUrl">
+
+          <div class="section-header">
+            <h2>Dashboard Power BI Manager</h2>
+            <span class="section-subtitle">
+              Analyse décisionnelle de l’équipe : congés, performance, compétences et risque RH
+            </span>
+          </div>
+
+          <div class="bi-frame-card">
+            <iframe
+              [src]="powerBiManagerUrl"
+              title="Dashboard Power BI Manager"
+              frameborder="0"
+              allowfullscreen="true">
+            </iframe>
+          </div>
+
+        </div>
+
+      </ng-container>
+    </ng-container>
+
+    <!-- =====================================================
+         EMPLOYE
+    ====================================================== -->
+    <ng-container *ngIf="isEmployee()">
+
+      <div class="welcome-card">
+        <h1>Bienvenue, {{ getEmployeeDisplayName() }} !</h1>
+        <p>Vous êtes connecté à l'espace employé du Portail RH.</p>
+      </div>
+
+      <div class="info-card">
+        <h3>Vos informations</h3>
+        <ul>
+          <li><strong>Nom :</strong> {{ fullName }}</li>
+          <li><strong>Email :</strong> {{ email }}</li>
+          <li><strong>Rôle :</strong> Employé</li>
+        </ul>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card" routerLink="/employee/mes-conges">
+          <h3>📅 Mes congés</h3>
+          <p>Consultez et gérez vos demandes de congé</p>
+        </div>
+
+        <div class="stat-card" routerLink="/employee/mes-formations">
+          <h3>🎓 Mes formations</h3>
+          <p>Découvrez les formations disponibles</p>
+        </div>
+
+        <div class="stat-card" routerLink="/employee/mon-profil">
+          <h3>👤 Mon profil</h3>
+          <p>Mettez à jour vos informations personnelles</p>
+        </div>
+
+        <div class="stat-card" routerLink="/employee/competences">
+          <h3>🧠 Mes compétences</h3>
+          <p>Modifier mes compétences pour IA</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <h2>🎓 Recommandations intelligentes</h2>
+          <span class="section-subtitle">
+            Suggestions de formation basées sur votre profil
+          </span>
+        </div>
+
+        <div class="cards" *ngIf="recommendations.length > 0; else noReco">
+
+          <div class="card" *ngFor="let r of recommendations">
+            <h3>{{ r.titre }}</h3>
+
+            <p>Score IA : {{ r.score | number:'1.2-2' }}</p>
+
+            <div class="bar">
+              <div class="fill" [style.width.%]="r.score * 100"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <ng-template #noReco>
+          <div class="info-card">
+            <p>Aucune recommandation disponible</p>
+          </div>
+        </ng-template>
+      </div>
+
+      <div class="bi-section" *ngIf="powerBiEmployeeUrl">
+
+        <div class="section-header">
+          <h2>Dashboard Power BI Employé</h2>
+          <span class="section-subtitle">
+            Suivi personnel des congés, formations, compétences et évaluations
+          </span>
+        </div>
+
+        <div class="bi-frame-card">
+          <iframe
+            [src]="powerBiEmployeeUrl"
+            title="Dashboard Power BI Employé"
+            frameborder="0"
+            allowfullscreen="true">
+          </iframe>
+        </div>
+
+      </div>
+
+    </ng-container>
+
+  </div>
+</div>

@@ -1,131 +1,89 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
-import { ApiService } from './api.service';
 import { HttpClient } from '@angular/common/http';
-import { Formation, FormationResponse } from '../../features/admin/gestion-formations/models/formation.model';
+import { Observable } from 'rxjs';
+import { Formation } from '../models/formation.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class FormationService {
+  private readonly apiUrl = 'http://localhost:8082/api/formations';
 
-  private endpoint = 'formations';
+  constructor(private http: HttpClient) {}
 
-  // Pour les routes /api/formations
-  private baseUrl = '/api/formations';
-
-  // Pour les routes /api/certificates
-  private apiRoot = '/api';
-
-  constructor(
-    private api: ApiService,
-    private http: HttpClient
-  ) {}
-
-  getAll(): Observable<FormationResponse> {
-    return this.api.get<FormationResponse>(this.endpoint);
-  }
-
-  getAllPaged(page = 0, size = 10): Observable<FormationResponse> {
-    return this.api.get<FormationResponse>(`${this.endpoint}/paged`, { page, size });
+  getAll(): Observable<Formation[]> {
+    return this.http.get<Formation[]>(this.apiUrl);
   }
 
   getById(id: number): Observable<any> {
-    return this.http.get(`${this.baseUrl}/${id}/details`);
+    return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
 
-  create(formation: Formation): Observable<FormationResponse> {
-    return this.api.post<FormationResponse>(this.endpoint, formation);
+  create(formation: Formation): Observable<any> {
+    return this.http.post<any>(this.apiUrl, formation);
   }
 
-  update(id: number, formation: Formation): Observable<FormationResponse> {
-    return this.api.put<FormationResponse>(`${this.endpoint}/id`, id, formation);
+  update(id: number, formation: Formation): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/${id}`, formation);
   }
 
   delete(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/id/${id}`);
+    return this.http.delete<any>(`${this.apiUrl}/${id}`);
+  }
+
+  activer(id: number): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/${id}/activer`, {});
+  }
+
+  desactiver(id: number): Observable<any> {
+    return this.http.put<any>(`${this.apiUrl}/${id}/desactiver`, {});
   }
 
   getParticipants(id: number): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/${id}/participants`);
+    return this.http.get<any[]>(`${this.apiUrl}/${id}/participants`);
   }
 
   retirerParticipant(formationId: number, employeId: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/${formationId}/participants/${employeId}`);
+    return this.http.delete<any>(
+      `${this.apiUrl}/${formationId}/participants/${employeId}`
+    );
+  }
+
+  uploadPdf(formData: FormData): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/upload-pdf`, formData);
   }
 
   getMyFormations(): Observable<any[]> {
-    return this.http.get<any[]>(`/api/employe-formations/mes-formations`);
+    return this.http.get<any[]>(`${this.apiUrl}/mes-formations`);
   }
 
-  inscrireFormation(formationId: number) {
-    return this.http.post(`/api/employe-formations/inscrire`, {
-      formationId
+  inscrireFormation(formationId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${formationId}/inscrire`, {});
+  }
+
+  getVideos(formationId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/${formationId}/videos`);
+  }
+
+  getCompletedVideos(formationId: number): Observable<number[]> {
+    return this.http.get<number[]>(`${this.apiUrl}/${formationId}/completed-videos`);
+  }
+
+  completeVideo(videoId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/videos/${videoId}/complete`, {});
+  }
+
+  resetFormationProgress(formationId: number): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/${formationId}/reset-progress`, {});
+  }
+
+  generateCertificate(formationId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${formationId}/certificate`, {
+      responseType: 'blob'
     });
   }
 
   getRecommendations(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/recommandations`);
-  }
-
-  getRecommendationsSkill(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/recommandations-skill`);
-  }
-
-  getVideos(formationId: number): Observable<any[]> {
-    return this.http.get<any[]>(`/api/employe-formations/${formationId}/videos`);
-  }
-
-  completeVideo(videoId: number) {
-    return this.http.post(`/api/employe-formations/complete-video/${videoId}`, {});
-  }
-
-  getCompletedVideos(formationId: number) {
-    return this.http.get<number[]>(`/api/employe-formations/${formationId}/completed-videos`);
-  }
-
-  uploadPdf(formData: FormData) {
-    return this.http.post(`${this.baseUrl}/upload-pdf`, formData);
-  }
-
-  search(keyword: string): Observable<FormationResponse> {
-    return this.api.get<FormationResponse>(`${this.endpoint}/search`, { keyword });
-  }
-
-  activer(id: number) {
-    return this.http.put(`/api/formations/${id}/activer`, {});
-  }
-
-  desactiver(id: number) {
-    return this.http.put(`/api/formations/${id}/desactiver`, {});
-  }
-
-  getStats(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/stats`);
-  }
-
- generateCertificate(formationId: number) {
-  return this.http.post(
-    `${this.apiRoot}/certificates/generate/${formationId}`,
-    {},
-    {
-      responseType: 'blob'
-    }
-  );
-}
-
-  getMyCertificates() {
-    return this.http.get<any[]>(
-      `${this.apiRoot}/certificates/me`
-    );
-  }
-
-
-
-  resetFormationProgress(formationId: number) {
-  return this.http.put(
-    `${this.apiRoot}/formations/reset-progress/${formationId}`,
-    {}
-  );
+  return this.http.get<any[]>(`${this.apiUrl}/recommendations`);
 }
 }

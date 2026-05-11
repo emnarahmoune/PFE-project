@@ -1,0 +1,1697 @@
+<div class="conges-page">
+
+  <!-- =====================================================
+       EMPLOYÉ : LISTE
+  ====================================================== -->
+  <ng-container *ngIf="congeMode === 'EMPLOYE_LISTE'">
+
+    <div class="glass-conges">
+
+      <div class="glass-hero">
+        <div class="hero-glow"></div>
+
+        <div class="hero-content">
+          <div class="hero-text">
+            <h1>✨ Mes congés</h1>
+            <p>Gérez vos demandes • {{ currentYear }}</p>
+          </div>
+
+          <button class="floating-btn" routerLink="/employee/mes-conges/nouveau">
+            <span class="btn-icon">+</span>
+            <span>Nouvelle demande</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="stats-rainbow">
+        <div class="stat-glass blue">
+          <div class="stat-icon">📅</div>
+          <div class="stat-data">
+            <span class="stat-number">{{ soldeTotal }}</span>
+            <span class="stat-label">Jours total</span>
+          </div>
+        </div>
+
+        <div class="stat-glass orange">
+          <div class="stat-icon">✈️</div>
+          <div class="stat-data">
+            <span class="stat-number">{{ soldePris }}</span>
+            <span class="stat-label">Jours pris</span>
+          </div>
+        </div>
+
+        <div class="stat-glass green">
+          <div class="stat-icon">✅</div>
+          <div class="stat-data">
+            <span class="stat-number">{{ soldeRestant }}</span>
+            <span class="stat-label">Jours restants</span>
+          </div>
+        </div>
+
+        <div class="stat-glass yellow">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-data">
+            <span class="stat-number">{{ soldeEnAttente }}</span>
+            <span class="stat-label">En attente</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-progress">
+        <div class="progress-header">
+          <span>📊 Utilisation du solde</span>
+          <span class="progress-stats">{{ soldePris }} / {{ soldeTotal }} jours</span>
+        </div>
+
+        <div class="progress-track">
+          <div class="progress-fill" [style.width.%]="getSoldeProgress()"></div>
+        </div>
+      </div>
+
+      <div class="selection-toolbar" *ngIf="!loading && conges.length > 0">
+        <button class="select-mode-btn" type="button" (click)="toggleSelectionMode()">
+          {{ selectionMode ? 'Désactiver la sélection' : 'Activer la sélection' }}
+        </button>
+
+        <ng-container *ngIf="selectionMode">
+          <mat-checkbox [checked]="selectAll" (change)="toggleSelectAll()">
+            Tout sélectionner
+          </mat-checkbox>
+
+          <span class="selection-count" *ngIf="selectedDemandes.size > 0">
+            {{ selectedDemandes.size }} sélectionnée(s)
+          </span>
+
+          <button class="delete-selected" type="button" (click)="deleteSelectedDemandes()">
+            Supprimer la sélection
+          </button>
+        </ng-container>
+      </div>
+
+      <div class="loading-state" *ngIf="loading">
+        <mat-spinner diameter="42"></mat-spinner>
+        <p>Chargement des congés...</p>
+      </div>
+
+      <div class="empty-glass" *ngIf="!loading && conges.length === 0">
+        <div class="empty-icon">📭</div>
+        <h3>Aucune demande de congé</h3>
+        <p>Vous n’avez pas encore créé de demande.</p>
+
+        <button class="floating-btn secondary" routerLink="/employee/mes-conges/nouveau">
+          Créer une demande
+        </button>
+      </div>
+
+      <div class="requests-grid" *ngIf="!loading && conges.length > 0">
+        <article class="request-card" *ngFor="let c of conges; trackBy: trackById">
+
+          <div class="card-select" *ngIf="selectionMode && isSelectable(c)">
+            <mat-checkbox
+              [checked]="isSelected(c.id!)"
+              (change)="toggleSelection(c.id!)">
+            </mat-checkbox>
+          </div>
+
+          <div class="request-header">
+            <div class="date-pill">
+              <span>{{ formatDate(c.dateDebut) | slice:0:2 }}</span>
+              <small>{{ formatDate(c.dateDebut) | slice:3:5 }}</small>
+            </div>
+
+            <div class="date-range">
+              <strong>{{ formatDate(c.dateDebut) }} → {{ formatDate(c.dateFin) }}</strong>
+              <span>{{ getTypeLabel(c.type) }}</span>
+            </div>
+
+            <span class="status-badge" [ngClass]="getStatutClass(c.statut)">
+              {{ getStatutLabel(c.statut) }}
+            </span>
+          </div>
+
+          <div class="request-body">
+            <div>
+              <span>Durée</span>
+              <strong>{{ c.joursOuvres ?? c.nombreJours ?? '—' }} jour(s)</strong>
+            </div>
+
+            <div>
+              <span>Commentaire</span>
+              <strong>{{ c.commentaire || 'Aucun commentaire' }}</strong>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="action-link view" [routerLink]="['/employee/mes-conges', c.id]">
+              Détails
+            </button>
+
+            <button
+              class="action-link edit"
+              *ngIf="peutModifier(c)"
+              [routerLink]="['/employee/mes-conges', c.id, 'modifier']">
+              Modifier
+            </button>
+
+            <button
+              class="action-link cancel"
+              *ngIf="peutAnnuler(c)"
+              type="button"
+              (click)="annulerDemande(c)">
+              Annuler
+            </button>
+          </div>
+
+        </article>
+      </div>
+
+    </div>
+
+  </ng-container>
+
+  <!-- =====================================================
+       EMPLOYÉ : NOUVEAU / MODIFIER
+  ====================================================== -->
+  <ng-container *ngIf="congeMode === 'EMPLOYE_NOUVEAU' || congeMode === 'EMPLOYE_MODIFIER'">
+
+    <div class="demande-conge-container">
+
+      <div class="form-header">
+        <button class="back-button" routerLink="/employee/mes-conges">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+
+        <h1>
+          {{ congeMode === 'EMPLOYE_NOUVEAU' ? 'Demande de congé' : 'Modifier ma demande' }}
+        </h1>
+      </div>
+
+      <div class="content-grid">
+
+        <mat-card class="form-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>{{ congeMode === 'EMPLOYE_NOUVEAU' ? 'event' : 'edit' }}</mat-icon>
+              {{ congeMode === 'EMPLOYE_NOUVEAU' ? 'Nouvelle demande' : 'Modification' }}
+            </mat-card-title>
+
+            <mat-card-subtitle>
+              {{
+                congeMode === 'EMPLOYE_NOUVEAU'
+                  ? 'Remplissez les informations ci-dessous'
+                  : 'Modifiez les informations ci-dessous'
+              }}
+            </mat-card-subtitle>
+          </mat-card-header>
+
+          <mat-card-content>
+            <form [formGroup]="demandeForm" (ngSubmit)="onSubmit()">
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Type de congé</mat-label>
+
+                <mat-select formControlName="type">
+                  <mat-select-trigger>
+                    <span class="select-trigger-content" *ngIf="demandeForm.get('type')?.value">
+                      <mat-icon [style.color]="getTypeColor(demandeForm.get('type')?.value)">
+                        {{ getTypeIcon(demandeForm.get('type')?.value) }}
+                      </mat-icon>
+                      <span>{{ getTypeLabel(demandeForm.get('type')?.value) }}</span>
+                    </span>
+                  </mat-select-trigger>
+
+                  <mat-option *ngFor="let type of typesConge" [value]="type.value">
+                    <div class="type-option">
+                      <mat-icon [style.color]="type.color">{{ type.icon }}</mat-icon>
+                      <span>{{ type.label }}</span>
+                    </div>
+                  </mat-option>
+                </mat-select>
+
+                <mat-error *ngIf="demandeForm.get('type')?.touched && demandeForm.get('type')?.hasError('required')">
+                  Le type de congé est obligatoire
+                </mat-error>
+              </mat-form-field>
+
+              <div class="date-row">
+                <mat-form-field appearance="outline" class="date-field">
+                  <mat-label>Date de début</mat-label>
+                  <input matInput [matDatepicker]="debutPicker" formControlName="dateDebut">
+                  <mat-datepicker-toggle matSuffix [for]="debutPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #debutPicker></mat-datepicker>
+
+                  <mat-error *ngIf="demandeForm.get('dateDebut')?.touched && demandeForm.get('dateDebut')?.hasError('required')">
+                    Date de début obligatoire
+                  </mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="date-field">
+                  <mat-label>Date de fin</mat-label>
+                  <input matInput [matDatepicker]="finPicker" formControlName="dateFin">
+                  <mat-datepicker-toggle matSuffix [for]="finPicker"></mat-datepicker-toggle>
+                  <mat-datepicker #finPicker></mat-datepicker>
+
+                  <mat-error *ngIf="demandeForm.get('dateFin')?.touched && demandeForm.get('dateFin')?.hasError('required')">
+                    Date de fin obligatoire
+                  </mat-error>
+                </mat-form-field>
+              </div>
+
+              <div class="form-error" *ngIf="demandeForm.hasError('dateInvalide')">
+                La date de début doit être antérieure à la date de fin.
+              </div>
+
+              <div class="form-error" *ngIf="demandeForm.hasError('datePassee')">
+                La date de début ne peut pas être dans le passé.
+              </div>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Commentaire</mat-label>
+                <textarea
+                  matInput
+                  rows="4"
+                  formControlName="commentaire"
+                  placeholder="Ajoutez un commentaire si nécessaire">
+                </textarea>
+              </mat-form-field>
+
+              <mat-checkbox formControlName="urgente">
+                Demande urgente
+              </mat-checkbox>
+
+              <div class="warning-card" *ngIf="!verifierSolde() && demandeForm.get('type')?.value === 'ANNUEL'">
+                <mat-icon>warning</mat-icon>
+                <span>
+                  Solde insuffisant. Il vous reste {{ soldeRestant }} jour(s).
+                </span>
+              </div>
+
+              <div class="form-actions">
+                <button class="btn-cancel" type="button" routerLink="/employee/mes-conges">
+                  Annuler
+                </button>
+
+                <button
+  class="btn-submit"
+  type="submit"
+  [disabled]="isSubmitting">
+  <mat-spinner *ngIf="isSubmitting" diameter="20"></mat-spinner>
+  <span *ngIf="!isSubmitting">
+    {{
+      congeMode === 'EMPLOYE_NOUVEAU'
+        ? 'Envoyer la demande'
+        : 'Enregistrer les modifications'
+    }}
+  </span>
+</button>
+              </div>
+
+            </form>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-card class="recap-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>account_balance_wallet</mat-icon>
+              Mon solde
+            </mat-card-title>
+          </mat-card-header>
+
+          <mat-card-content>
+            <div class="solde-list">
+              <div>
+                <span>Solde total</span>
+                <strong>{{ soldeTotal || soldeConges }}</strong>
+              </div>
+
+              <div>
+                <span>Jours pris</span>
+                <strong>{{ soldePris || congesPris }}</strong>
+              </div>
+
+              <div>
+                <span>Jours restants</span>
+                <strong>{{ soldeRestant || congesRestants }}</strong>
+              </div>
+
+              <div>
+                <span>Jours demandés</span>
+                <strong>{{ calculerNombreJours() }}</strong>
+              </div>
+            </div>
+
+            <mat-progress-bar
+              mode="determinate"
+              [value]="(soldeTotal || soldeConges) > 0 ? ((soldePris || congesPris) / (soldeTotal || soldeConges)) * 100 : 0">
+            </mat-progress-bar>
+          </mat-card-content>
+        </mat-card>
+
+      </div>
+    </div>
+
+  </ng-container>
+
+  <!-- =====================================================
+       EMPLOYÉ : DÉTAIL
+  ====================================================== -->
+  <ng-container *ngIf="congeMode === 'EMPLOYE_DETAIL'">
+
+    <div class="demande-conge-container" *ngIf="!loading && demande; else employeeDetailLoadingTpl">
+
+      <section class="detail-hero">
+        <button class="back-button" type="button" (click)="goBack()" aria-label="Retour">
+          ←
+        </button>
+
+        <div class="hero-text">
+          <h1>Détail de la demande de congé</h1>
+          <p>Consultez les informations complètes de votre demande.</p>
+        </div>
+
+        <span class="status-badge" [ngClass]="getStatutClass(demande.statut)">
+          {{ getStatutLabel(demande.statut) }}
+        </span>
+      </section>
+
+      <section class="detail-grid">
+
+        <article class="detail-card main-card">
+
+          <div class="card-header">
+            <div class="card-title">
+              <span class="title-icon">📄</span>
+              <div>
+                <h2>Informations de la demande</h2>
+                <p>Période, durée, type et commentaire</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+
+        <div class="detail-stats">
+
+  <div class="info-item">
+    <span class="info-icon">👤</span>
+    <div>
+      <span class="info-label">Employé</span>
+      <span class="info-value">
+        {{ getDemandeEmployeNom() }}
+      </span>
+    </div>
+  </div>
+
+  <div class="info-item">
+    <span class="info-icon">📧</span>
+    <div>
+      <span class="info-label">Email</span>
+      <span class="info-value">
+        {{ getDemandeEmployeEmail() }}
+      </span>
+    </div>
+  </div>
+
+  <div class="info-item">
+    <span class="info-icon">🏷️</span>
+    <div>
+      <span class="info-label">Type</span>
+      <span class="info-value">
+        {{ getTypeLabel(demande.type) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="info-item">
+    <span class="info-icon">📅</span>
+    <div>
+      <span class="info-label">Date début</span>
+      <span class="info-value">
+        {{ formatDate(demande.dateDebut) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="info-item">
+    <span class="info-icon">📆</span>
+    <div>
+      <span class="info-label">Date fin</span>
+      <span class="info-value">
+        {{ formatDate(demande.dateFin) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="info-item">
+    <span class="info-icon">⏱️</span>
+    <div>
+      <span class="info-label">Durée</span>
+      <span class="info-value">
+        {{ getDuree(demande) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="info-item">
+    <span class="info-icon">📝</span>
+    <div>
+      <span class="info-label">Demandé le</span>
+      <span class="info-value">
+        {{ formatDate(demande.dateDemande) }}
+      </span>
+    </div>
+  </div>
+
+  <div class="info-item">
+    <span class="info-icon">⚡</span>
+    <div>
+      <span class="info-label">Urgente</span>
+      <span class="info-value">
+        {{ getUrgenceFromObject(demande) ? 'Oui' : 'Non' }}
+      </span>
+    </div>
+  </div>
+
+</div>
+
+            <div class="comment-box">
+              <h3>Commentaire</h3>
+              <p>{{ demande.commentaire || 'Aucun commentaire fourni.' }}</p>
+            </div>
+
+            <div class="comment-box danger" *ngIf="demande.motifRefus">
+              <h3>Motif du refus</h3>
+              <p>{{ demande.motifRefus }}</p>
+            </div>
+
+            <div class="detail-actions">
+              <button class="btn-cancel" type="button" (click)="goBack()">
+                Retour
+              </button>
+
+              <button
+                class="btn-submit"
+                *ngIf="peutModifier(demande)"
+                [routerLink]="['/employee/mes-conges', demande.id, 'modifier']">
+                Modifier
+              </button>
+
+              <button
+                class="btn-danger"
+                *ngIf="peutAnnuler(demande)"
+                type="button"
+                (click)="annulerDemande(demande)">
+                Annuler la demande
+              </button>
+            </div>
+
+          </div>
+        </article>
+
+        <aside class="detail-card">
+          <h3>Suivi de validation</h3>
+
+          <div class="timeline">
+            <div class="timeline-item active">
+              <span></span>
+              <p>Demande créée</p>
+              <small>{{ formatDate(demande.dateDemande) }}</small>
+            </div>
+
+            <div class="timeline-item" [class.active]="demande.managerApprouve">
+              <span></span>
+              <p>Validation manager</p>
+              <small>{{ demande.managerNom || 'En attente' }}</small>
+            </div>
+
+            <div class="timeline-item" [class.active]="demande.rhApprouve">
+              <span></span>
+              <p>Validation RH</p>
+              <small>{{ demande.adminEmail || 'En attente' }}</small>
+            </div>
+          </div>
+        </aside>
+
+      </section>
+
+    </div>
+
+    <ng-template #employeeDetailLoadingTpl>
+      <div class="loading-state" *ngIf="loading">
+        <mat-spinner diameter="42"></mat-spinner>
+        <p>Chargement de la demande...</p>
+      </div>
+
+      <div class="error-card" *ngIf="!loading && errorMessage">
+        <span class="error-icon">⚠️</span>
+        <h3>Impossible de charger la demande</h3>
+        <p>{{ errorMessage }}</p>
+
+        <button class="back-button" type="button" (click)="goBack()">
+          ← Revenir
+        </button>
+      </div>
+    </ng-template>
+
+  </ng-container>
+
+  <!-- =====================================================
+       MANAGER : VALIDATION + CALENDRIER
+  ====================================================== -->
+  <ng-container *ngIf="congeMode === 'MANAGER_VALIDATION'">
+
+    <div class="approbation-page">
+
+      <section class="page-hero">
+        <div class="hero-left">
+          <div class="hero-icon">
+            <mat-icon>event_available</mat-icon>
+          </div>
+
+          <div>
+            <h1>Approbation des congés</h1>
+            <p>Consultez, analysez et traitez les demandes de congé de votre équipe.</p>
+          </div>
+        </div>
+
+        <button class="refresh-btn" type="button" (click)="loadPageData()">
+          <mat-icon>refresh</mat-icon>
+          Actualiser
+        </button>
+      </section>
+
+      <section class="stats-grid manager-stats">
+        <div class="stat-card">
+          <div class="stat-icon pending">
+            <mat-icon>hourglass_top</mat-icon>
+          </div>
+
+          <div>
+            <strong>{{ tasks.length }}</strong>
+            <span>Demandes en attente</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon team">
+            <mat-icon>groups</mat-icon>
+          </div>
+
+          <div>
+            <strong>{{ equipeSize }}</strong>
+            <span>Membres équipe</span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon urgent">
+            <mat-icon>priority_high</mat-icon>
+          </div>
+
+          <div>
+            <strong>{{ getUrgentTasksCount() }}</strong>
+            <span>Demandes urgentes</span>
+          </div>
+        </div>
+      </section>
+
+      <div *ngIf="errorMessage" class="alert-error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <mat-tab-group animationDuration="0ms" class="custom-tabs">
+
+        <mat-tab label="📋 Demandes à traiter">
+
+          <section class="content-card">
+
+            <div class="section-header">
+              <div>
+                <h2>Demandes à traiter</h2>
+                <p>Liste des demandes nécessitant votre décision.</p>
+              </div>
+
+              <span class="section-count">{{ tasks.length }} demande(s)</span>
+            </div>
+
+            <div *ngIf="loading" class="loading-state">
+              <mat-spinner diameter="42"></mat-spinner>
+              <p>Chargement des demandes...</p>
+            </div>
+
+            <div *ngIf="!loading && tasks.length === 0" class="empty-state">
+              <div class="empty-icon">
+                <mat-icon>task_alt</mat-icon>
+              </div>
+
+              <h3>Aucune demande en attente</h3>
+              <p>Toutes les demandes de votre équipe ont été traitées.</p>
+            </div>
+
+            <div *ngIf="!loading && tasks.length > 0" class="tasks-list">
+
+              <article
+                *ngFor="let task of tasks"
+                class="task-card"
+                [class.urgent]="isTaskUrgent(task)"
+                [class.own-task]="isOwnRequest(task)">
+
+                <div class="task-top">
+                  <div class="employee-block">
+
+                    <app-employee-avatar
+                      [employee]="task"
+                      size="md"
+                      shape="circle">
+                    </app-employee-avatar>
+
+                    <div>
+                      <h3>
+                        {{ getEmployeInfo(task) }}
+
+                        <span *ngIf="isTaskUrgent(task)" class="urgent-badge">
+                             Urgent</span>
+                      </h3>
+
+                      <p>{{ task.employeEmail || '-' }}</p>
+                    </div>
+                  </div>
+
+                  <span class="status-badge en-attente">
+                    En attente manager
+                  </span>
+                </div>
+
+                <div class="task-info-grid">
+                  <div>
+                    <span>Période</span>
+                    <strong>{{ formatDate(task.dateDebut) }} → {{ formatDate(task.dateFin) }}</strong>
+                  </div>
+
+                  <div>
+                    <span>Type</span>
+                    <strong>{{ getTypeLabel(task.type) }}</strong>
+                  </div>
+
+                  <div>
+                    <span>Jours</span>
+                    <strong>{{ getTaskDays(task) }}</strong>
+                  </div>
+                </div>
+
+                <div class="task-comment" *ngIf="task.commentaire">
+                  {{ task.commentaire }}
+                </div>
+
+                <div class="task-actions">
+                  <button class="refresh-btn" type="button" (click)="openDetailsModal(task)">
+                    Détails
+                  </button>
+
+                  <button
+                    class="btn-confirm approve"
+                    type="button"
+                    [disabled]="!canTreatManager(task)"
+                    (click)="openApproveModal(task)">
+                    Approuver
+                  </button>
+
+                  <button
+                    class="btn-confirm reject"
+                    type="button"
+                    [disabled]="!canTreatManager(task)"
+                    (click)="openRejectModal(task)">
+                    Refuser
+                  </button>
+                </div>
+
+                <div class="own-warning" *ngIf="isOwnRequest(task)">
+                  Vous ne pouvez pas traiter votre propre demande.
+                </div>
+
+              </article>
+
+            </div>
+
+          </section>
+
+        </mat-tab>
+
+        <mat-tab label="📅 Calendrier">
+
+          <div class="calendar-layout">
+
+            <div class="calendar-sidebar">
+              <h3>Navigation</h3>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Année</mat-label>
+                <mat-select [(value)]="selectedYear" (selectionChange)="changeYearMonth()">
+                  <mat-option *ngFor="let year of years" [value]="year">
+                    {{ year }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Mois</mat-label>
+                <mat-select [(value)]="selectedMonth" (selectionChange)="changeYearMonth()">
+                  <mat-option *ngFor="let month of months; let i = index" [value]="i">
+                    {{ month }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <h3>Légende</h3>
+
+              <div class="legend-item">
+                <span class="legend-color approved"></span>
+                Approuvé
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-color pending"></span>
+                En attente RH
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-color refused"></span>
+                Refusé manager/RH
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-color other"></span>
+                Autre
+              </div>
+
+              <div class="legend-note">
+                * Congés des membres de votre équipe
+              </div>
+            </div>
+
+            <div class="calendar-container">
+              <full-calendar #calendar [options]="calendarOptions"></full-calendar>
+            </div>
+
+          </div>
+
+        </mat-tab>
+
+      </mat-tab-group>
+
+    </div>
+
+  </ng-container>
+
+  <!-- =====================================================
+       MANAGER : HISTORIQUE EMPLOYÉ
+  ====================================================== -->
+  <ng-container *ngIf="congeMode === 'MANAGER_HISTORIQUE_EMPLOYE'">
+
+    <div class="conges-container">
+
+      <section class="history-header">
+        <div class="header-main">
+          <button class="back-button" type="button" (click)="goBack()">
+            <span>←</span>
+            Revenir à la page précédente
+          </button>
+
+          <div class="title-row">
+            <div class="title-icon">📅</div>
+
+            <div>
+              <h2>Historique des congés</h2>
+
+              <p *ngIf="employeNom">
+                pour <strong>{{ employeNom }}</strong>
+              </p>
+
+              <p *ngIf="!employeNom">
+                Suivi des demandes de congé de l’employé sélectionné.
+              </p>
+
+              <div class="employee-meta" *ngIf="employePoste || employeDepartement">
+                <span *ngIf="employePoste">{{ employePoste }}</span>
+                <span *ngIf="employeDepartement">{{ employeDepartement }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-count" *ngIf="!managerHistoriqueLoading && !managerHistoriqueError">
+          <strong>{{ managerHistoriqueConges.length }}</strong>
+          <span>demande(s)</span>
+        </div>
+
+        <div class="indicateurs-mini" *ngIf="!managerHistoriqueLoading && !managerHistoriqueError">
+          <div class="indicator" [ngClass]="getAbsenteismeClass(absenteisme)">
+            <span class="icon">📉</span>
+
+            <div>
+              <span class="value">
+                {{ absenteisme != null ? (absenteisme | number:'1.1-1') + '%' : '—' }}
+              </span>
+              <span class="label">Absentéisme</span>
+            </div>
+          </div>
+
+          <div class="indicator" [ngClass]="getScoreClass(scoreTurnover)">
+            <span class="icon">⚠️</span>
+
+            <div>
+              <span class="value">{{ scoreTurnover != null ? scoreTurnover : '—' }}</span>
+              <span class="label">Risque turnover</span>
+              <span class="sub-label" *ngIf="scoreTurnoverNiveau">Niveau : {{ scoreTurnoverNiveau }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="loader" *ngIf="managerHistoriqueLoading">
+        <div class="spinner"></div>
+        <p>Chargement des demandes...</p>
+      </div>
+
+      <div class="error-card" *ngIf="managerHistoriqueError && !managerHistoriqueLoading">
+        <span class="error-icon">⚠️</span>
+        <h3>Impossible de charger les congés</h3>
+        <p>Cet employé n'existe pas ou vous n'avez pas les droits.</p>
+
+        <div class="error-actions">
+          <button class="back-button" type="button" (click)="goBack()">
+            ← Revenir
+          </button>
+
+          <a routerLink="/manager/equipe" class="back-link">
+            Retour à l'équipe
+          </a>
+        </div>
+      </div>
+
+      <section class="conges-list" *ngIf="!managerHistoriqueLoading && !managerHistoriqueError && managerHistoriqueConges.length > 0">
+
+        <article
+          class="conge-card"
+          *ngFor="let c of managerHistoriqueConges; trackBy: trackByCongeId">
+
+          <div class="card-header">
+            <div class="type-badge" [ngClass]="getTypeClass(c.type)">
+              {{ getTypeLabel(c.type) }}
+            </div>
+
+            <div class="status-chip" [ngClass]="getStatutClass(c.statut)">
+              {{ getStatutLabel(c.statut) }}
+            </div>
+          </div>
+
+          <div class="card-body">
+
+            <div class="date-range-history">
+              <div class="date-box">
+                <span>Début</span>
+                <strong>{{ formatDate(c.dateDebut) }}</strong>
+              </div>
+
+              <div class="arrow">→</div>
+
+              <div class="date-box">
+                <span>Fin</span>
+                <strong>{{ formatDate(c.dateFin) }}</strong>
+              </div>
+            </div>
+
+            <div class="info">
+              <div class="info-item">
+                <span>Durée</span>
+                <strong>{{ c.joursOuvres || c.nombreJours || 0 }} jour(s) ouvré(s)</strong>
+              </div>
+
+              <div class="info-item">
+                <span>Demandé le</span>
+                <strong>{{ formatDate(c.dateDemande) }}</strong>
+              </div>
+            </div>
+
+            <div class="commentaire" *ngIf="c.commentaire">
+              <span class="label">Commentaire</span>
+              <p>{{ c.commentaire }}</p>
+            </div>
+
+            <div class="motif-refus" *ngIf="c.statut === 'REFUSE' && c.motifRefus">
+              <span class="label">Motif du refus</span>
+              <p>{{ c.motifRefus }}</p>
+            </div>
+
+          </div>
+        </article>
+
+      </section>
+
+      <div class="empty-state" *ngIf="!managerHistoriqueLoading && !managerHistoriqueError && managerHistoriqueConges.length === 0">
+        <span class="empty-icon">📭</span>
+        <h3>Aucune demande trouvée</h3>
+        <p>Aucune demande de congé n’a encore été enregistrée pour cet employé.</p>
+
+        <button class="back-button" type="button" (click)="goBack()">
+          ← Revenir
+        </button>
+      </div>
+
+    </div>
+
+  </ng-container>
+
+  <!-- =====================================================
+       ADMIN RH
+  ====================================================== -->
+  <ng-container *ngIf="congeMode === 'ADMIN_RH_VALIDATION'">
+
+    <div class="validation-container">
+
+      <div class="admin-header">
+        <div>
+          <h1>Validation des congés</h1>
+          <p>Suivez et gérez les demandes</p>
+        </div>
+
+        <button mat-raised-button class="btn-refresh" type="button" (click)="refreshAllData()">
+          🔄 Actualiser
+        </button>
+      </div>
+
+      <div class="stats-grid admin-stats">
+        <div class="admin-stat-card">
+          <h2>{{ stats.EN_ATTENTE || 0 }}</h2>
+          <p>En attente RH</p>
+        </div>
+
+        <div class="admin-stat-card">
+          <h2>{{ stats.APPROUVE || 0 }}</h2>
+          <p>Approuvées</p>
+        </div>
+
+        <div class="admin-stat-card">
+          <h2>{{ stats.REFUSE || 0 }}</h2>
+          <p>Refusées</p>
+        </div>
+
+        <div class="admin-stat-card">
+          <h2>{{ (stats.EN_ATTENTE || 0) + (stats.APPROUVE || 0) + (stats.REFUSE || 0) }}</h2>
+          <p>Total</p>
+        </div>
+      </div>
+
+      <mat-tab-group animationDuration="0ms" class="custom-tabs">
+
+        <mat-tab label="📋 Demandes RH">
+
+          <div class="section-title">
+            <div>
+              <h2>Demandes à valider par RH</h2>
+              <p>Seules les demandes en attente RH peuvent être approuvées ou refusées.</p>
+            </div>
+          </div>
+
+          <div class="card-table" *ngIf="!loadingTaches">
+
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Employé</th>
+                  <th>Période</th>
+                  <th>Jours</th>
+                  <th>Type</th>
+                  <th>Statut</th>
+                  <th class="center">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr
+                  *ngFor="let t of taches; trackBy: trackByTaskId"
+                  [class.row-final]="!isPendingRh(t)">
+
+                  <td>
+                    <div class="employee-cell">
+                      <app-employee-avatar
+                        [employee]="t"
+                        size="md"
+                        shape="circle">
+                      </app-employee-avatar>
+
+                      <div>
+                        <strong>{{ t.employePrenom }} {{ t.employeNom }}</strong>
+                        <small>{{ t.employeEmail || '-' }}</small>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td>{{ formatDate(t.dateDebut) }} → {{ formatDate(t.dateFin) }}</td>
+
+                  <td>
+                    <span class="days-chip">
+                      {{ t.nbJours || t.nombreJours || 0 }} jour(s)
+                    </span>
+                  </td>
+
+                  <td>{{ getTypeLabel(t.type) }}</td>
+
+                  <td>
+                    <span class="status-badge" [ngClass]="getStatusClass(t.statut)">
+                      {{ getStatutLabel(t.statut || 'EN_ATTENTE_RH') }}
+                    </span>
+                  </td>
+
+                  <td>
+                    <div class="actions-group" *ngIf="canTreatRh(t); else noActionTpl">
+                      <button
+                        type="button"
+                        class="action-btn approve"
+                        title="Approuver"
+                        [disabled]="isSubmitting"
+                        (click)="openApproveRhModal(t)">
+                        <span>✓</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="action-btn reject"
+                        title="Refuser"
+                        [disabled]="isSubmitting"
+                        (click)="openRejectRhModal(t)">
+                        <span>×</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="action-btn details"
+                        title="Détails"
+                        (click)="openRhDetails(t)">
+                        <span>ℹ</span>
+                      </button>
+                    </div>
+
+                    <ng-template #noActionTpl>
+                      <span class="final-label own-request" *ngIf="isOwnRequest(t); else finalStatusTpl">
+                        Votre propre demande
+                      </span>
+
+                      <ng-template #finalStatusTpl>
+                        <span class="final-label">
+                          Déjà traitée
+                        </span>
+                      </ng-template>
+                    </ng-template>
+                  </td>
+
+                </tr>
+              </tbody>
+            </table>
+
+            <div *ngIf="taches.length === 0" class="empty-state">
+              Aucune demande en attente RH
+            </div>
+
+          </div>
+
+          <div *ngIf="loadingTaches" class="loading-container">
+            Chargement...
+          </div>
+
+        </mat-tab>
+
+        <mat-tab label="📅 Calendrier">
+
+          <div class="section-title">
+            <div>
+              <h2>Calendrier des congés</h2>
+              <p>Visualisez les congés en attente, approuvés et refusés.</p>
+            </div>
+          </div>
+
+          <div class="calendar-layout">
+
+            <div class="calendar-sidebar">
+              <h3>Navigation</h3>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Année</mat-label>
+                <mat-select [(value)]="selectedYear" (selectionChange)="changeYearMonth()">
+                  <mat-option *ngFor="let year of years" [value]="year">
+                    {{ year }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Mois</mat-label>
+                <mat-select [(value)]="selectedMonth" (selectionChange)="changeYearMonth()">
+                  <mat-option *ngFor="let month of months; let i = index" [value]="i">
+                    {{ month }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <h3>Légende</h3>
+
+              <div class="legend-item">
+                <span class="legend-color approved"></span>
+                Approuvé
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-color pending"></span>
+                En attente
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-color refused"></span>
+                Refusé
+              </div>
+
+              <div class="legend-item">
+                <span class="legend-color other"></span>
+                Autre
+              </div>
+            </div>
+
+            <div class="calendar-container">
+              <full-calendar #calendar [options]="calendarOptions"></full-calendar>
+            </div>
+
+          </div>
+
+        </mat-tab>
+
+        <mat-tab label="⚠️ Refus manager">
+
+          <div class="section-title refus-section-title">
+            <div>
+              <h2>Demandes déjà refusées par manager</h2>
+              <p>Ces demandes sont consultables, mais ne peuvent plus être approuvées par RH.</p>
+            </div>
+
+            <span class="section-count">
+              {{ refusManager.length || 0 }} refus
+            </span>
+          </div>
+
+          <div class="card-table refused-card" *ngIf="!loadingRefus">
+
+            <table class="modern-table">
+              <thead>
+                <tr>
+                  <th>Employé</th>
+                  <th>Manager</th>
+                  <th>Période</th>
+                  <th>Motif du refus</th>
+                  <th>Date décision</th>
+                  <th class="center">Statut</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr
+                  *ngFor="let r of refusManager; trackBy: trackByRefusId"
+                  class="row-refused-manager">
+
+                  <td>
+                    <div class="employee-cell">
+                      <app-employee-avatar
+                        [employee]="r"
+                        size="md"
+                        shape="circle">
+                      </app-employee-avatar>
+
+                      <div>
+                        <strong>{{ r.employePrenom }} {{ r.employeNom }}</strong>
+                        <small>{{ r.employeDepartement || '-' }}</small>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td>
+                    {{ r.managerNom || '-' }}
+                  </td>
+
+                  <td>
+                    {{ formatDate(r.dateDebut) }} → {{ formatDate(r.dateFin) }}
+                  </td>
+
+                  <td>
+                    <span class="motif-refus">
+                      {{ r.motifRefus || 'Motif non renseigné' }}
+                    </span>
+                  </td>
+
+                  <td>
+                    {{ formatFullDate(r.dateDecision) || '-' }}
+                  </td>
+
+                  <td class="center">
+                    <button
+                      type="button"
+                      class="status-badge manager-refused clickable-status"
+                      title="Voir détails"
+                      (click)="openRefusDetails(r)">
+                      ❌ Refus manager
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div *ngIf="refusManager.length === 0" class="empty-state">
+              Aucune demande refusée par manager
+            </div>
+
+          </div>
+
+          <div *ngIf="loadingRefus" class="loading-container">
+            Chargement des refus manager...
+          </div>
+
+        </mat-tab>
+
+      </mat-tab-group>
+
+    </div>
+
+  </ng-container>
+
+  <!-- =====================================================
+       MODAL MANAGER APPROBATION / REFUS
+  ====================================================== -->
+  <div class="modal-backdrop" *ngIf="showModal && selectedTaskForApproval">
+    <div class="modal-card" [class.reject-modal]="actionType === 'reject'">
+
+      <div class="modal-header">
+        <div class="modal-title-zone">
+          <div class="modal-icon" [class.approve-icon]="actionType === 'approve'" [class.reject-icon]="actionType === 'reject'">
+            {{ actionType === 'approve' ? '✓' : '×' }}
+          </div>
+
+          <div>
+            <h2>
+              {{ actionType === 'approve' ? 'Approuver la demande' : 'Refuser la demande' }}
+            </h2>
+
+            <p>
+              {{ getEmployeInfo(selectedTaskForApproval) }} —
+              {{ getSelectedManagerTaskPeriod() }}
+            </p>
+          </div>
+        </div>
+
+        <button type="button" class="modal-close" (click)="closeModal()">
+          ×
+        </button>
+      </div>
+
+      <div class="modal-body" *ngIf="actionType === 'approve'">
+        <label>Commentaire optionnel</label>
+        <textarea
+          [(ngModel)]="commentaire"
+          placeholder="Ajouter un commentaire..."
+          rows="5">
+        </textarea>
+      </div>
+
+      <div class="modal-body" *ngIf="actionType === 'reject'">
+        <label>Motif du refus *</label>
+        <textarea
+          [(ngModel)]="motifRefus"
+          placeholder="Exemple : solde insuffisant..."
+          rows="5">
+        </textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="btn-cancel"
+          [disabled]="isSubmitting"
+          (click)="closeModal()">
+          Annuler
+        </button>
+
+        <button
+          type="button"
+          class="btn-confirm"
+          [class.approve]="actionType === 'approve'"
+          [class.reject]="actionType === 'reject'"
+          [disabled]="isSubmitting || (actionType === 'reject' && !motifRefus.trim())"
+          (click)="submitManagerAction()">
+          Confirmer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       MODAL MANAGER DETAILS COLLABORATEUR
+  ====================================================== -->
+  <div class="modal-backdrop" *ngIf="showDetailsModal">
+    <div class="modal-card wide">
+
+      <div class="modal-header">
+        <div class="modal-title-zone">
+          <div class="modal-icon approve-icon">👤</div>
+
+          <div>
+            <h2>Détails collaborateur</h2>
+            <p>Solde et historique des congés</p>
+          </div>
+        </div>
+
+        <button type="button" class="modal-close" (click)="closeDetailsModal()">
+          ×
+        </button>
+      </div>
+
+      <div *ngIf="loadingDetails" class="loading-state">
+        <mat-spinner diameter="36"></mat-spinner>
+        <p>Chargement des détails...</p>
+      </div>
+
+      <div *ngIf="detailsError" class="alert-error">
+        {{ detailsError }}
+      </div>
+
+      <ng-container *ngIf="!loadingDetails && !detailsError">
+
+        <div class="detail-stats">
+          <div class="info-item">
+            <span class="info-icon">👤</span>
+            <div>
+              <span class="info-label">Employé</span>
+              <span class="info-value">
+                {{ employeDetails?.prenom }} {{ employeDetails?.nom }}
+              </span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="info-icon">📧</span>
+            <div>
+              <span class="info-label">Email</span>
+              <span class="info-value">{{ employeDetails?.email || '-' }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="info-icon">✅</span>
+            <div>
+              <span class="info-label">Solde restant</span>
+              <span class="info-value">{{ employeSolde?.restant ?? '-' }}</span>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <span class="info-icon">⏳</span>
+            <div>
+              <span class="info-label">En attente</span>
+              <span class="info-value">{{ employeSolde?.enAttente ?? '-' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="modal-subtitle">Historique congés</h3>
+
+       <div class="mini-list">
+  <div class="mini-item" *ngFor="let h of employeHistorique; trackBy: trackByCongeId">
+    <div class="mini-item-top">
+      <strong>{{ formatDate(h.dateDebut) }} → {{ formatDate(h.dateFin) }}</strong>
+
+      <span class="status-badge" [ngClass]="getStatutClass(h.statut)">
+        {{ getStatutLabel(h.statut) }}
+      </span>
+    </div>
+
+    <span>
+      {{ getTypeLabel(h.type) }}
+      •
+      {{ h.joursOuvres || h.nombreJours || 0 }} jour(s)
+    </span>
+
+    <small *ngIf="h.commentaire">
+      {{ h.commentaire }}
+    </small>
+
+    <small *ngIf="h.motifRefus">
+      Motif refus : {{ h.motifRefus }}
+    </small>
+  </div>
+
+  <div class="empty-state compact" *ngIf="employeHistorique.length === 0">
+    Aucun historique disponible.
+  </div>
+</div>
+
+      </ng-container>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" (click)="closeDetailsModal()">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =====================================================
+       MODALS RH
+  ====================================================== -->
+  <div class="modal-backdrop" *ngIf="showApproveModal && selectedTache">
+    <div class="modal-card approve-modal">
+
+      <div class="modal-header">
+        <div class="modal-title-zone">
+          <div class="modal-icon approve-icon">✓</div>
+
+          <div>
+            <h2>Approuver la demande</h2>
+            <p>{{ selectedTache.employePrenom }} {{ selectedTache.employeNom }}</p>
+          </div>
+        </div>
+
+        <button type="button" class="modal-close" (click)="closeModals()">
+          ×
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <label for="commentaire-approbation">
+          Commentaire optionnel
+        </label>
+
+        <textarea
+          id="commentaire-approbation"
+          [(ngModel)]="commentaire"
+          placeholder="Ajouter un commentaire pour l'approbation..."
+          rows="5">
+        </textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="btn-cancel"
+          [disabled]="isSubmitting"
+          (click)="closeModals()">
+          Annuler
+        </button>
+
+        <button
+          type="button"
+          class="btn-confirm approve"
+          [disabled]="isSubmitting"
+          (click)="confirmApprove()">
+          ✓ Confirmer l’approbation
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="showRejectModal && selectedTache">
+    <div class="modal-card reject-modal">
+
+      <div class="modal-header">
+        <div class="modal-title-zone">
+          <div class="modal-icon reject-icon">×</div>
+
+          <div>
+            <h2>Refuser la demande</h2>
+            <p>{{ selectedTache.employePrenom }} {{ selectedTache.employeNom }}</p>
+          </div>
+        </div>
+
+        <button type="button" class="modal-close" (click)="closeModals()">
+          ×
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <label for="motif-refus">
+          Motif du refus *
+        </label>
+
+        <textarea
+          id="motif-refus"
+          [(ngModel)]="motifRefus"
+          placeholder="Exemple : solde insuffisant..."
+          rows="5">
+        </textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button
+          type="button"
+          class="btn-cancel"
+          [disabled]="isSubmitting"
+          (click)="closeModals()">
+          Annuler
+        </button>
+
+        <button
+          type="button"
+          class="btn-confirm reject"
+          [disabled]="isSubmitting || !motifRefus.trim()"
+          (click)="confirmReject()">
+          × Confirmer le refus
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="showRhDetailsModal">
+    <div class="modal-card wide">
+      <div class="modal-header">
+        <div class="modal-title-zone">
+          <div class="modal-icon approve-icon">ℹ</div>
+
+          <div>
+            <h2>Détails de la demande RH</h2>
+            <p>Informations de la demande sélectionnée</p>
+          </div>
+        </div>
+
+        <button type="button" class="modal-close" (click)="closeRhDetails()">
+          ×
+        </button>
+      </div>
+
+      <div class="details-grid" *ngIf="selectedDetails">
+        <div class="detail-row">
+          <span>Employé</span>
+          <strong>{{ selectedDetails.employePrenom }} {{ selectedDetails.employeNom }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>Période</span>
+          <strong>{{ formatDate(selectedDetails.dateDebut) }} → {{ formatDate(selectedDetails.dateFin) }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>Type</span>
+          <strong>{{ getTypeLabel(selectedDetails.type) }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>Jours</span>
+          <strong>{{ selectedDetails.nbJours || selectedDetails.nombreJours || 0 }}</strong>
+        </div>
+
+        <div class="detail-row" *ngIf="selectedDetails.commentaire">
+          <span>Commentaire</span>
+          <strong>{{ selectedDetails.commentaire }}</strong>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" (click)="closeRhDetails()">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" *ngIf="showRefusDetailsModal">
+    <div class="modal-card reject-modal">
+
+      <div class="modal-header">
+        <div class="modal-title-zone">
+          <div class="modal-icon reject-icon">×</div>
+
+          <div>
+            <h2>Détail du refus manager</h2>
+            <p>Demande déjà refusée avant validation RH</p>
+          </div>
+        </div>
+
+        <button type="button" class="modal-close" (click)="closeRefusDetails()">
+          ×
+        </button>
+      </div>
+
+      <div class="modal-body">
+
+        <div *ngIf="loadingRefusDetails" class="loading-container">
+          Chargement des détails...
+        </div>
+
+        <div *ngIf="!loadingRefusDetails && selectedRefusDetails" class="details-grid">
+
+          <div class="detail-row">
+            <span>Employé</span>
+            <strong>
+              {{ selectedRefusDetails.employeePrenom }} {{ selectedRefusDetails.employeeNom }}
+            </strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Manager</span>
+            <strong>
+              {{ selectedRefusDetails.managerNom || '-' }}
+            </strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Période</span>
+            <strong>
+              {{ formatDate(selectedRefusDetails.dateDebut) }} → {{ formatDate(selectedRefusDetails.dateFin) }}
+            </strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Motif refus</span>
+            <strong>
+              {{ selectedRefusDetails.motifRefus || 'Motif non renseigné' }}
+            </strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Date décision</span>
+            <strong>
+              {{ formatFullDate(selectedRefusDetails.dateDecisionManager) || '-' }}
+            </strong>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" (click)="closeRefusDetails()">
+          Fermer
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>

@@ -8,7 +8,7 @@ import {
   ManagerProfile,
   UpdateProfileData,
   ChangePasswordData
-} from '../../features/manager/models/manager-profile.model';
+} from '../models/manager-profile.model';
 
 @Injectable({ providedIn: 'root' })
 export class ManagerProfileService {

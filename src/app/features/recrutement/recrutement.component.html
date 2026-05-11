@@ -1,0 +1,913 @@
+<div class="recrutement-page">
+  <!-- HEADER -->
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">
+        {{ isAdminMode() ? 'Administration RH' : 'Mobilité interne' }}
+      </p>
+
+      <h1>
+        {{ isAdminMode() ? 'Recrutement interne' : 'Offres internes' }}
+      </h1>
+
+      <p class="subtitle">
+        <ng-container *ngIf="isAdminMode(); else employeeSubtitle">
+          Publiez des postes internes, analysez automatiquement les CV et sélectionnez les meilleurs profils.
+        </ng-container>
+
+        <ng-template #employeeSubtitle>
+          Consultez les opportunités internes et postulez avec votre CV.
+        </ng-template>
+      </p>
+    </div>
+
+    <button
+      *ngIf="isAdminMode()"
+      type="button"
+      class="primary-btn"
+      (click)="openCreateOffreForm()"
+    >
+      <mat-icon>add</mat-icon>
+      Nouvelle offre
+    </button>
+  </section>
+
+  <!-- STATS ADMIN -->
+  <section *ngIf="isAdminMode()" class="stats-grid">
+    <article class="stat-card">
+      <span class="stat-icon">
+        <mat-icon>work</mat-icon>
+      </span>
+      <div>
+        <strong>{{ offres.length }}</strong>
+        <p>Offres créées</p>
+      </div>
+    </article>
+
+    <article class="stat-card">
+      <span class="stat-icon">
+        <mat-icon>campaign</mat-icon>
+      </span>
+      <div>
+        <strong>{{ offresFiltrees.length }}</strong>
+        <p>Offres affichées</p>
+      </div>
+    </article>
+
+    <article class="stat-card">
+      <span class="stat-icon">
+        <mat-icon>groups</mat-icon>
+      </span>
+      <div>
+        <strong>{{ candidatures.length }}</strong>
+        <p>Candidatures offre sélectionnée</p>
+      </div>
+    </article>
+
+    <article class="stat-card">
+      <span class="stat-icon">
+        <mat-icon>auto_awesome</mat-icon>
+      </span>
+      <div>
+        <strong>{{ topCandidatures.length }}</strong>
+        <p>Top profils IA</p>
+      </div>
+    </article>
+  </section>
+
+  <!-- FILTERS -->
+  <section class="filters-card">
+    <div class="search-box">
+      <mat-icon>search</mat-icon>
+      <input
+        type="text"
+        placeholder="Rechercher par poste, compétence, technologie..."
+        [value]="searchTerm"
+        (input)="onSearchChange($event)"
+      />
+    </div>
+
+    <select
+      *ngIf="isAdminMode()"
+      [value]="statutFilter"
+      (change)="onStatutFilterChange($event)"
+    >
+      <option value="ALL">Tous les statuts</option>
+      <option value="OUVERTE">Ouverte</option>
+      <option value="BROUILLON">Brouillon</option>
+      <option value="FERMEE">Fermée</option>
+    </select>
+  </section>
+
+  <!-- ADMIN FORM OFFRE MODAL -->
+  <div *ngIf="isAdminMode() && showOffreForm" class="admin-offer-modal-backdrop">
+    <section class="admin-offer-modal-card">
+      <div class="admin-offer-modal-header">
+        <div class="header-icon">
+          <mat-icon>{{ editingOffre ? 'edit_note' : 'post_add' }}</mat-icon>
+        </div>
+
+        <div class="header-content">
+          <p class="form-eyebrow">
+            {{ editingOffre ? 'Modification' : 'Nouvelle demande' }}
+          </p>
+
+          <h2>
+            {{ editingOffre ? 'Modifier l’offre de recrutement' : 'Créer une offre de recrutement interne' }}
+          </h2>
+
+          <p>
+            Renseignez les informations du poste, les compétences attendues et les technologies nécessaires.
+            Ces critères seront utilisés par l’agent IA pour comparer les CV des employés.
+          </p>
+        </div>
+
+        <button type="button" class="form-close-btn" (click)="closeOffreForm()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="admin-offer-modal-body">
+        <form [formGroup]="offreForm" class="recruitment-offer-form">
+          <!-- SECTION 1 -->
+          <div class="form-section">
+            <div class="section-heading">
+              <span class="section-number">1</span>
+              <div>
+                <h3>Informations générales</h3>
+                <p>Définissez les informations principales du poste à pourvoir.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field field-large">
+                <span>Titre du poste <strong>*</strong></span>
+
+                <div class="input-wrapper">
+                  <mat-icon>work</mat-icon>
+
+                  <select formControlName="titrePoste">
+                    <option value="">Sélectionner un poste</option>
+                    <option *ngFor="let poste of postesDisponibles" [value]="poste">
+                      {{ poste }}
+                    </option>
+                  </select>
+                </div>
+
+                <small
+                  class="field-error"
+                  *ngIf="offreForm.get('titrePoste')?.invalid && offreForm.get('titrePoste')?.touched"
+                >
+                  Le titre du poste est obligatoire.
+                </small>
+              </label>
+
+              <label class="form-field">
+                <span>Département</span>
+                <div class="input-wrapper">
+                  <mat-icon>business</mat-icon>
+                  <input
+                    formControlName="departement"
+                    type="text"
+                    placeholder="Ex: IT, RH, Finance"
+                  />
+                </div>
+              </label>
+
+              <label class="form-field">
+                <span>Type de contrat</span>
+                <div class="input-wrapper">
+                  <mat-icon>description</mat-icon>
+                  <select formControlName="typeContrat">
+                    <option value="CDI">CDI</option>
+                    <option value="CDD">CDD</option>
+                    <option value="STAGE">Stage</option>
+                    <option value="ALTERNANCE">Alternance</option>
+                    <option value="MISSION_INTERNE">Mission interne</option>
+                  </select>
+                </div>
+              </label>
+
+              <label class="form-field">
+                <span>Localisation</span>
+                <div class="input-wrapper">
+                  <mat-icon>location_on</mat-icon>
+                  <input
+                    formControlName="localisation"
+                    type="text"
+                    placeholder="Ex: Tunis, Hybride, Remote"
+                  />
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- SECTION 2 -->
+          <div class="form-section">
+            <div class="section-heading">
+              <span class="section-number">2</span>
+              <div>
+                <h3>Description du poste</h3>
+                <p>Expliquez les missions, responsabilités et objectifs du poste.</p>
+              </div>
+            </div>
+
+            <label class="form-field">
+              <span>Description détaillée <strong>*</strong></span>
+
+              <textarea
+                formControlName="description"
+                rows="5"
+                placeholder="Ex: Le collaborateur aura pour mission de développer, maintenir et optimiser les applications internes..."
+              ></textarea>
+
+              <small
+                class="field-error"
+                *ngIf="offreForm.get('description')?.invalid && offreForm.get('description')?.touched"
+              >
+                La description est obligatoire et doit contenir au moins 10 caractères.
+              </small>
+            </label>
+          </div>
+
+          <!-- SECTION 3 -->
+          <div class="form-section">
+            <div class="section-heading">
+              <span class="section-number">3</span>
+              <div>
+                <h3>Critères de matching IA</h3>
+                <p>Ces éléments seront utilisés pour calculer le score de compatibilité CV / offre.</p>
+              </div>
+            </div>
+
+            <div class="criteria-grid">
+              <label class="form-field">
+                <span>Compétences requises <strong>*</strong></span>
+
+                <div class="multi-select-wrapper">
+                  <select formControlName="competencesRequises" multiple>
+                    <option *ngFor="let competence of competencesDisponibles" [value]="competence">
+                      {{ competence }}
+                    </option>
+                  </select>
+                </div>
+
+                <small>Maintenez Ctrl ou Cmd pour sélectionner plusieurs compétences.</small>
+
+                <small
+                  class="field-error"
+                  *ngIf="offreForm.get('competencesRequises')?.invalid && offreForm.get('competencesRequises')?.touched"
+                >
+                  Les compétences requises sont obligatoires.
+                </small>
+              </label>
+
+              <label class="form-field">
+                <span>Technologies requises <strong>*</strong></span>
+
+                <div class="multi-select-wrapper">
+                  <select formControlName="technologiesRequises" multiple>
+                    <option *ngFor="let technologie of technologiesDisponibles" [value]="technologie">
+                      {{ technologie }}
+                    </option>
+                  </select>
+                </div>
+
+                <small>Maintenez Ctrl ou Cmd pour sélectionner plusieurs technologies.</small>
+
+                <small
+                  class="field-error"
+                  *ngIf="offreForm.get('technologiesRequises')?.invalid && offreForm.get('technologiesRequises')?.touched"
+                >
+                  Les technologies requises sont obligatoires.
+                </small>
+              </label>
+            </div>
+
+            <div class="ai-note">
+              <mat-icon>auto_awesome</mat-icon>
+              <div>
+                <strong>Analyse IA</strong>
+                <p>
+                  Après chaque candidature, l’agent IA analysera le CV, détectera les compétences
+                  et calculera un score de compatibilité selon ces critères.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 4 -->
+          <div class="form-section">
+            <div class="section-heading">
+              <span class="section-number">4</span>
+              <div>
+                <h3>Conditions souhaitées</h3>
+                <p>Ajoutez les critères complémentaires pour affiner la sélection.</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <label class="form-field">
+                <span>Expérience minimale</span>
+                <div class="input-wrapper">
+                  <mat-icon>timeline</mat-icon>
+                  <input
+                    formControlName="experienceMin"
+                    type="number"
+                    min="0"
+                    placeholder="Ex: 2"
+                  />
+                </div>
+              </label>
+
+              <label class="form-field">
+                <span>Salaire proposé</span>
+                <div class="input-wrapper">
+                  <mat-icon>payments</mat-icon>
+                  <input
+                    formControlName="salairePropose"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ex: 2500"
+                  />
+                </div>
+              </label>
+
+              <label class="form-field">
+                <span>Niveau d’étude</span>
+
+                <div class="input-wrapper">
+                  <mat-icon>school</mat-icon>
+
+                  <select formControlName="niveauEtude">
+                    <option value="">Sélectionner un niveau</option>
+                    <option *ngFor="let niveau of niveauxEtudeDisponibles" [value]="niveau">
+                      {{ niveau }}
+                    </option>
+                  </select>
+                </div>
+              </label>
+
+              <label class="form-field">
+                <span>Date d’expiration</span>
+                <div class="input-wrapper">
+                  <mat-icon>event</mat-icon>
+                  <input
+                    formControlName="dateExpiration"
+                    type="date"
+                  />
+                </div>
+              </label>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="admin-offer-modal-footer">
+        <div class="footer-help">
+          <mat-icon>info</mat-icon>
+          <span>
+            Les champs marqués par <strong>*</strong> sont obligatoires.
+          </span>
+        </div>
+
+        <div class="footer-actions">
+          <button type="button" class="secondary-btn" (click)="closeOffreForm()">
+            Annuler
+          </button>
+
+          <button
+            type="button"
+            class="secondary-btn"
+            [disabled]="saving"
+            (click)="saveOffre('BROUILLON')"
+          >
+            <mat-icon>{{ saving ? 'hourglass_empty' : 'drafts' }}</mat-icon>
+            {{ saving ? 'Enregistrement...' : 'Enregistrer comme brouillon' }}
+          </button>
+
+          <button
+            type="button"
+            class="primary-btn"
+            [disabled]="saving"
+            (click)="saveOffre('PUBLIER')"
+          >
+            <mat-icon>{{ saving ? 'hourglass_empty' : 'campaign' }}</mat-icon>
+            {{ saving ? 'Publication...' : editingOffre ? 'Mettre à jour et publier' : 'Créer et publier' }}
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- CONTENT -->
+  <section class="content-grid" [class.employee-grid]="isEmployeeMode()">
+    <!-- LISTE OFFRES -->
+    <div class="offres-column">
+      <div *ngIf="loading" class="empty-state">
+        <mat-icon>hourglass_empty</mat-icon>
+        <h3>Chargement...</h3>
+      </div>
+
+      <div *ngIf="!loading && offresFiltrees.length === 0" class="empty-state">
+        <mat-icon>work_off</mat-icon>
+        <h3>Aucune offre trouvée</h3>
+        <p>Aucune offre ne correspond aux critères actuels.</p>
+      </div>
+
+      <article
+        *ngFor="let offre of offresFiltrees"
+        class="offre-card"
+        [class.active]="selectedOffre?.id === offre.id"
+        (click)="selectOffre(offre)"
+      >
+        <div class="offre-top">
+          <div>
+            <h3>{{ offre.titrePoste }}</h3>
+            <p>
+              {{ offre.departement || 'Département non précisé' }}
+              <span *ngIf="offre.localisation">• {{ offre.localisation }}</span>
+            </p>
+          </div>
+
+          <span class="status-pill" [ngClass]="getStatutClass(offre.statut)">
+            {{ getOffreStatutLabel(offre.statut) }}
+          </span>
+        </div>
+
+        <p class="description">
+          {{ offre.description }}
+        </p>
+
+        <div class="chips">
+          <span *ngFor="let competence of offre.competencesRequises">
+            {{ competence }}
+          </span>
+        </div>
+
+        <div class="chips tech">
+          <span *ngFor="let tech of offre.technologiesRequises">
+            {{ tech }}
+          </span>
+        </div>
+
+        <div class="offre-footer">
+          <small>
+            <mat-icon>event</mat-icon>
+            Publiée le {{ formatDate(offre.datePublication) }}
+          </small>
+
+          <small *ngIf="offre.dateExpiration">
+            Expire le {{ formatDate(offre.dateExpiration) }}
+          </small>
+
+          <small *ngIf="offre.salairePropose">
+            <mat-icon>payments</mat-icon>
+            {{ offre.salairePropose }} TND
+          </small>
+        </div>
+
+        <div *ngIf="isAdminMode()" class="card-actions" (click)="$event.stopPropagation()">
+          <button
+            type="button"
+            class="secondary-btn small"
+            (click)="openEditOffreForm(offre)"
+          >
+            <mat-icon>{{ offre.statut === 'BROUILLON' ? 'edit_note' : 'edit' }}</mat-icon>
+            {{ offre.statut === 'BROUILLON' ? 'Continuer la modification' : 'Modifier' }}
+          </button>
+
+          <button
+            *ngIf="offre.statut !== 'OUVERTE'"
+            type="button"
+            class="success-btn small"
+            (click)="changerStatut(offre, 'OUVERTE')"
+          >
+            <mat-icon>campaign</mat-icon>
+            Publier
+          </button>
+
+          <button
+            *ngIf="offre.statut === 'OUVERTE'"
+            type="button"
+            class="warning-btn small"
+            (click)="changerStatut(offre, 'FERMEE')"
+          >
+            <mat-icon>lock</mat-icon>
+            Fermer
+          </button>
+
+          <button
+            *ngIf="offre.statut === 'FERMEE'"
+            type="button"
+            class="secondary-btn small"
+            (click)="changerStatut(offre, 'BROUILLON')"
+          >
+            <mat-icon>drafts</mat-icon>
+            Remettre en brouillon
+          </button>
+
+          <button
+            type="button"
+            class="danger-btn small"
+            (click)="deleteOffre(offre)"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+
+        <div *ngIf="isEmployeeMode()" class="card-actions" (click)="$event.stopPropagation()">
+          <button
+            *ngIf="!hasApplied(offre.id)"
+            type="button"
+            class="primary-btn small"
+            (click)="openPostulerForm(offre)"
+          >
+            <mat-icon>send</mat-icon>
+            Postuler
+          </button>
+
+          <span *ngIf="hasApplied(offre.id)" class="already-applied">
+            <mat-icon>check_circle</mat-icon>
+            Déjà postulé
+          </span>
+        </div>
+      </article>
+    </div>
+
+    <!-- ADMIN DETAILS -->
+    <aside *ngIf="isAdminMode()" class="details-column">
+      <div *ngIf="!selectedOffre" class="empty-state">
+        <mat-icon>touch_app</mat-icon>
+        <h3>Sélectionnez une offre</h3>
+        <p>Les candidatures et scores IA apparaîtront ici.</p>
+      </div>
+
+      <ng-container *ngIf="selectedOffre">
+        <section class="details-card">
+          <div class="section-title">
+            <div>
+              <h2>Top 5 candidats IA</h2>
+              <p>Classement selon compatibilité CV / offre.</p>
+            </div>
+            <mat-icon>auto_awesome</mat-icon>
+          </div>
+
+          <div *ngIf="topCandidatures.length === 0" class="mini-empty">
+            Aucun score IA disponible pour cette offre.
+          </div>
+
+          <article
+            *ngFor="let top of topCandidatures; let i = index"
+            class="top-candidate"
+          >
+            <div class="rank">#{{ i + 1 }}</div>
+
+            <div class="candidate-main">
+  <app-employee-avatar
+    [employee]="top.candidature"
+    size="md"
+    shape="circle"
+  ></app-employee-avatar>
+
+  <div class="candidate-info">
+    <h4>
+      {{ top.candidature.employePrenom }}
+      {{ top.candidature.employeNom }}
+    </h4>
+    <p>{{ top.candidature.employePosteActuel || 'Poste actuel non précisé' }}</p>
+  </div>
+</div>
+
+            <div class="score-badge" [ngClass]="getScoreColor(top.scoreGlobal)">
+              {{ top.scoreGlobal }}%
+            </div>
+          </article>
+        </section>
+
+        <!-- CANDIDATURES AVEC DETAILS TOGGLE -->
+        <section class="details-card">
+          <div class="section-title">
+            <div>
+              <h2>Candidatures</h2>
+              <p>{{ candidatures.length }} candidature(s) reçue(s)</p>
+            </div>
+          </div>
+
+          <ng-container *ngFor="let candidature of candidatures">
+            <article
+              class="candidature-row"
+              [class.active]="selectedCandidature?.id === candidature.id"
+              (click)="selectCandidature(candidature)"
+            >
+              <div class="candidate-main">
+  <app-employee-avatar
+    [employee]="candidature"
+    size="md"
+    shape="circle"
+  ></app-employee-avatar>
+
+  <div>
+    <h4>
+      {{ candidature.employePrenom }}
+      {{ candidature.employeNom }}
+    </h4>
+
+    <p>{{ candidature.employePosteActuel || 'Poste actuel non précisé' }}</p>
+    <small>{{ formatDate(candidature.dateSoumission) }}</small>
+  </div>
+</div>
+
+              <div class="row-right">
+                <span
+                  *ngIf="candidature.score"
+                  class="score-badge"
+                  [ngClass]="getScoreColor(candidature.score.scoreGlobal)"
+                >
+                  {{ candidature.score.scoreGlobal }}%
+                </span>
+
+                <span class="status-pill" [ngClass]="getStatutClass(candidature.statut)">
+                  {{ candidature.statut }}
+                </span>
+              </div>
+            </article>
+
+            <section
+              *ngIf="selectedCandidature?.id === candidature.id"
+              class="candidate-detail-inline"
+              (click)="$event.stopPropagation()"
+            >
+              <div class="section-title">
+               <div class="candidate-main">
+  <app-employee-avatar
+    [employee]="candidature"
+    size="lg"
+    shape="circle"
+  ></app-employee-avatar>
+
+  <div>
+    <h2>Détail candidature</h2>
+    <p>
+      {{ candidature.employePrenom }}
+      {{ candidature.employeNom }}
+    </p>
+    <small>{{ candidature.employePosteActuel || 'Poste actuel non précisé' }}</small>
+  </div>
+</div>
+                <button
+                  type="button"
+                  class="secondary-btn small"
+                  [disabled]="analysing || !canRelancerAnalyse(candidature)"
+                  (click)="relancerAnalyseIa(candidature)"
+                >
+                  <mat-icon>psychology</mat-icon>
+                  {{ analysing ? 'Analyse...' : 'Relancer IA' }}
+                </button>
+              </div>
+
+              <div class="motivation-box">
+                <strong>Motivation</strong>
+                <p>{{ candidature.motivation || 'Aucune motivation saisie.' }}</p>
+              </div>
+
+              <div *ngIf="candidature.score" class="ia-box">
+                <div class="ia-score">
+                  <span [ngClass]="getScoreColor(candidature.score.scoreGlobal)">
+                    {{ candidature.score.scoreGlobal }}%
+                  </span>
+                  <p>{{ getScoreLabel(candidature.score.scoreGlobal) }}</p>
+                </div>
+
+                <div>
+                  <h4>Justification IA</h4>
+                  <p>{{ candidature.score.justificationIa || 'Non disponible.' }}</p>
+
+                  <h4>Recommandation</h4>
+                  <p>{{ candidature.score.recommandationIa || 'Non disponible.' }}</p>
+                </div>
+              </div>
+
+              <div *ngIf="candidature.score" class="matching-section">
+                <div class="matching-card">
+                  <h4>Compétences correspondantes</h4>
+
+                  <div
+                    class="chips success"
+                    *ngIf="candidature.score.competencesCorrespondantes?.length; else noCompetencesCorrespondantes"
+                  >
+                    <span *ngFor="let c of candidature.score.competencesCorrespondantes">
+                      {{ c }}
+                    </span>
+                  </div>
+
+                  <ng-template #noCompetencesCorrespondantes>
+                    <p class="empty-matching-message">
+                      Aucune compétence correspondante détectée dans le CV.
+                    </p>
+                  </ng-template>
+                </div>
+
+                <div class="matching-card">
+                  <h4>Compétences manquantes</h4>
+
+                  <div
+                    class="chips danger"
+                    *ngIf="candidature.score.competencesManquantes?.length; else noCompetencesManquantes"
+                  >
+                    <span *ngFor="let c of candidature.score.competencesManquantes">
+                      {{ c }}
+                    </span>
+                  </div>
+
+                  <ng-template #noCompetencesManquantes>
+                    <p class="empty-matching-message">
+                      Aucune compétence manquante détectée.
+                    </p>
+                  </ng-template>
+                </div>
+
+                <div class="matching-card">
+                  <h4>Technologies correspondantes</h4>
+
+                  <div
+                    class="chips success"
+                    *ngIf="candidature.score.technologiesCorrespondantes?.length; else noTechnologiesCorrespondantes"
+                  >
+                    <span *ngFor="let t of candidature.score.technologiesCorrespondantes">
+                      {{ t }}
+                    </span>
+                  </div>
+
+                  <ng-template #noTechnologiesCorrespondantes>
+                    <p class="empty-matching-message">
+                      Aucune technologie correspondante détectée dans le CV.
+                    </p>
+                  </ng-template>
+                </div>
+
+                <div class="matching-card">
+                  <h4>Technologies manquantes</h4>
+
+                  <div
+                    class="chips danger"
+                    *ngIf="candidature.score.technologiesManquantes?.length; else noTechnologiesManquantes"
+                  >
+                    <span *ngFor="let t of candidature.score.technologiesManquantes">
+                      {{ t }}
+                    </span>
+                  </div>
+
+                  <ng-template #noTechnologiesManquantes>
+                    <p class="empty-matching-message">
+                      Aucune technologie manquante détectée.
+                    </p>
+                  </ng-template>
+                </div>
+              </div>
+
+              <div
+                *ngIf="getDecisionLockMessage(candidature)"
+                class="decision-locked-message"
+              >
+                <mat-icon>lock</mat-icon>
+                <span>{{ getDecisionLockMessage(candidature) }}</span>
+              </div>
+
+              <form [formGroup]="decisionForm" class="decision-form">
+                <label>
+                  <span>Commentaire décision</span>
+                  <textarea
+                    formControlName="commentaire"
+                    rows="3"
+                    placeholder="Ajouter un commentaire pour la décision..."
+                  ></textarea>
+                </label>
+
+                <div class="form-actions">
+                  <button
+                    type="button"
+                    class="danger-btn"
+                    [disabled]="!canRefuserCandidature(candidature)"
+                    [title]="getDecisionLockMessage(candidature)"
+                    (click)="refuserCandidature(candidature)"
+                  >
+                    <mat-icon>close</mat-icon>
+                    Refuser
+                  </button>
+
+                  <button
+                    type="button"
+                    class="success-btn"
+                    [disabled]="!canAccepterCandidature(candidature)"
+                    [title]="getDecisionLockMessage(candidature)"
+                    (click)="accepterCandidature(candidature)"
+                  >
+                    <mat-icon>check</mat-icon>
+                    Accepter
+                  </button>
+                </div>
+              </form>
+            </section>
+          </ng-container>
+        </section>
+      </ng-container>
+    </aside>
+  </section>
+
+  <!-- EMPLOYEE POSTULER MODAL -->
+  <div *ngIf="isEmployeeMode() && showPostulerForm" class="modal-backdrop">
+    <section class="modal-card">
+      <div class="form-header">
+        <div>
+          <h2>Postuler à l’offre</h2>
+          <p>{{ selectedOffre?.titrePoste }}</p>
+        </div>
+
+        <button type="button" class="icon-btn" (click)="closePostulerForm()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <form [formGroup]="candidatureForm" (ngSubmit)="submitCandidature()">
+        <label>
+          <span>Motivation *</span>
+          <textarea
+            formControlName="motivation"
+            rows="5"
+            placeholder="Expliquez pourquoi vous souhaitez postuler à ce poste..."
+          ></textarea>
+        </label>
+
+        <label class="file-upload">
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx"
+            (change)="onCvSelected($event)"
+          />
+          <mat-icon>upload_file</mat-icon>
+          <strong>{{ cvFileName || 'Joindre votre CV' }}</strong>
+          <small>Formats acceptés : PDF, DOC, DOCX</small>
+        </label>
+
+        <div class="form-actions">
+          <button
+            type="button"
+            class="secondary-btn"
+            (click)="closePostulerForm()"
+          >
+            Annuler
+          </button>
+
+          <button
+            type="submit"
+            class="primary-btn"
+            [disabled]="saving"
+          >
+            <mat-icon>{{ saving ? 'hourglass_empty' : 'send' }}</mat-icon>
+            {{ saving ? 'Envoi...' : 'Soumettre ma candidature' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <!-- EMPLOYEE MES CANDIDATURES -->
+  <section *ngIf="isEmployeeMode()" class="my-applications">
+    <div class="section-title">
+      <div>
+        <h2>Mes candidatures</h2>
+        <p>Suivi de vos candidatures internes.</p>
+      </div>
+    </div>
+
+    <div *ngIf="mesCandidatures.length === 0" class="mini-empty">
+      Vous n’avez pas encore postulé à une offre interne.
+    </div>
+
+    <article
+      *ngFor="let candidature of mesCandidatures"
+      class="application-card"
+    >
+      <div>
+        <h3>{{ candidature.offre?.titrePoste || 'Offre interne' }}</h3>
+        <p>Soumise le {{ formatDate(candidature.dateSoumission) }}</p>
+      </div>
+
+      <div class="application-right">
+        <span
+          *ngIf="candidature.score"
+          class="score-badge"
+          [ngClass]="getScoreColor(candidature.score.scoreGlobal)"
+        >
+          {{ candidature.score.scoreGlobal }}%
+        </span>
+
+        <span class="status-pill" [ngClass]="getStatutClass(candidature.statut)">
+          {{ candidature.statut }}
+        </span>
+      </div>
+    </article>
+  </section>
+</div>
