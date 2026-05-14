@@ -1,0 +1,203 @@
+<div class="score-detail" *ngIf="!loading && !error && detail">
+  <!-- En-tête -->
+  <div class="detail-header">
+    <button class="back-btn" (click)="goBack()">← Retour à la liste des scores</button>
+    <h1>Détail du score Turnover</h1>
+  </div>
+
+  <!-- Profil -->
+  <div class="profil-section">
+    <app-employee-avatar [employee]="{
+      id: detail.employeId,
+      prenom: detail.prenom,
+      nom: detail.nom,
+      photoUrl: detail.photoUrl,
+      departement: detail.departement
+    }" size="xl" shape="circle"></app-employee-avatar>
+    <div class="profil-info">
+      <h2>{{ detail.prenom }} {{ detail.nom }}</h2>
+      <div class="poste">{{ detail.poste || 'Employé' }}</div>
+      <div class="meta-grid">
+        <div class="meta-item">📌 Matricule : {{ detail.matricule }}</div>
+        <div class="meta-item">🏢 Département : {{ detail.departement }}</div>
+        <div class="meta-item">📅 Date d'embauche : {{ formatDate(detail.dateEmbauche) }}</div>
+        <div class="meta-item">💰 Salaire : {{ detail.salaireAnnuel }} DT</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Score global -->
+  <div class="score-global-card">
+    <div class="score-jauge">
+      <div class="circular-progress">
+        <svg viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#e5e7eb" stroke-width="8"/>
+          <circle cx="60" cy="60" r="52" fill="none"
+                  [attr.stroke]="getNiveauCouleur(detail.scoreActuel.score)"
+                  stroke-width="8"
+                  stroke-dasharray="326.7"
+                  [attr.stroke-dashoffset]="326.7 - (326.7 * getScorePourcentage() / 100)"
+                  stroke-linecap="round"
+                  transform="rotate(-90 60 60)"/>
+        </svg>
+        <div class="score-value">{{ detail.scoreActuel.score }}</div>
+      </div>
+      <div class="score-label">
+        <span class="score-niveau" [class]="getNiveauClass(detail.scoreActuel.niveauRisque)">
+          {{ getNiveauIcon(detail.scoreActuel.niveauRisque) }} {{ detail.scoreActuel.niveauRisque }}
+        </span>
+        <span class="score-date">Dernier calcul : {{ formatDate(detail.scoreActuel.datePrediction) }}</span>
+      </div>
+    </div>
+    <div class="score-evolution">
+      <div class="evolution-prev">
+        <span class="prev-label">Score précédent</span>
+        <span class="prev-value">{{ detail.scorePrecedent?.score ?? '—' }}</span>
+        <span class="prev-niveau" [class]="getNiveauClass(detail.scorePrecedent?.niveauRisque || '')">
+          {{ getNiveauIcon(detail.scorePrecedent?.niveauRisque || '') }} {{ detail.scorePrecedent?.niveauRisque || '—' }}
+        </span>
+        <span class="prev-date">{{ formatDate(detail.scorePrecedent?.datePrediction) }}</span>
+      </div>
+      <div class="evolution-delta" [class.positive]="detail.evolutionScore > 0">
+        <span>Évolution</span>
+        <strong>{{ detail.evolutionScore > 0 ? '+' : '' }}{{ detail.evolutionScore }}</strong>
+        <small>({{ detail.evolutionPourcentage > 0 ? '+' : '' }}{{ detail.evolutionPourcentage }}%)</small>
+      </div>
+      <div class="evolution-rang">
+        <span>Rang</span>
+        <strong>#{{ detail.rang }} / {{ detail.totalEmployes }}</strong>
+        <span>Percentile {{ detail.percentile }}e</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onglets -->
+  <div class="tabs-container">
+    <div class="tabs-header">
+      <button class="tab-btn" [class.active]="activeTab === 'overview'" (click)="activeTab = 'overview'">Vue d'ensemble</button>
+      <button class="tab-btn" [class.active]="activeTab === 'factors'" (click)="activeTab = 'factors'">Détails des facteurs</button>
+      <button class="tab-btn" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">Historique</button>
+      <button class="tab-btn" [class.active]="activeTab === 'actions'" (click)="activeTab = 'actions'">Facteurs & Actions</button>
+      <button class="tab-btn" [class.active]="activeTab === 'params'" (click)="activeTab = 'params'">Paramètres</button>
+    </div>
+    <div class="tab-content">
+      <!-- Vue d'ensemble : sous-scores + légende -->
+      <div *ngIf="activeTab === 'overview'">
+        <div class="sous-scores-section">
+          <h3>📊 Détail des sous-scores (avant pondération)</h3>
+          <div class="sous-scores-list">
+            <div *ngFor="let ss of detail.sousScores" class="sous-score-item">
+              <div class="ss-header">
+                <span class="ss-label">{{ ss.critere }}</span>
+                <span class="ss-values">{{ ss.valeur }} / {{ ss.max }}</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="(ss.valeur / ss.max) * 100" [style.background]="ss.couleur"></div>
+              </div>
+              <div class="ss-footer">
+                <span class="ss-contribution">Contribution {{ ss.contribution }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="legend-section">
+          <h4>Niveaux de risque</h4>
+          <div class="legend-items">
+            <div *ngFor="let niv of niveauxRisque" class="legend-item">
+              <span class="legend-color" [style.backgroundColor]="niv.couleur"></span>
+              <span class="legend-label">{{ niv.niveau }}</span>
+              <span class="legend-range">{{ niv.min }} - {{ niv.max < 100 ? niv.max : '≥ ' + niv.min }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Détails des facteurs -->
+      <div *ngIf="activeTab === 'factors'">
+        <div class="facteurs-section" *ngIf="detail.facteursContributifs.length">
+          <h3>⚠️ Facteurs contributifs (diagnostic)</h3>
+          <div class="facteurs-grid">
+            <div *ngFor="let fact of detail.facteursContributifs" class="facteur-card">
+              <div class="facteur-header">
+                <span class="facteur-icon">⚠️</span>
+                <span class="facteur-libelle">{{ fact.libelle }}</span>
+                <span class="facteur-score">Score: {{ fact.score }}</span>
+              </div>
+              <div class="facteur-impact" [class]="getImpactClass(fact.niveauImpact)">
+                {{ fact.niveauImpact }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historique -->
+      <div *ngIf="activeTab === 'history'">
+        <div class="historique-section">
+          <h3>📜 Historique des scores</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr><th>Date</th><th>Score</th><th>Niveau</th><th>Ancienneté</th><th>Salaire</th><th>Performance</th><th>Formations</th><th>Absentéisme</th><th>Facteurs majeurs</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let h of detail.historique">
+                  <td>{{ h.date }}</td>
+                  <td class="score-cell">{{ h.scoreGlobal }}</td>
+                  <td><span class="niveau-badge" [class]="getNiveauClass(h.niveau)">{{ getNiveauIcon(h.niveau) }} {{ h.niveau }}</span></td>
+                  <td>{{ h.anciennete }}</td><td>{{ h.salaire }}</td><td>{{ h.performance }}</td><td>{{ h.formations }}</td><td>{{ h.absenteisme }}</td>
+                  <td>{{ h.facteursMajeurs }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Facteurs & Actions -->
+      <div *ngIf="activeTab === 'actions'">
+        <div class="facteurs-section" *ngIf="detail.facteursContributifs.length">
+          <h3>⚠️ Facteurs contributifs</h3>
+          <div class="facteurs-grid">
+            <div *ngFor="let fact of detail.facteursContributifs" class="facteur-card">
+              <div class="facteur-header">
+                <span class="facteur-icon">⚠️</span>
+                <span class="facteur-libelle">{{ fact.libelle }}</span>
+                <span class="facteur-score">Score: {{ fact.score }}</span>
+              </div>
+              <div class="facteur-impact" [class]="getImpactClass(fact.niveauImpact)">{{ fact.niveauImpact }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="actions-section">
+          <h3>✅ Actions recommandées</h3>
+          <div class="actions-list">
+            <div *ngFor="let action of detail.actionsRecommandees" class="action-item">
+              <span class="action-icon">✔</span>
+              <span class="action-text">{{ action.action }}</span>
+              <span class="action-type" [ngClass]="action.type === 'RH' ? 'type-rh' : 'type-manager'">{{ action.type }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paramètres -->
+      <div *ngIf="activeTab === 'params'">
+        <div class="info-calcul-section">
+          <h4>📐 Informations de calcul</h4>
+          <div class="info-grid">
+            <div>Période d'analyse: {{ detail.infoCalcul.periodeDebut }} - {{ detail.infoCalcul.periodeFin }}</div>
+            <div>Méthode: {{ detail.infoCalcul.methode }}</div>
+            <div>Source: {{ detail.infoCalcul.source }}</div>
+            <div>Dernier batch: {{ detail.infoCalcul.dernierBatch }}</div>
+            <div>Prochain batch: {{ detail.infoCalcul.prochainBatch }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loader / Error -->
+<div *ngIf="loading" class="loading-state">...</div>
+<div *ngIf="error && !loading" class="error-state">...</div>

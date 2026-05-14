@@ -1,5 +1,4 @@
 // src/app/features/employee/pages/demande-conge/demande-conge.component.ts
-
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
@@ -32,6 +31,15 @@ interface TypeCongeOption {
   icon: string;
   color: string;
 }
+
+// Durées maximales par type (synchronisées avec le backend)
+const MAX_JOURS_PAR_TYPE: Record<TypeCongeValue, number> = {
+  PATERNITE: 5,
+  MATERNITE: 30,
+  MALADIE: 6,
+  ANNUEL: 30,
+  SANS_SOLDE: 365,
+};
 
 @Component({
   selector: 'app-demande-conge',
@@ -71,36 +79,11 @@ export class DemandeCongeComponent implements OnInit {
   errorMessage = '';
 
   typesConge: TypeCongeOption[] = [
-    {
-      value: 'ANNUEL',
-      label: 'Congé annuel',
-      icon: 'beach_access',
-      color: '#1976d2'
-    },
-    {
-      value: 'MALADIE',
-      label: 'Congé maladie',
-      icon: 'local_hospital',
-      color: '#dc3545'
-    },
-    {
-      value: 'SANS_SOLDE',
-      label: 'Congé sans solde',
-      icon: 'attach_money',
-      color: '#ffc107'
-    },
-    {
-      value: 'MATERNITE',
-      label: 'Congé maternité',
-      icon: 'child_care',
-      color: '#28a745'
-    },
-    {
-      value: 'PATERNITE',
-      label: 'Congé paternité',
-      icon: 'child_friendly',
-      color: '#28a745'
-    }
+    { value: 'ANNUEL', label: 'Congé annuel', icon: 'beach_access', color: '#1976d2' },
+    { value: 'MALADIE', label: 'Congé maladie', icon: 'local_hospital', color: '#dc3545' },
+    { value: 'SANS_SOLDE', label: 'Congé sans solde', icon: 'attach_money', color: '#ffc107' },
+    { value: 'MATERNITE', label: 'Congé maternité', icon: 'child_care', color: '#28a745' },
+    { value: 'PATERNITE', label: 'Congé paternité', icon: 'child_friendly', color: '#28a745' }
   ];
 
   constructor(
@@ -118,9 +101,7 @@ export class DemandeCongeComponent implements OnInit {
         commentaire: [''],
         urgente: [false]
       },
-      {
-        validators: this.dateRangeValidator
-      }
+      { validators: this.dateRangeValidator }
     );
   }
 
@@ -133,7 +114,6 @@ export class DemandeCongeComponent implements OnInit {
       next: (response: CongeResponse) => {
         if (response.success) {
           const data = response.data as any;
-
           this.soldeConges = data.total ?? 25;
           this.congesPris = data.pris ?? 0;
           this.congesRestants = data.restant ?? (this.soldeConges - this.congesPris);
@@ -141,7 +121,6 @@ export class DemandeCongeComponent implements OnInit {
       },
       error: (error: any) => {
         console.error('Erreur chargement solde:', error);
-
         this.soldeConges = 25;
         this.congesPris = 0;
         this.congesRestants = 25;
@@ -152,61 +131,56 @@ export class DemandeCongeComponent implements OnInit {
   dateRangeValidator(form: FormGroup): { [key: string]: boolean } | null {
     const debut = form.get('dateDebut')?.value;
     const fin = form.get('dateFin')?.value;
-
-    if (!debut || !fin) {
-      return null;
-    }
-
+    if (!debut || !fin) return null;
     const debutDate = new Date(debut);
     const finDate = new Date(fin);
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     const normalizedDebut = new Date(debutDate);
     normalizedDebut.setHours(0, 0, 0, 0);
-
-    if (debutDate > finDate) {
-      return { dateInvalide: true };
-    }
-
-    if (normalizedDebut < today) {
-      return { datePassee: true };
-    }
-
+    if (debutDate > finDate) return { dateInvalide: true };
+    if (normalizedDebut < today) return { datePassee: true };
     return null;
   }
 
   calculerNombreJours(): number {
     const debut = this.demandeForm.get('dateDebut')?.value;
     const fin = this.demandeForm.get('dateFin')?.value;
-
-    if (!debut || !fin) {
-      return 0;
-    }
-
+    if (!debut || !fin) return 0;
     const debutDate = new Date(debut);
     const finDate = new Date(fin);
-
-    if (debutDate > finDate) {
-      return 0;
-    }
-
+    if (debutDate > finDate) return 0;
     const diffTime = Math.abs(finDate.getTime() - debutDate.getTime());
-
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   }
 
   verifierSolde(): boolean {
     const type = this.demandeForm.get('type')?.value;
-
-    if (type !== 'ANNUEL') {
-      return true;
-    }
-
+    if (type !== 'ANNUEL') return true;
     const joursDemandes = this.calculerNombreJours();
-
     return joursDemandes <= this.congesRestants;
+  }
+
+  // ✅ Vérification de la durée maximale par type
+  verifierDureeMax(): boolean {
+    const type = this.demandeForm.get('type')?.value as TypeCongeValue;
+    if (!type) return true;
+    const maxJours = MAX_JOURS_PAR_TYPE[type];
+    if (!maxJours) return true;
+    const joursDemandes = this.calculerNombreJours();
+    return joursDemandes <= maxJours;
+  }
+
+  getMessageDureeMax(): string {
+    const type = this.demandeForm.get('type')?.value as TypeCongeValue;
+    if (!type) return '';
+    const max = MAX_JOURS_PAR_TYPE[type];
+    if (!max) return '';
+    const jours = this.calculerNombreJours();
+    if (jours > max) {
+      return `⚠️ La durée sélectionnée (${jours} jours) dépasse le maximum autorisé (${max} jours) pour ce type de congé.`;
+    }
+    return '';
   }
 
   getTypeLabel(type: string | null | undefined): string {
@@ -225,10 +199,7 @@ export class DemandeCongeComponent implements OnInit {
   }
 
   formatDate(date: Date | string | null | undefined): string {
-    if (!date) {
-      return '';
-    }
-
+    if (!date) return '';
     return new Date(date).toLocaleDateString('fr-FR');
   }
 
@@ -237,29 +208,23 @@ export class DemandeCongeComponent implements OnInit {
 
     if (this.demandeForm.invalid) {
       this.markFormGroupTouched(this.demandeForm);
-
       if (this.demandeForm.get('type')?.hasError('required')) {
-        this.snackBar.open('Veuillez sélectionner un type de congé', 'Fermer', {
-          duration: 3000
-        });
+        this.snackBar.open('Veuillez sélectionner un type de congé', 'Fermer', { duration: 3000 });
       } else if (this.demandeForm.get('dateDebut')?.hasError('required')) {
-        this.snackBar.open('Veuillez sélectionner une date de début', 'Fermer', {
-          duration: 3000
-        });
+        this.snackBar.open('Veuillez sélectionner une date de début', 'Fermer', { duration: 3000 });
       } else if (this.demandeForm.get('dateFin')?.hasError('required')) {
-        this.snackBar.open('Veuillez sélectionner une date de fin', 'Fermer', {
-          duration: 3000
-        });
+        this.snackBar.open('Veuillez sélectionner une date de fin', 'Fermer', { duration: 3000 });
       } else if (this.demandeForm.hasError('dateInvalide')) {
-        this.snackBar.open('La date de fin doit être postérieure à la date de début', 'Fermer', {
-          duration: 3000
-        });
+        this.snackBar.open('La date de fin doit être postérieure à la date de début', 'Fermer', { duration: 3000 });
       } else if (this.demandeForm.hasError('datePassee')) {
-        this.snackBar.open('La date de début ne peut pas être dans le passé', 'Fermer', {
-          duration: 3000
-        });
+        this.snackBar.open('La date de début ne peut pas être dans le passé', 'Fermer', { duration: 3000 });
       }
+      return;
+    }
 
+    // ✅ Vérification durée maximale
+    if (!this.verifierDureeMax()) {
+      this.snackBar.open(this.getMessageDureeMax(), 'Fermer', { duration: 5000, panelClass: ['error-snackbar'] });
       return;
     }
 
@@ -269,17 +234,12 @@ export class DemandeCongeComponent implements OnInit {
       this.snackBar.open(
         `❌ Solde insuffisant. Vous avez ${this.congesRestants} jours restants.`,
         'Fermer',
-        {
-          duration: 5000,
-          panelClass: ['error-snackbar']
-        }
+        { duration: 5000, panelClass: ['error-snackbar'] }
       );
-
       return;
     }
 
     this.submitting = true;
-
     const demande = {
       dateDebut: this.demandeForm.value.dateDebut,
       dateFin: this.demandeForm.value.dateFin,
@@ -291,55 +251,27 @@ export class DemandeCongeComponent implements OnInit {
     this.congeService.soumettreDemande(demande).subscribe({
       next: (response: any) => {
         this.submitting = false;
-
         if (response.success || response.statusCode === 200 || response.statusCode === 201) {
-          this.snackBar.open('✅ Demande de congé soumise avec succès', 'Fermer', {
-            duration: 3000,
-            panelClass: ['success-snackbar']
-          });
-
+          this.snackBar.open('✅ Demande de congé soumise avec succès', 'Fermer', { duration: 3000, panelClass: ['success-snackbar'] });
           this.notificationService.loadNotifications();
           this.notificationService.loadUnreadCount();
-
-          setTimeout(() => {
-            this.router.navigate(['/employee/mes-conges']);
-          }, 1500);
-
+          setTimeout(() => this.router.navigate(['/employee/mes-conges']), 1500);
           return;
         }
-
         const errorMsg = response.message || response.error || 'Erreur lors de la soumission';
-
         this.errorMessage = errorMsg;
-
-        this.snackBar.open(errorMsg, 'Fermer', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
-        });
-
+        this.snackBar.open(errorMsg, 'Fermer', { duration: 5000, panelClass: ['error-snackbar'] });
         this.notificationService.loadNotifications();
         this.notificationService.loadUnreadCount();
       },
       error: (error: any) => {
         this.submitting = false;
-
         let errorMessage = 'Erreur lors de la soumission de la demande';
-
-        if (error.error?.message) {
-          errorMessage = error.error.message;
-        } else if (error.error?.error) {
-          errorMessage = error.error.error;
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-
+        if (error.error?.message) errorMessage = error.error.message;
+        else if (error.error?.error) errorMessage = error.error.error;
+        else if (error.message) errorMessage = error.message;
         this.errorMessage = errorMessage;
-
-        this.snackBar.open(errorMessage, 'Fermer', {
-          duration: 5000,
-          panelClass: ['error-snackbar']
-        });
-
+        this.snackBar.open(errorMessage, 'Fermer', { duration: 5000, panelClass: ['error-snackbar'] });
         this.notificationService.loadNotifications();
         this.notificationService.loadUnreadCount();
       }
@@ -349,10 +281,7 @@ export class DemandeCongeComponent implements OnInit {
   private markFormGroupTouched(formGroup: FormGroup): void {
     Object.values(formGroup.controls).forEach(control => {
       control.markAsTouched();
-
-      if (control instanceof FormGroup) {
-        this.markFormGroupTouched(control);
-      }
+      if (control instanceof FormGroup) this.markFormGroupTouched(control);
     });
   }
 

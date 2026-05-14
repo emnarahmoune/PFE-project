@@ -189,20 +189,15 @@
         <!-- COMPÉTENCES -->
         <ng-container *ngIf="activeTab === 'competences'">
 
-          <div class="empty-state" *ngIf="!employe?.competences?.length">
+          <div class="empty-state" *ngIf="!employe.competences?.length">
             Aucune compétence enregistrée
           </div>
 
-          <div *ngIf="employe?.competences?.length">
-
+          <div *ngIf="employe.competences?.length">
             <div *ngFor="let c of employe.competences" class="field-row">
               <span class="field-val">{{ c.nom }}</span>
-
-              <span class="badge-pill badge-actif">
-                {{ c.niveau }}
-              </span>
+              <span class="badge-pill badge-actif">{{ c.niveau }}</span>
             </div>
-
           </div>
 
         </ng-container>
@@ -210,160 +205,116 @@
         <!-- FORMATIONS -->
         <ng-container *ngIf="activeTab === 'formations'">
 
-          <div class="empty-state" *ngIf="!employe?.formations?.length">
+          <div class="empty-state" *ngIf="!employe.formations?.length">
             Aucune formation enregistrée
           </div>
 
-          <div *ngIf="employe?.formations?.length">
-
+          <div *ngIf="employe.formations?.length">
             <div *ngFor="let f of employe.formations" class="info-panel">
-
               <div class="field-row">
                 <span class="field-key">{{ f.titre }}</span>
                 <span class="field-val">{{ f.progression || 0 }}%</span>
               </div>
-
               <div class="progress-bar">
-                <div
-                  class="progress-fill"
-                  [style.width.%]="f.progression || 0">
-                </div>
+                <div class="progress-fill" [style.width.%]="f.progression || 0"></div>
               </div>
-
             </div>
-
           </div>
 
         </ng-container>
 
         <!-- CONGÉS -->
-<!-- CONGÉS -->
-<ng-container *ngIf="activeTab === 'conges'">
+        <ng-container *ngIf="activeTab === 'conges'">
 
-  <div class="empty-state" *ngIf="!employe?.conges?.length">
-    Aucun historique de congés
-  </div>
+          <div class="empty-state" *ngIf="!employe.conges?.length">
+            Aucun historique de congés
+          </div>
 
-  <div class="conges-list" *ngIf="employe?.conges?.length">
+          <div class="conges-list" *ngIf="employe.conges?.length">
+            <article class="conge-card" *ngFor="let c of employe.conges">
+              <div class="conge-head">
+                <div class="conge-title-wrap">
+                  <div class="conge-icon">🏖️</div>
+                  <div>
+                    <h3 class="conge-title">{{ c.type || 'Congé' }}</h3>
+                    <div class="conge-sub">
+                      Demandé le {{ c.dateDemande ? (c.dateDemande | date:'dd/MM/yyyy') : '—' }}
+                    </div>
+                  </div>
+                </div>
+                <span class="badge-pill" [ngClass]="'badge-' + (c.statut || '').toLowerCase()">
+                  {{ c.statut || '—' }}
+                </span>
+              </div>
+              <div class="conge-body">
+                <div class="conge-dates">
+                  <div class="conge-date-box">
+                    <span>Début</span>
+                    <strong>{{ c.dateDebut | date:'dd/MM/yyyy' }}</strong>
+                  </div>
+                  <div class="conge-arrow">→</div>
+                  <div class="conge-date-box">
+                    <span>Fin</span>
+                    <strong>{{ c.dateFin | date:'dd/MM/yyyy' }}</strong>
+                  </div>
+                </div>
+                <div class="conge-meta">
+                  <div class="conge-meta-item">
+                    <span>Durée</span>
+                    <strong>{{ c.joursOuvres || 0 }} jour(s)</strong>
+                  </div>
+                  <div class="conge-meta-item">
+                    <span>Décision</span>
+                    <strong>{{ c.dateDecision ? (c.dateDecision | date:'dd/MM/yyyy') : 'Non décidée' }}</strong>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
 
-    <article class="conge-card" *ngFor="let c of employe.conges">
+        </ng-container>
 
-      <div class="conge-head">
+        <!-- ÉVALUATIONS -->
+        <ng-container *ngIf="activeTab === 'evaluations'">
 
-        <div class="conge-title-wrap">
-          <div class="conge-icon">🏖️</div>
+          <div class="empty-state" *ngIf="!employe.evaluations?.length">
+            Aucune évaluation enregistrée
+          </div>
 
-          <div>
-            <h3 class="conge-title">{{ c.type || 'Congé' }}</h3>
-            <div class="conge-sub">
-              Demandé le {{ c.dateDemande ? (c.dateDemande | date:'dd/MM/yyyy') : '—' }}
+          <div *ngIf="employe.evaluations?.length">
+            <div *ngFor="let e of employe.evaluations" class="info-panel">
+              <div class="field-row">
+                <span class="field-key">Évaluation du {{ e.dateEvaluation | date:'dd/MM/yyyy' }}</span>
+                <span class="badge-pill badge-actif">{{ e.note }}/10</span>
+              </div>
+              <div class="field-row">
+                <span class="field-key">Objectifs atteints</span>
+                <span class="field-val">{{ e.objectifsAtteints ?? 0 }}%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="e.objectifsAtteints || 0"></div>
+              </div>
+              <div class="field-row" *ngIf="e.evaluateurNom">
+                <span class="field-key">Évaluateur</span>
+                <span class="field-val">{{ e.evaluateurNom }}</span>
+              </div>
+              <div class="field-row" *ngIf="e.commentaire">
+                <span class="field-key">Commentaire</span>
+                <span class="field-val">{{ e.commentaire }}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <span
-          class="badge-pill"
-          [ngClass]="'badge-' + (c.statut || '').toLowerCase()">
-          {{ c.statut || '—' }}
-        </span>
+        </ng-container>
 
       </div>
-
-      <div class="conge-body">
-
-        <div class="conge-dates">
-
-          <div class="conge-date-box">
-            <span>Début</span>
-            <strong>{{ c.dateDebut | date:'dd/MM/yyyy' }}</strong>
-          </div>
-
-          <div class="conge-arrow">→</div>
-
-          <div class="conge-date-box">
-            <span>Fin</span>
-            <strong>{{ c.dateFin | date:'dd/MM/yyyy' }}</strong>
-          </div>
-        </div>
-
-        <div class="conge-meta">
-
-          <div class="conge-meta-item">
-            <span>Durée</span>
-            <strong>{{ c.joursOuvres || 0 }} jour(s)</strong>
-          </div>
-
-          <div class="conge-meta-item">
-            <span>Décision</span>
-            <strong>
-              {{ c.dateDecision ? (c.dateDecision | date:'dd/MM/yyyy') : 'Non décidée' }}
-            </strong>
-          </div>
-
-        </div>
-
-      </div>
-
-    </article>
-
-  </div>
-
-</ng-container>
-
-<!-- ÉVALUATIONS -->
-<ng-container *ngIf="activeTab === 'evaluations'">
-
-  <div class="empty-state" *ngIf="!employe?.evaluations?.length">
-    Aucune évaluation enregistrée
-  </div>
-
-  <div *ngIf="employe?.evaluations?.length">
-
-    <div *ngFor="let e of employe.evaluations" class="info-panel">
-
-      <div class="field-row">
-        <span class="field-key">
-          Évaluation du {{ e.dateEvaluation | date:'dd/MM/yyyy' }}
-        </span>
-
-        <span class="badge-pill badge-actif">
-          {{ e.note }}/10
-        </span>
-      </div>
-
-      <div class="field-row">
-        <span class="field-key">Objectifs atteints</span>
-        <span class="field-val">
-          {{ e.objectifsAtteints ?? 0 }}%
-        </span>
-      </div>
-
-      <div class="progress-bar">
-        <div
-          class="progress-fill"
-          [style.width.%]="e.objectifsAtteints || 0">
-        </div>
-      </div>
-
-      <div class="field-row" *ngIf="e.evaluateurNom">
-        <span class="field-key">Évaluateur</span>
-        <span class="field-val">{{ e.evaluateurNom }}</span>
-      </div>
-
-      <div class="field-row" *ngIf="e.commentaire">
-        <span class="field-key">Commentaire</span>
-        <span class="field-val">{{ e.commentaire }}</span>
-      </div>
-
     </div>
 
-  </div>
+    <!-- NOT FOUND -->
+    <div class="not-found" *ngIf="!loading && !employe">
+      Employé introuvable
+    </div>
 
-</ng-container>
-
-  <!-- NOT FOUND -->
-  <div class="not-found" *ngIf="!loading && !employe">
-    Employé introuvable
-  </div>
+  </ng-container>
 
 </div>

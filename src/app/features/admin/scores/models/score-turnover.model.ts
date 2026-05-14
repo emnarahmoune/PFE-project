@@ -1,14 +1,27 @@
-// src/app/features/admin/scores/models/score-turnover.model.ts
+// score-turnover.model.ts
 export interface ScoreTurnover {
-  id: number;
+  photoUrl: string | undefined;
   employeId: number;
   employeNom: string;
   employePrenom: string;
   employeMatricule?: string;
   employeDepartement?: string;
+  employeEmail?: string;
+  employePhotoUrl?: string;
+  employePoste?: string;
+  dateEmbauche?: string;
+  salaireAnnuel?: number;
   score: number;
-  niveauRisque: string; // FAIBLE, MOYEN, ELEVE, CRITIQUE
+  niveauRisque: string;
   datePrediction: string;
+  scoreAnciennete?: number;
+  scoreSalaire?: number;
+  scorePerformance?: number;
+  scoreFormation?: number;
+  scoreAbsenteisme?: number;
+  
   facteursPrincipaux?: string;
   actionRecommandee?: string;
+  confianceModele?: number;
+
 }

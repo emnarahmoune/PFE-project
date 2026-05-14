@@ -1,6 +1,15 @@
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Subject, interval } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 import { ManagerService } from '../../../core/services/manager.service';
 import { ScoreTurnover } from './models/score-turnover.model';
@@ -9,19 +18,17 @@ import { EmployeeAvatarComponent } from '../../../shared/layouts/components/empl
 @Component({
   selector: 'app-admin-scores',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    EmployeeAvatarComponent
-  ],
+  imports: [CommonModule, FormsModule, EmployeeAvatarComponent],
   templateUrl: './admin-scores.component.html',
   styleUrls: ['./admin-scores.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AdminScoresComponent implements OnInit {
+export class AdminScoresComponent implements OnInit, OnDestroy {
   scores: ScoreTurnover[] = [];
   filteredScores: ScoreTurnover[] = [];
+
   loading = true;
+  recalculating = false;
   error = false;
 
   niveauFilter = 'TOUS';
@@ -34,93 +41,152 @@ export class AdminScoresComponent implements OnInit {
   scoreMoyen = 0;
   totalEmployes = 0;
   nbCritiques = 0;
-
   viewMode: 'table' | 'cards' = 'table';
+
+  autoRefresh = false;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private managerService: ManagerService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
     this.loadScores();
+
+    if (this.autoRefresh) {
+      interval(300000)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(() => this.loadScores(false));
+    }
   }
 
-  trackByScoreId(index: number, score: ScoreTurnover): number {
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  trackByScoreId(_: number, score: ScoreTurnover): number {
     return score.employeId;
   }
 
-  trackByDept(index: number, dept: string): string {
+  trackByDept(_: number, dept: string): string {
     return dept;
   }
 
-  loadScores(): void {
-    this.loading = true;
+  normalizeScore(value: any): number | null {
+    const n = Number(value);
+    if (isNaN(n) || n === null || n === undefined) return null;
+    return Math.max(0, Math.min(100, Math.round(n)));
+  }
+
+  normalizeNiveau(value: any): string {
+    const v = String(value ?? '').trim().toUpperCase();
+
+    switch (v) {
+      case 'FAIBLE':
+        return 'FAIBLE';
+      case 'MOYEN':
+        return 'MOYEN';
+      case 'ELEVE':
+      case 'ÉLEVÉ':
+      case 'ELEVÉ':
+      case 'ELEVEE':
+      case 'ÉLEVÉE':
+        return 'ELEVE';
+      case 'CRITIQUE':
+        return 'CRITIQUE';
+      default:
+        return 'MOYEN';
+    }
+  }
+
+  private normalizeText(value: any): string {
+    return String(value ?? '').trim();
+  }
+
+  loadScores(showFullLoader = true): void {
+    if (showFullLoader) {
+      this.loading = true;
+    }
     this.error = false;
 
     this.managerService.getDerniersScores().subscribe({
-      next: (res: any) => {
-        if (res.success && res.data) {
-          this.scores = res.data;
-          this.departements = [
-            ...new Set(
-              this.scores
-                .map(s => s.employeDepartement)
-                .filter((dept): dept is string => !!dept && dept.trim() !== '')
-            )
-          ];
+      next: (scoresData: ScoreTurnover[]) => {
+        this.scores = (scoresData ?? []).map((s: any) => ({
+          ...s,
+          score: this.normalizeScore(s.score),
+          niveauRisque: this.normalizeNiveau(s.niveauRisque),
+          employeDepartement: this.normalizeText(s.employeDepartement),
+          employeNom: this.normalizeText(s.employeNom),
+          employePrenom: this.normalizeText(s.employePrenom),
+          employeMatricule: this.normalizeText(s.employeMatricule),
+          employeEmail: this.normalizeText(s.employeEmail)
+        }));
 
-          this.calculerStats();
-          this.applyFilters();
-        } else {
-          this.error = true;
-        }
+        this.departements = [
+          ...new Set(
+            this.scores
+              .map(s => s.employeDepartement)
+              .filter((d): d is string => !!d && d.trim() !== '')
+          )
+        ].sort((a, b) => a.localeCompare(b, 'fr'));
+
+        this.calculerStats();
+        this.applyFilters();
 
         this.loading = false;
+        this.recalculating = false;
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err) => {
+        console.error('Erreur chargement scores', err);
         this.error = true;
         this.loading = false;
+        this.recalculating = false;
         this.cdr.detectChanges();
       }
     });
   }
 
-  calculerStats(): void {
+   calculerStats(): void {
     this.totalEmployes = this.scores.length;
-
     if (this.totalEmployes === 0) {
       this.scoreMoyen = 0;
       this.nbCritiques = 0;
       return;
     }
 
-    this.scoreMoyen = Math.round(
-      this.scores.reduce((acc, s) => acc + s.score, 0) / this.totalEmployes
-    );
+    const scoresValides = this.scores
+      .map(s => s.score)
+      .filter((s): s is number => s !== null);
+
+    if (scoresValides.length === 0) {
+      this.scoreMoyen = 0;
+    } else {
+      this.scoreMoyen = Math.round(
+        scoresValides.reduce((acc, s) => acc + s, 0) / scoresValides.length
+      );
+    }
 
     this.nbCritiques = this.scores.filter(s => s.niveauRisque === 'CRITIQUE').length;
   }
 
   applyFilters(): void {
+    const search = this.searchText.trim().toLowerCase();
+
     this.filteredScores = this.scores.filter(score => {
-      if (this.niveauFilter !== 'TOUS' && score.niveauRisque !== this.niveauFilter) {
-        return false;
-      }
+      const niveau = this.normalizeNiveau(score.niveauRisque);
+      const dept = this.normalizeText(score.employeDepartement);
+      const fullName = `${score.employePrenom ?? ''} ${score.employeNom ?? ''}`.toLowerCase();
+      const matricule = String(score.employeMatricule ?? '').toLowerCase();
 
-      if (this.departementFilter && score.employeDepartement !== this.departementFilter) {
-        return false;
-      }
+      if (this.niveauFilter !== 'TOUS' && niveau !== this.niveauFilter) return false;
+      if (this.departementFilter && dept !== this.departementFilter) return false;
 
-      if (this.searchText) {
-        const search = this.searchText.toLowerCase();
-        const fullName = `${score.employePrenom} ${score.employeNom}`.toLowerCase();
-        const mat = (score.employeMatricule || '').toLowerCase();
-
-        if (!fullName.includes(search) && !mat.includes(search)) {
-          return false;
-        }
+      if (search) {
+        if (!fullName.includes(search) && !matricule.includes(search)) return false;
       }
 
       return true;
@@ -137,62 +203,55 @@ export class AdminScoresComponent implements OnInit {
   }
 
   getCountNiveau(niveau: string): number {
-    return this.scores.filter(s => s.niveauRisque === niveau).length;
+    const n = this.normalizeNiveau(niveau);
+    return this.scores.filter(s => this.normalizeNiveau(s.niveauRisque) === n).length;
   }
 
   getPourcentageNiveau(niveau: string): number {
-    if (this.totalEmployes === 0) {
-      return 0;
-    }
-
+    if (this.totalEmployes === 0) return 0;
     return (this.getCountNiveau(niveau) / this.totalEmployes) * 100;
   }
 
   getNiveauClass(niveau: string): string {
-    switch (niveau) {
-      case 'FAIBLE':
-        return 'niveau-faible';
-      case 'MOYEN':
-        return 'niveau-moyen';
-      case 'ELEVE':
-        return 'niveau-eleve';
-      case 'CRITIQUE':
-        return 'niveau-critique';
-      default:
-        return '';
-    }
+    const n = this.normalizeNiveau(niveau);
+    const map: Record<string, string> = {
+      FAIBLE: 'niveau-faible',
+      MOYEN: 'niveau-moyen',
+      ELEVE: 'niveau-eleve',
+      CRITIQUE: 'niveau-critique'
+    };
+    return map[n] ?? '';
   }
 
   getNiveauLabel(niveau: string): string {
-    switch (niveau) {
-      case 'FAIBLE':
-        return 'FAIBLE';
-      case 'MOYEN':
-        return 'MOYEN';
-      case 'ELEVE':
-        return 'ÉLEVÉ';
-      case 'CRITIQUE':
-        return 'CRITIQUE';
-      default:
-        return niveau;
-    }
+    const n = this.normalizeNiveau(niveau);
+    const map: Record<string, string> = {
+      FAIBLE: 'FAIBLE',
+      MOYEN: 'MOYEN',
+      ELEVE: 'ÉLEVÉ',
+      CRITIQUE: 'CRITIQUE'
+    };
+    return map[n] ?? n;
   }
 
   getNiveauIcon(niveau: string): string {
-    switch (niveau) {
-      case 'TOUS':
-        return '🎯';
-      case 'FAIBLE':
-        return '🟢';
-      case 'MOYEN':
-        return '🟠';
-      case 'ELEVE':
-        return '🔴';
-      case 'CRITIQUE':
-        return '⛔';
-      default:
-        return '⚪';
-    }
+    const n = this.normalizeNiveau(niveau);
+    const map: Record<string, string> = {
+      TOUS: '🎯',
+      FAIBLE: '🟢',
+      MOYEN: '🟠',
+      ELEVE: '🔴',
+      CRITIQUE: '⛔'
+    };
+    return map[n] ?? '⚪';
+  }
+
+   getScoreBarClass(score: number | null): string {
+    const s = score ?? 0;
+    if (s < 25) return 'score-bar-faible';
+    if (s < 50) return 'score-bar-moyen';
+    if (s < 75) return 'score-bar-eleve';
+    return 'score-bar-critique';
   }
 
   getAvatarColor(dept: string | undefined): string {
@@ -205,46 +264,66 @@ export class AdminScoresComponent implements OnInit {
       Direction: '#7c3aed',
       Logistique: '#4f46e5'
     };
-
-    return colors[dept || ''] || '#6366f1';
+    return colors[dept ?? ''] ?? '#6366f1';
   }
 
-  /**
-   * Transforme un ScoreTurnover en objet compatible avec app-employee-avatar.
-   * Important parce que le score utilise employePrenom/employeNom.
-   */
   toEmployeeAvatar(score: ScoreTurnover): any {
+    const photo = score.employePhotoUrl ?? score.photoUrl ?? null;
     return {
       id: score.employeId,
       prenom: score.employePrenom,
       nom: score.employeNom,
       employePrenom: score.employePrenom,
       employeNom: score.employeNom,
-      email: (score as any).employeEmail,
-      employeEmail: (score as any).employeEmail,
+      email: score.employeEmail,
+      employeEmail: score.employeEmail,
       departement: score.employeDepartement,
       employeDepartement: score.employeDepartement,
       matricule: score.employeMatricule,
       employeMatricule: score.employeMatricule,
-
-      photoUrl: (score as any).photoUrl,
-      employePhotoUrl: (score as any).employePhotoUrl,
-      employePhotoProfil: (score as any).employePhotoProfil,
-      photoProfil: (score as any).photoProfil
+      photoUrl: photo,
+      employePhotoUrl: photo,
+      employePhotoProfil: photo,
+      photoProfil: photo
     };
   }
 
   formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString('fr-FR');
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('fr-FR');
   }
 
   recalculerScore(employeId: number): void {
-    if (confirm('Recalculer le score de risque pour cet employé ?')) {
-      this.managerService.recalculerScoreTurnover(employeId).subscribe({
-        next: () => this.loadScores(),
-        error: (err: any) => console.error(err)
-      });
-    }
+    if (!confirm('Recalculer le score de risque pour cet employé ?')) return;
+
+    this.managerService.recalculerScoreTurnover(employeId).subscribe({
+      next: () => this.loadScores(false),
+      error: (err: any) => console.error('Erreur recalcul', err)
+    });
+  }
+
+  recalculerTousScores(): void {
+    if (!confirm('Recalculer les scores pour tous les employés ?\nCette opération peut prendre quelques secondes.')) return;
+
+    this.recalculating = true;
+    this.error = false;
+    this.cdr.detectChanges();
+
+    this.managerService.recalculerTousScores().subscribe({
+      next: () => this.loadScores(false),
+      error: (err: any) => {
+        console.error('Erreur recalcul global', err);
+        this.recalculating = false;
+        this.error = true;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  voirDetail(employeId: number): void {
+    this.router.navigate(['/admin/scores', employeId, 'detail']);
   }
 
   retry(): void {
@@ -252,45 +331,31 @@ export class AdminScoresComponent implements OnInit {
   }
 
   exportCSV(): void {
-    const headers = [
-      'Matricule',
-      'Nom',
-      'Prénom',
-      'Département',
-      'Score',
-      'Niveau',
-      'Date calcul'
-    ];
+    const headers = ['Matricule', 'Nom', 'Prénom', 'Département', 'Score', 'Niveau', 'Date calcul'];
 
     const rows = this.filteredScores.map(s => [
-      s.employeMatricule || '',
-      s.employeNom,
-      s.employePrenom,
-      s.employeDepartement || '',
-      s.score,
-      s.niveauRisque,
+      s.employeMatricule ?? '',
+      s.employeNom ?? '',
+      s.employePrenom ?? '',
+      s.employeDepartement ?? '',
+      String(this.normalizeScore(s.score)),
+      this.getNiveauLabel(s.niveauRisque),
       this.formatDate(s.datePrediction)
     ]);
 
-    const csvContent = [headers, ...rows]
-      .map(row => row.join(';'))
-      .join('\n');
-
-    const blob = new Blob([csvContent], {
-      type: 'text/csv;charset=utf-8;'
-    });
-
-    const link = document.createElement('a');
+    const csvContent = [headers, ...rows].map(row => row.join(';')).join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
 
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'scores_turnover.csv');
-    link.style.visibility = 'hidden';
+    const link = Object.assign(document.createElement('a'), {
+      href: url,
+      download: `scores_turnover_${new Date().toISOString().slice(0, 10)}.csv`,
+      style: 'visibility:hidden'
+    });
 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
     URL.revokeObjectURL(url);
   }
 }

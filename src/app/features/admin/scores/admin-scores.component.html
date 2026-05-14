@@ -1,6 +1,5 @@
 <div class="admin-scores">
 
-  <!-- Hero + KPIs animés -->
   <div class="hero-section">
     <div class="hero-text">
       <h1>⚠️ Scores de risque de turnover</h1>
@@ -8,19 +7,19 @@
     </div>
 
     <div class="stats-cards">
-      <div class="stat-card" [style.animation-delay]="'0s'">
+      <div class="stat-card">
         <div class="stat-icon">📊</div>
-        <div class="stat-value" [class.count-up]="true">{{ scoreMoyen }}</div>
+        <div class="stat-value">{{ scoreMoyen }}</div>
         <div class="stat-label">Score moyen</div>
       </div>
 
-      <div class="stat-card" [style.animation-delay]="'0.1s'">
+      <div class="stat-card">
         <div class="stat-icon">👥</div>
         <div class="stat-value">{{ totalEmployes }}</div>
         <div class="stat-label">Employés analysés</div>
       </div>
 
-      <div class="stat-card danger" [style.animation-delay]="'0.2s'">
+      <div class="stat-card danger">
         <div class="stat-icon">⛔</div>
         <div class="stat-value">{{ nbCritiques }}</div>
         <div class="stat-label">Risque critique</div>
@@ -28,42 +27,33 @@
     </div>
   </div>
 
-  <!-- Graphique de répartition des niveaux -->
   <div class="distribution-section">
     <div class="distribution-header">
       <span class="dist-title">🔍 Répartition des risques</span>
-
-      <button class="btn-export" type="button" (click)="exportCSV()" aria-label="Exporter en CSV">
-        📎 Exporter CSV
-      </button>
+      <div class="header-actions">
+        <button class="btn-export" (click)="exportCSV()">📎 Exporter CSV</button>
+        <button class="btn-recalc-all" (click)="recalculerTousScores()">🔄 Recalculer tous</button>
+      </div>
     </div>
 
     <div class="distribution-bars">
       <div *ngFor="let niveau of ['FAIBLE', 'MOYEN', 'ELEVE', 'CRITIQUE']" class="dist-item">
-        <span class="dist-label">
-          {{ getNiveauIcon(niveau) }} {{ getNiveauLabel(niveau) }}
-        </span>
-
+        <span class="dist-label">{{ getNiveauIcon(niveau) }} {{ getNiveauLabel(niveau) }}</span>
         <div class="dist-bar-wrapper">
           <div
             class="dist-bar"
-            [style.width.%]="getPourcentageNiveau(niveau)"
-            [class]="getNiveauClass(niveau)">
+            [ngClass]="getNiveauClass(niveau)"
+            [style.width.%]="getPourcentageNiveau(niveau)">
           </div>
         </div>
-
         <span class="dist-count">{{ getCountNiveau(niveau) }}</span>
       </div>
     </div>
   </div>
 
-  <!-- Filtres modernes -->
   <div class="filters-section">
     <div class="filter-group">
-      <label>
-        <span class="icon">🏷️</span> Niveau de risque
-      </label>
-
+      <label>🏷️ Niveau de risque</label>
       <div class="chips">
         <span
           *ngFor="let niv of niveaux"
@@ -76,77 +66,44 @@
     </div>
 
     <div class="filter-group">
-      <label>
-        <span class="icon">🏢</span> Département
-      </label>
-
+      <label>🏢 Département</label>
       <select [(ngModel)]="departementFilter" (change)="applyFilters()">
         <option value="">Tous les départements</option>
-        <option *ngFor="let dept of departements; trackBy: trackByDept" [value]="dept">
-          {{ dept }}
-        </option>
+        <option *ngFor="let dept of departements" [value]="dept">{{ dept }}</option>
       </select>
     </div>
 
     <div class="filter-group search">
-      <label>
-        <span class="icon">🔍</span> Recherche
-      </label>
-
+      <label>🔍 Recherche</label>
       <div class="search-wrapper">
         <input
           type="text"
           [(ngModel)]="searchText"
           (input)="applyFilters()"
-          placeholder="Nom, prénom, matricule..."
-        >
-
+          placeholder="Nom, prénom, matricule...">
         <span class="search-icon">🔍</span>
       </div>
     </div>
 
-    <button class="btn-reset" type="button" (click)="resetFilters()" aria-label="Réinitialiser les filtres">
-      <span>⟳</span> Réinitialiser
-    </button>
+    <button class="btn-reset" (click)="resetFilters()">⟳ Réinitialiser</button>
   </div>
 
-  <!-- État de chargement -->
   <div *ngIf="loading" class="loading-state">
     <div class="spinner"></div>
     <span>Chargement des scores...</span>
   </div>
 
-  <!-- État d'erreur -->
   <div *ngIf="error && !loading" class="error-state">
-    <span>⛔ Une erreur est survenue lors du chargement des données.</span>
-
-    <button class="btn-retry" type="button" (click)="retry()">
-      ⟳ Réessayer
-    </button>
+    <span>⛔ Une erreur est survenue.</span>
+    <button class="btn-retry" (click)="retry()">⟳ Réessayer</button>
   </div>
 
-  <!-- Vue cartes / tableau -->
   <div *ngIf="!loading && !error" class="content">
-
     <div class="view-toggle">
-      <button
-        class="toggle-btn"
-        type="button"
-        [class.active]="viewMode === 'table'"
-        (click)="viewMode = 'table'">
-        📋 Tableau
-      </button>
-
-      <button
-        class="toggle-btn"
-        type="button"
-        [class.active]="viewMode === 'cards'"
-        (click)="viewMode = 'cards'">
-        🎴 Cartes
-      </button>
+      <button class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'">📋 Tableau</button>
+      <button class="toggle-btn" [class.active]="viewMode === 'cards'" (click)="viewMode = 'cards'">🎴 Cartes</button>
     </div>
 
-    <!-- Mode tableau -->
     <div *ngIf="viewMode === 'table'" class="table-wrapper">
       <table>
         <thead>
@@ -163,7 +120,6 @@
         <tbody>
           <tr *ngFor="let score of filteredScores; trackBy: trackByScoreId">
             <td class="employe-cell">
-
               <app-employee-avatar
                 [employee]="toEmployeeAvatar(score)"
                 size="md"
@@ -178,48 +134,41 @@
 
             <td>{{ score.employeDepartement || '-' }}</td>
 
-            <td class="score-value">
+            <td class="score-cell">
               <div class="score-bar">
-                <div class="score-fill" [style.width.%]="score.score"></div>
-                <span class="score-text">{{ score.score }}</span>
+                <div
+                  class="score-fill"
+                  [ngClass]="getScoreBarClass(score.score)"
+                  [style.width.%]="normalizeScore(score.score)">
+                </div>
+                <span class="score-text">{{ normalizeScore(score.score) }}/100</span>
               </div>
             </td>
 
             <td>
-              <span class="niveau-badge" [class]="getNiveauClass(score.niveauRisque)">
+              <span class="niveau-badge" [ngClass]="getNiveauClass(score.niveauRisque)">
                 {{ getNiveauIcon(score.niveauRisque) }} {{ getNiveauLabel(score.niveauRisque) }}
               </span>
             </td>
 
             <td>{{ formatDate(score.datePrediction) }}</td>
 
-            <td>
-              <button
-                class="btn-recalc"
-                type="button"
-                (click)="recalculerScore(score.employeId)"
-                title="Recalculer le score"
-                aria-label="Recalculer le score">
-                🔄
-              </button>
+            <td class="actions-cell">
+              <button class="btn-detail" (click)="voirDetail(score.employeId)" title="Détail complet">📊 Détail</button>
+              <button class="btn-recalc" (click)="recalculerScore(score.employeId)" title="Recalculer">🔄</button>
             </td>
           </tr>
 
           <tr *ngIf="filteredScores.length === 0">
-            <td colspan="6" class="empty-row">
-              Aucun score ne correspond aux critères.
-            </td>
+            <td colspan="6" class="empty-row">Aucun score ne correspond aux critères.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Mode cartes -->
     <div *ngIf="viewMode === 'cards'" class="cards-grid">
       <div *ngFor="let score of filteredScores; trackBy: trackByScoreId" class="score-card">
-
         <div class="card-header">
-
           <app-employee-avatar
             [employee]="toEmployeeAvatar(score)"
             size="lg"
@@ -231,7 +180,7 @@
             <span class="matricule">{{ score.employeMatricule }}</span>
           </div>
 
-          <div class="risk-badge" [class]="getNiveauClass(score.niveauRisque)">
+          <div class="risk-badge" [ngClass]="getNiveauClass(score.niveauRisque)">
             {{ getNiveauIcon(score.niveauRisque) }} {{ getNiveauLabel(score.niveauRisque) }}
           </div>
         </div>
@@ -244,10 +193,13 @@
 
           <div class="info-row">
             <span class="label">Score global</span>
-
             <div class="score-bar-large">
-              <div class="score-fill" [style.width.%]="score.score"></div>
-              <span>{{ score.score }}</span>
+              <div
+                class="score-fill"
+                [ngClass]="getScoreBarClass(score.score)"
+                [style.width.%]="normalizeScore(score.score)">
+              </div>
+              <span>{{ normalizeScore(score.score) }}/100</span>
             </div>
           </div>
 
@@ -258,18 +210,12 @@
         </div>
 
         <div class="card-actions">
-          <button
-            class="btn-recalc-full"
-            type="button"
-            (click)="recalculerScore(score.employeId)">
-            🔄 Recalculer le score
-          </button>
+          <button class="btn-detail-card" (click)="voirDetail(score.employeId)">📊 Voir le détail complet</button>
+          <button class="btn-recalc-full" (click)="recalculerScore(score.employeId)">🔄 Recalculer</button>
         </div>
       </div>
 
-      <div *ngIf="filteredScores.length === 0" class="empty-cards">
-        Aucune carte à afficher
-      </div>
+      <div *ngIf="filteredScores.length === 0" class="empty-cards">Aucune carte à afficher</div>
     </div>
   </div>
 </div>

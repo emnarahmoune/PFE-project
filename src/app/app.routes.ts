@@ -59,6 +59,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/gestion-conges/pages/validation-rh/validation-rh.component')
           .then(m => m.ValidationRhComponent)
       },
+       {
+        path: 'scores/:id/detail',
+        loadComponent: () => import('./features/admin/scores/pages/employe-score-detail/employe-score-detail.component')
+          .then(m => m.EmployeScoreDetailComponent)
+      },
       {
         path: 'scores',
         loadComponent: () => import('./features/admin/scores/admin-scores.component')

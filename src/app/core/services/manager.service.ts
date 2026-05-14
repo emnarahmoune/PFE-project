@@ -36,24 +36,18 @@ export interface TacheManager {
   taskName?: string;
   createTime?: string;
   processInstanceId?: string;
-
   demandeId?: number;
   employeId?: string | number;
-
   nbJours?: number;
   joursOuvres?: number;
-
   dateDebut?: string;
   dateFin?: string;
   type?: string;
   commentaire?: string;
   statut?: string;
-
   employeNom?: string;
   employePrenom?: string;
   employeEmail?: string;
-
-  // ✅ IMPORTANT POUR PHOTO AVATAR
   photoUrl?: string;
   employePhotoProfil?: string;
   employePhotoUrl?: string;
@@ -75,7 +69,6 @@ export interface ManagerCalendarEvent {
   borderColor?: string;
   textColor?: string;
   extendedProps?: any;
-
   demandeId?: number;
   statut?: string;
   type?: string;
@@ -86,6 +79,72 @@ export interface ManagerCalendarEvent {
   dateFin?: string;
 }
 
+export interface SousScoreItem {
+  critere: string;
+  valeur: number;
+  max: number;
+  contribution: number;
+  couleur: string;
+}
+
+export interface FacteurItem {
+  libelle: string;
+  score: number;
+  niveauImpact: string;
+}
+
+export interface ActionItem {
+  action: string;
+  type: string;
+}
+
+export interface HistoriqueLigne {
+  date: string;
+  scoreGlobal: number;
+  niveau: string;
+  anciennete: string;
+  salaire: string;
+  performance: string;
+  formations: string;
+  absenteisme: string;
+  facteursMajeurs: string;
+}
+
+export interface InfoCalcul {
+  periodeDebut: string;
+  periodeFin: string;
+  methode: string;
+  source: string;
+  dernierBatch: string;
+  prochainBatch: string;
+}
+
+export interface EmployeScoreDetail {
+  employeId: number;
+  nom: string;
+  prenom: string;
+  matricule: string;
+  poste: string;
+  departement: string;
+  dateEmbauche: string;
+  anciennete: string;
+  salaireAnnuel: number;
+  managerNom?: string;
+  photoUrl?: string;
+  scoreActuel: ScoreTurnover;
+  scorePrecedent?: ScoreTurnover;
+  evolutionScore: number;
+  evolutionPourcentage: number;
+  rang: number;
+  percentile: number;
+  totalEmployes: number;
+  sousScores: SousScoreItem[];
+  facteursContributifs: FacteurItem[];
+  actionsRecommandees: ActionItem[];
+  historique: HistoriqueLigne[];
+  infoCalcul: InfoCalcul;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -93,13 +152,16 @@ export class ManagerService {
 
   private apiUrl = `${environment.apiUrl}/employes`;
   private managerApiUrl = `${environment.apiUrl}/manager`;
+  private scoreApiUrl = `${environment.apiUrl}/scores-turnover`;
 
   constructor(private http: HttpClient) {}
 
+  // ============================================================
+  // EMPLOYÉS (inchangé)
+  // ============================================================
+
   getEquipe(): Observable<{ success: boolean; data: Employe[] }> {
-    return this.http.get<{ success: boolean; data: Employe[] }>(
-      `${this.apiUrl}/equipe`
-    );
+    return this.http.get<{ success: boolean; data: Employe[] }>(`${this.apiUrl}/equipe`);
   }
 
   getEmployeDetails(employeId: number): Observable<{ success: boolean; data: Employe }> {
@@ -115,39 +177,27 @@ export class ManagerService {
   }
 
   getAllManagers(): Observable<{ success: boolean; data: Manager[] }> {
-    return this.http.get<{ success: boolean; data: Manager[] }>(
-      `${this.apiUrl}/managers`
-    );
+    return this.http.get<{ success: boolean; data: Manager[] }>(`${this.apiUrl}/managers`);
   }
 
   getAll(): Observable<{ success: boolean; data: Manager[] }> {
     return this.getAllManagers();
   }
 
-  /**
-   * Ancien endpoint manager direct.
-   * Peut être utilisé ailleurs.
-   */
   getTachesManager(): Observable<{ success: boolean; data: TacheManager[] }> {
     return this.http.get<{ success: boolean; data: TacheManager[] }>(
       `${this.managerApiUrl}/conges`
     );
   }
 
-  approuverDemande(
-    taskId: string,
-    commentaire?: string
-  ): Observable<{ success: boolean; message: string }> {
+  approuverDemande(taskId: string, commentaire?: string): Observable<{ success: boolean; message: string }> {
     return this.http.post<{ success: boolean; message: string }>(
       `${this.managerApiUrl}/approuver-demande`,
       { taskId, commentaire }
     );
   }
 
-  refuserDemande(
-    taskId: string,
-    motif: string
-  ): Observable<{ success: boolean; message: string }> {
+  refuserDemande(taskId: string, motif: string): Observable<{ success: boolean; message: string }> {
     return this.http.post<{ success: boolean; message: string }>(
       `${this.managerApiUrl}/refuser-demande`,
       { taskId, motif }
@@ -167,36 +217,11 @@ export class ManagerService {
   }
 
   getStats(): Observable<{ success: boolean; data: ManagerStats }> {
-    return this.http.get<{ success: boolean; data: ManagerStats }>(
-      `${this.managerApiUrl}/stats`
-    );
+    return this.http.get<{ success: boolean; data: ManagerStats }>(`${this.managerApiUrl}/stats`);
   }
 
   getConges(): Observable<{ success: boolean; data: DemandeConge[] }> {
-    return this.http.get<{ success: boolean; data: DemandeConge[] }>(
-      `${this.managerApiUrl}/conges`
-    );
-  }
-
-  getDernierScoreTurnover(
-    employeId: number
-  ): Observable<{ success: boolean; data: { score: number; niveauRisque: string } }> {
-    return this.http.get<{ success: boolean; data: any }>(
-      `${environment.apiUrl}/scores-turnover/employe/${employeId}/dernier`
-    );
-  }
-
-  getDerniersScores(): Observable<{ success: boolean; data: ScoreTurnover[] }> {
-    return this.http.get<{ success: boolean; data: ScoreTurnover[] }>(
-      `${environment.apiUrl}/scores-turnover/derniers`
-    );
-  }
-
-  recalculerScoreTurnover(employeId: number): Observable<any> {
-    return this.http.post(
-      `${environment.apiUrl}/scores-turnover/calculer/employe/${employeId}?systemeBIId=1`,
-      {}
-    );
+    return this.http.get<{ success: boolean; data: DemandeConge[] }>(`${this.managerApiUrl}/conges`);
   }
 
   getDernierAbsenteisme(
@@ -207,55 +232,97 @@ export class ManagerService {
     );
   }
 
-  // ======================================================
-  // CALENDRIER MANAGER
-  // Backend :
-  // GET /api/manager/calendar-events
-  // ======================================================
+  // ============================================================
+  // SCORES TURNOVER
+  // ============================================================
 
-  getCalendarEvents(): Observable<EventInput[]> {
-    return this.http.get<ApiResponse<ManagerCalendarEvent[]> | ManagerCalendarEvent[]>(
-      `${this.managerApiUrl}/calendar-events`
-    ).pipe(
-      map((res: ApiResponse<ManagerCalendarEvent[]> | ManagerCalendarEvent[]) => {
-        const events = Array.isArray(res)
-          ? res
-          : (res?.data || []);
+  getDernierScoreTurnover(employeId: number): Observable<{ success: boolean; data: { score: number; niveauRisque: string } }> {
+    return this.http.get<{ success: boolean; data: any }>(`${this.scoreApiUrl}/employe/${employeId}/dernier`);
+  }
 
-        return events.map((event: ManagerCalendarEvent): EventInput => {
-          const statut = String(event.statut || event.extendedProps?.statut || '').toUpperCase();
-
-          return {
-            id: String(event.id ?? event.demandeId ?? ''),
-            title: event.title || this.buildCalendarTitle(event),
-            start: event.start || event.dateDebut,
-            end: event.end || this.normalizeEndDate(event.end || event.dateFin),
-            color: event.color || event.backgroundColor || this.resolveColorByStatut(statut),
-            backgroundColor: event.backgroundColor || event.color || this.resolveColorByStatut(statut),
-            borderColor: event.borderColor || event.color || this.resolveColorByStatut(statut),
-            textColor: event.textColor || '#ffffff',
-            extendedProps: {
-              ...(event.extendedProps || {}),
-              demandeId: event.demandeId ?? event.extendedProps?.demandeId,
-              statut: event.statut ?? event.extendedProps?.statut,
-              type: event.type ?? event.extendedProps?.type,
-              employeNom: event.employeNom ?? event.extendedProps?.employeNom,
-              employePrenom: event.employePrenom ?? event.extendedProps?.employePrenom,
-              employeEmail: event.employeEmail ?? event.extendedProps?.employeEmail
-            }
-          };
-        });
+/**
+ * Récupère la liste des derniers scores de tous les employés
+ */
+getDerniersScores(): Observable<ScoreTurnover[]> {
+  return this.http.get<ApiResponse<ScoreTurnover[]>>(`${this.scoreApiUrl}/derniers`)
+    .pipe(
+      map(response => {
+        if (response && response.success && Array.isArray(response.data)) {
+          return response.data;
+        }
+        console.warn('Format de réponse inattendu pour /derniers', response);
+        return [];
       })
     );
+}
+  /**
+   * ✅ Détail complet du score d'un employé
+   * La réponse du backend est : { success: true, data: EmployeScoreDetail }
+   */
+  getEmployeScoreDetail(employeId: number): Observable<EmployeScoreDetail> {
+    return this.http.get<ApiResponse<EmployeScoreDetail>>(`${this.scoreApiUrl}/employe/${employeId}/detail`)
+      .pipe(
+        map(response => {
+          if (!response || !response.success || !response.data) {
+            throw new Error(`Impossible de charger le détail du score pour l'employé ${employeId}`);
+          }
+          return response.data;
+        })
+      );
   }
+
+  recalculerScoreTurnover(employeId: number): Observable<any> {
+    return this.http.post(`${this.scoreApiUrl}/calculer/employe/${employeId}?systemeBIId=1`, {});
+  }
+
+  recalculerTousScores(): Observable<any> {
+    return this.http.post(`${this.scoreApiUrl}/calculer/tous?systemeBIId=1`, {});
+  }
+
+  // ============================================================
+  // CALENDRIER MANAGER (simplifié)
+  // ============================================================
+
+  getCalendarEvents(): Observable<EventInput[]> {
+    return this.http.get<ApiResponse<ManagerCalendarEvent[]>>(`${this.managerApiUrl}/calendar-events`)
+      .pipe(
+        map(response => {
+          const events = response?.data ?? [];
+          return events.map((event): EventInput => {
+            const statut = String(event.statut || event.extendedProps?.statut || '').toUpperCase();
+            return {
+              id: String(event.id ?? event.demandeId ?? ''),
+              title: event.title || this.buildCalendarTitle(event),
+              start: event.start || event.dateDebut,
+              end: event.end || this.normalizeEndDate(event.dateFin),
+              color: event.color || event.backgroundColor || this.resolveColorByStatut(statut),
+              backgroundColor: event.backgroundColor || event.color || this.resolveColorByStatut(statut),
+              borderColor: event.borderColor || event.color || this.resolveColorByStatut(statut),
+              textColor: event.textColor || '#ffffff',
+              extendedProps: {
+                ...(event.extendedProps || {}),
+                demandeId: event.demandeId ?? event.extendedProps?.demandeId,
+                statut: event.statut ?? event.extendedProps?.statut,
+                type: event.type ?? event.extendedProps?.type,
+                employeNom: event.employeNom ?? event.extendedProps?.employeNom,
+                employePrenom: event.employePrenom ?? event.extendedProps?.employePrenom,
+                employeEmail: event.employeEmail ?? event.extendedProps?.employeEmail
+              }
+            };
+          });
+        })
+      );
+  }
+
+  // ============================================================
+  // MÉTHODES PRIVÉES
+  // ============================================================
 
   private buildCalendarTitle(event: ManagerCalendarEvent): string {
     const prenom = event.employePrenom || event.extendedProps?.employePrenom || '';
     const nom = event.employeNom || event.extendedProps?.employeNom || '';
     const type = event.type || event.extendedProps?.type || 'Congé';
-
     const fullName = `${prenom} ${nom}`.trim();
-
     return fullName ? `${fullName} - ${type}` : type;
   }
 
@@ -266,7 +333,6 @@ export class ManagerService {
       case 'APPROUVÉ':
       case 'APPROUVÉE':
         return '#10b981';
-
       case 'REFUSE':
       case 'REFUSEE':
       case 'REFUSÉ':
@@ -274,23 +340,17 @@ export class ManagerService {
       case 'REFUSE_MANAGER':
       case 'REFUSE_PAR_MANAGER':
         return '#ef4444';
-
       case 'EN_ATTENTE':
       case 'EN_ATTENTE_MANAGER':
       case 'EN_ATTENTE_RH':
       case 'EN_ATTENTE_ADMIN':
         return '#f59e0b';
-
       default:
         return '#4361ee';
     }
   }
 
   private normalizeEndDate(end?: string): string | undefined {
-    if (!end) {
-      return undefined;
-    }
-
-    return end;
+    return end || undefined;
   }
 }
