@@ -7,7 +7,7 @@ import { EventInput } from '@fullcalendar/core';
 
 import { environment } from '../../../environments/environment';
 import { Employe } from '../models/employe.model';
-import { DemandeConge, SoldeConges } from '../../features/employee/models/conge.model';
+import { DemandeConge, SoldeConges } from '../models/conge.model';
 import { ScoreTurnover } from '../models/score-turnover.model';
 
 export interface ManagerStats {
@@ -85,6 +85,74 @@ export interface ManagerCalendarEvent {
   dateDebut?: string;
   dateFin?: string;
 }
+
+export interface SousScoreItem {
+  critere: string;
+  valeur: number;
+  max: number;
+  contribution: number;
+  couleur: string;
+}
+
+export interface FacteurItem {
+  libelle: string;
+  score: number;
+  niveauImpact: string;
+}
+
+export interface ActionItem {
+  action: string;
+  type: string;
+}
+
+export interface HistoriqueLigne {
+  date: string;
+  scoreGlobal: number;
+  niveau: string;
+  anciennete: string;
+  salaire: string;
+  performance: string;
+  formations: string;
+  absenteisme: string;
+  facteursMajeurs: string;
+}
+
+export interface InfoCalcul {
+  periodeDebut: string;
+  periodeFin: string;
+  methode: string;
+  source: string;
+  dernierBatch: string;
+  prochainBatch: string;
+}
+
+export interface EmployeScoreDetail {
+  employeId: number;
+  nom: string;
+  prenom: string;
+  matricule: string;
+  poste: string;
+  departement: string;
+  dateEmbauche: string;
+  anciennete: string;
+  salaireAnnuel: number;
+  managerNom?: string;
+  photoUrl?: string;
+  scoreActuel: ScoreTurnover;
+  scorePrecedent?: ScoreTurnover;
+  evolutionScore: number;
+  evolutionPourcentage: number;
+  rang: number;
+  percentile: number;
+  totalEmployes: number;
+  sousScores: SousScoreItem[];
+  facteursContributifs: FacteurItem[];
+  actionsRecommandees: ActionItem[];
+  historique: HistoriqueLigne[];
+  infoCalcul: InfoCalcul;
+}
+
+
 
 @Injectable({
   providedIn: 'root'
@@ -319,4 +387,21 @@ export class ManagerService {
 
     return end;
   }
+
+/**
+   * ✅ Détail complet du score d'un employé
+   * La réponse du backend est : { success: true, data: EmployeScoreDetail }
+   */
+  getEmployeScoreDetail(employeId: number): Observable<EmployeScoreDetail> {
+    return this.http.get<ApiResponse<EmployeScoreDetail>>(`${this.scoresApiUrl}/employe/${employeId}/detail`)
+      .pipe(
+        map(response => {
+          if (!response || !response.success || !response.data) {
+            throw new Error(`Impossible de charger le détail du score pour l'employé ${employeId}`);
+          }
+          return response.data;
+        })
+      );
+  }
+  
 }

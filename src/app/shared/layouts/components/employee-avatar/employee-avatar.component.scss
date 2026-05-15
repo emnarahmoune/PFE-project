@@ -1,7 +1,15 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .employee-avatar {
   width: 46px;
   height: 46px;
   min-width: 46px;
+  flex-shrink: 0;
 
   border-radius: 50%;
   overflow: hidden;
@@ -21,47 +29,103 @@
   border: 2px solid rgba(59, 130, 246, 0.25);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
 
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  span {
-    line-height: 1;
-  }
-
-  &.size-sm {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    font-size: 12px;
-  }
-
-  &.size-md {
-    width: 46px;
-    height: 46px;
-    min-width: 46px;
-    font-size: 14px;
-  }
-
-  &.size-lg {
-    width: 58px;
-    height: 58px;
-    min-width: 58px;
-    font-size: 17px;
-  }
-
-  &.rounded {
-    border-radius: 14px;
-  }
+  user-select: none;
 }
 
-:host-context(body.dark-theme) {
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-initials {
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================
+   SIZES
+========================= */
+
+.employee-avatar.avatar-sm {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  font-size: 12px;
+}
+
+.employee-avatar.avatar-md {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  font-size: 14px;
+}
+
+.employee-avatar.avatar-lg {
+  width: 58px;
+  height: 58px;
+  min-width: 58px;
+  font-size: 17px;
+}
+
+.employee-avatar.avatar-xl {
+  width: 76px;
+  height: 76px;
+  min-width: 76px;
+  font-size: 22px;
+}
+
+/* =========================
+   SHAPES
+========================= */
+
+.employee-avatar.avatar-circle {
+  border-radius: 50%;
+}
+
+.employee-avatar.avatar-square {
+  border-radius: 14px;
+}
+
+/* compatibilité ancienne classe si tu l'utilises quelque part */
+.employee-avatar.rounded {
+  border-radius: 14px;
+}
+
+/* =========================
+   DARK MODE
+========================= */
+
+:host-context(body.dark-theme),
+:host-context(.dark-theme),
+:host-context(body.dark),
+:host-context(.dark) {
   .employee-avatar {
     background: linear-gradient(135deg, #2563eb, #7c3aed);
     border-color: rgba(96, 165, 250, 0.45);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 480px) {
+  .employee-avatar.avatar-lg {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    font-size: 15px;
+  }
+
+  .employee-avatar.avatar-xl {
+    width: 62px;
+    height: 62px;
+    min-width: 62px;
+    font-size: 18px;
   }
 }

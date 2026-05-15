@@ -233,10 +233,10 @@
     ====================================================== -->
     <ng-container *ngIf="isManager()">
 
-      <div class="welcome-card">
-        <h1>Bienvenue, {{ getManagerDisplayName() }} !</h1>
-        <p>Vous êtes connecté à l'espace manager du Portail RH.</p>
-      </div>
+     <div class="welcome-card admin-welcome">
+  <h1>Bienvenue, {{ getManagerDisplayName() }} !</h1>
+  <p>Vous êtes connecté à l'espace manager du Portail RH.</p>
+</div>
 
       <div class="loader-overlay" *ngIf="loading">
         <div class="loader-spinner"></div>
@@ -337,120 +337,222 @@
           </div>
         </div>
 
-        <div class="bi-section" *ngIf="powerBiManagerUrl">
-
-          <div class="section-header">
-            <h2>Dashboard Power BI Manager</h2>
-            <span class="section-subtitle">
-              Analyse décisionnelle de l’équipe : congés, performance, compétences et risque RH
-            </span>
-          </div>
-
-          <div class="bi-frame-card">
-            <iframe
-              [src]="powerBiManagerUrl"
-              title="Dashboard Power BI Manager"
-              frameborder="0"
-              allowfullscreen="true">
-            </iframe>
-          </div>
-
-        </div>
 
       </ng-container>
     </ng-container>
 
     <!-- =====================================================
-         EMPLOYE
-    ====================================================== -->
-    <ng-container *ngIf="isEmployee()">
+     EMPLOYE
+====================================================== -->
+<ng-container *ngIf="isEmployee()">
 
-      <div class="welcome-card">
-        <h1>Bienvenue, {{ getEmployeeDisplayName() }} !</h1>
-        <p>Vous êtes connecté à l'espace employé du Portail RH.</p>
+  <div class="welcome-card admin-welcome">
+    <h1>Bienvenue, {{ getEmployeeDisplayName() }} !</h1>
+    <p>Vous êtes connecté à l'espace employé du Portail RH.</p>
+  </div>
+
+  <div class="info-card">
+    <h3>Vos informations</h3>
+    <ul>
+      <li><strong>Nom :</strong> {{ fullName }}</li>
+      <li><strong>Email :</strong> {{ email }}</li>
+      <li><strong>Rôle :</strong> Employé</li>
+    </ul>
+  </div>
+
+  <div class="employee-stats-modern">
+
+    <div class="employee-main-stat">
+      <div>
+        <span class="stat-eyebrow">Progression globale</span>
+        <h2>{{ employeeStats?.progressionFormations || 0 }}%</h2>
+        <p>Progression moyenne de vos formations</p>
       </div>
 
-      <div class="info-card">
-        <h3>Vos informations</h3>
-        <ul>
-          <li><strong>Nom :</strong> {{ fullName }}</li>
-          <li><strong>Email :</strong> {{ email }}</li>
-          <li><strong>Rôle :</strong> Employé</li>
-        </ul>
+      <div class="progress-ring">
+        {{ employeeStats?.progressionFormations || 0 }}%
       </div>
+    </div>
 
-      <div class="stats-grid">
-        <div class="stat-card" routerLink="/employee/mes-conges">
-          <h3>📅 Mes congés</h3>
-          <p>Consultez et gérez vos demandes de congé</p>
-        </div>
+    <div class="employee-side-stats">
 
-        <div class="stat-card" routerLink="/employee/mes-formations">
-          <h3>🎓 Mes formations</h3>
-          <p>Découvrez les formations disponibles</p>
-        </div>
-
-        <div class="stat-card" routerLink="/employee/mon-profil">
-          <h3>👤 Mon profil</h3>
-          <p>Mettez à jour vos informations personnelles</p>
-        </div>
-
-        <div class="stat-card" routerLink="/employee/competences">
-          <h3>🧠 Mes compétences</h3>
-          <p>Modifier mes compétences pour IA</p>
+      <div class="mini-stat" routerLink="/employee/mes-conges">
+        <span class="mini-icon">🏖️</span>
+        <div>
+          <strong>{{ employeeStats?.congesRestants || 0 }}</strong>
+          <p>Congés restants</p>
         </div>
       </div>
 
-      <div class="section">
-        <div class="section-header">
-          <h2>🎓 Recommandations intelligentes</h2>
-          <span class="section-subtitle">
-            Suggestions de formation basées sur votre profil
-          </span>
+      <div class="mini-stat" routerLink="/employee/mes-formations">
+        <span class="mini-icon">🎓</span>
+        <div>
+          <strong>{{ employeeStats?.formationsTerminees || 0 }}</strong>
+          <p>Formations terminées</p>
         </div>
+      </div>
 
-        <div class="cards" *ngIf="recommendations.length > 0; else noReco">
+      <div class="mini-stat" routerLink="/employee/competences">
+        <span class="mini-icon">🧠</span>
+        <div>
+          <strong>{{ employeeStats?.competencesValidees || 0 }}</strong>
+          <p>Compétences validées</p>
+        </div>
+      </div>
 
-          <div class="card" *ngFor="let r of recommendations">
-            <h3>{{ r.titre }}</h3>
+      <div class="mini-stat">
+        <span class="mini-icon">⭐</span>
+        <div>
+          <strong>{{ employeeStats?.noteMoyenne || 0 }}</strong>
+          <p>Note moyenne</p>
+        </div>
+      </div>
 
-            <p>Score IA : {{ r.score | number:'1.2-2' }}</p>
+      <div class="mini-stat" routerLink="/employee/mes-formations">
+        <span class="mini-icon">📜</span>
+        <div>
+          <strong>{{ employeeStats?.certificatsObtenus || 0 }}</strong>
+          <p>Certificats</p>
+        </div>
+      </div>
 
-            <div class="bar">
-              <div class="fill" [style.width.%]="r.score * 100"></div>
+      <div class="mini-stat">
+        <span class="mini-icon">🤖</span>
+        <div>
+          <strong>{{ employeeStats?.recommandationsIA || 0 }}</strong>
+          <p>Recommandations IA</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="employee-charts-grid">
+
+    <div class="employee-chart-card">
+      <div class="chart-card-header">
+        <div>
+          <h3>Progression formations</h3>
+          <p>Avancement moyen de vos formations</p>
+        </div>
+      </div>
+
+      <div class="donut-chart-wrap">
+        <div
+          class="donut-chart"
+          [style.background]="getProgressionChartStyle()">
+
+          <div class="donut-inner">
+            <strong>{{ employeeStats?.progressionFormations || 0 }}%</strong>
+            <span>complété</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="employee-chart-card">
+      <div class="chart-card-header">
+        <div>
+          <h3>Résumé personnel</h3>
+          <p>Vue rapide de votre activité RH</p>
+        </div>
+      </div>
+
+      <div class="bar-chart-list">
+
+        <div class="bar-chart-row">
+          <div class="bar-chart-label">
+            <span>🎓 Formations</span>
+            <strong>{{ employeeStats?.formationsTerminees || 0 }}</strong>
+          </div>
+          <div class="bar-chart-track">
+            <div
+              class="bar-chart-fill"
+              [style.width.%]="getEmployeeBarWidth(employeeStats?.formationsTerminees)">
             </div>
           </div>
-
         </div>
 
-        <ng-template #noReco>
-          <div class="info-card">
-            <p>Aucune recommandation disponible</p>
+        <div class="bar-chart-row">
+          <div class="bar-chart-label">
+            <span>🧠 Compétences</span>
+            <strong>{{ employeeStats?.competencesValidees || 0 }}</strong>
           </div>
-        </ng-template>
-      </div>
-
-      <div class="bi-section" *ngIf="powerBiEmployeeUrl">
-
-        <div class="section-header">
-          <h2>Dashboard Power BI Employé</h2>
-          <span class="section-subtitle">
-            Suivi personnel des congés, formations, compétences et évaluations
-          </span>
+          <div class="bar-chart-track">
+            <div
+              class="bar-chart-fill"
+              [style.width.%]="getEmployeeBarWidth(employeeStats?.competencesValidees)">
+            </div>
+          </div>
         </div>
 
-        <div class="bi-frame-card">
-          <iframe
-            [src]="powerBiEmployeeUrl"
-            title="Dashboard Power BI Employé"
-            frameborder="0"
-            allowfullscreen="true">
-          </iframe>
+        <div class="bar-chart-row">
+          <div class="bar-chart-label">
+            <span>📜 Certificats</span>
+            <strong>{{ employeeStats?.certificatsObtenus || 0 }}</strong>
+          </div>
+          <div class="bar-chart-track">
+            <div
+              class="bar-chart-fill"
+              [style.width.%]="getEmployeeBarWidth(employeeStats?.certificatsObtenus)">
+            </div>
+          </div>
+        </div>
+
+        <div class="bar-chart-row">
+          <div class="bar-chart-label">
+            <span>🤖 Recommandations IA</span>
+            <strong>{{ employeeStats?.recommandationsIA || 0 }}</strong>
+          </div>
+          <div class="bar-chart-track">
+            <div
+              class="bar-chart-fill"
+              [style.width.%]="getEmployeeBarWidth(employeeStats?.recommandationsIA)">
+            </div>
+          </div>
         </div>
 
       </div>
+    </div>
 
-    </ng-container>
+  </div>
 
+  <div class="section">
+  <div class="section-header">
+    <h2>🎓 Recommandations intelligentes</h2>
+    <span class="section-subtitle">
+      Suggestions de formation basées sur votre profil
+    </span>
+  </div>
+
+  <div class="cards" *ngIf="recommendations.length > 0; else noReco">
+
+<div class="card" *ngFor="let r of recommendations">
+
+ <h3>
+  {{
+    r.formationTitle ||
+    r.formation?.titre ||
+    r.formation?.nom ||
+    r.formationTitre ||
+    r.titreFormation ||
+    r.nomFormation ||
+    r.titre ||
+    r.nom ||
+    'Formation recommandée'
+  }}
+</h3>
+</div>
+
+  </div>
+
+  <ng-template #noReco>
+    <div class="info-card">
+      <p>Aucune recommandation disponible</p>
+    </div>
+  </ng-template>
+</div>
+
+</ng-container>
   </div>
 </div>

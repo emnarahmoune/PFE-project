@@ -1209,3 +1209,126 @@ a {
     border-radius: 22px;
   }
 }
+
+/* =========================================================
+   RESPONSIVE MOBILE - MANAGERS / EQUIPES
+========================================================= */
+
+@media (max-width: 1024px) {
+  .top-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .search-wrapper {
+    flex: 1 1 100%;
+  }
+
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .panel-left,
+  .panel-right {
+    width: 100%;
+  }
+
+  .team-grid,
+  .manager-grid,
+  .employe-grid-modern,
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .hr-app,
+  .manager-detail-modern {
+    min-height: calc(100vh - 64px);
+    padding: 0 0 32px;
+  }
+
+  .top-header {
+    padding: 20px;
+    border-radius: 20px;
+    gap: 16px;
+  }
+
+  .top-header h1,
+  .title h1 {
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
+  .top-header p,
+  .title p {
+    font-size: 14px;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-wrapper,
+  .search-wrapper input,
+  .btn-refresh,
+  .back-btn,
+  .conges-btn,
+  .detail-btn,
+  .expand-btn,
+  .btn-secondary {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .kpi-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .kpi-card {
+    min-width: 0;
+  }
+
+  .filters-header,
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters button {
+    width: 100%;
+  }
+
+  .team-grid,
+  .manager-grid,
+  .employe-grid-modern,
+  .cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .manager-card,
+  .employee-card,
+  .team-card {
+    border-radius: 20px;
+  }
+
+  .card-actions,
+  .manager-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card-actions button,
+  .manager-actions button {
+    width: 100%;
+  }
+}

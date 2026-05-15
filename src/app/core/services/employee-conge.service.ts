@@ -1,7 +1,7 @@
 // src/app/features/employee/services/employee-conge.service.ts
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from '../../../core/services/api.service';
+import { ApiService } from './api.service';
 import { DemandeConge, SoldeConges, CongeResponse } from '../models/conge.model';
 
 @Injectable({ providedIn: 'root' })

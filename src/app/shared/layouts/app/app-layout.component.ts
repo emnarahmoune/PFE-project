@@ -103,6 +103,10 @@ export class AppLayoutComponent implements OnInit, OnDestroy {
     this.layoutRole = this.route.snapshot.data['layoutRole'] || 'EMPLOYE';
     this.detectReturnSpace();
 
+    if (window.innerWidth <= 1024) {
+    this.isSidebarOpen = false;
+  }
+
     this.initMenu();
     this.loadUserInfo();
     this.loadFullProfile();
@@ -385,8 +389,9 @@ export class AppLayoutComponent implements OnInit, OnDestroy {
       currentUrl === item.path || currentUrl.startsWith(item.path + '/')
     );
 
-    return current?.label || 'PeopleOS';
+    return current?.label || 'Portail-RH';
   }
+
 
  goToPersonalSpace(): void {
   if (this.isAdminLayout()) {
@@ -485,4 +490,29 @@ goBackToRoleSpace(): void {
 
   this.router.navigate(['/employee/espace-personnel']);
 }
+
+
+
+isSimpleEmployee(): boolean {
+  const role = String(this.userRole || '').toUpperCase();
+
+  return (
+    this.isEmployeeLayout() &&
+    !role.includes('ADMIN') &&
+    !role.includes('MANAGER')
+  );
+}
+
+closeSidebarOnMobile(): void {
+  if (window.innerWidth <= 1024) {
+    this.isSidebarOpen = false;
+  }
+}
+
+
+
+
+
+
+
 }

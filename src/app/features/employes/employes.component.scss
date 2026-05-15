@@ -1618,3 +1618,334 @@ button:disabled {
     flex-wrap: wrap;
   }
 }
+
+/* ===== Compétences + Formations côté Manager Detail ===== */
+
+.employee-detail-page .detail-card {
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+}
+
+.employee-detail-page .card-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.employee-detail-page .card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+  font-size: 22px;
+}
+
+.employee-detail-page .card-title h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.employee-detail-page .card-title p {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.employee-detail-page .mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.employee-detail-page .mini-item {
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 1px solid #e2e8f0;
+  transition: 0.25s ease;
+}
+
+.employee-detail-page .mini-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.employee-detail-page .mini-item strong {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.employee-detail-page .mini-item span {
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.employee-detail-page .progress-bar {
+  width: 100%;
+  height: 9px;
+  margin-top: 12px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.employee-detail-page .progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4f46e5, #06b6d4);
+}
+
+.employee-detail-page .empty-inline {
+  padding: 18px;
+  border-radius: 16px;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* =========================================================
+   RESPONSIVE MOBILE - EMPLOYES
+========================================================= */
+
+@media (max-width: 1024px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-header-right {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .page-header-right button {
+    flex: 1;
+  }
+
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .filters-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .employee-grid,
+  .team-grid,
+  .employe-grid-modern,
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .emp-page,
+  .equipe-page,
+  .employee-detail-page {
+    min-height: calc(100vh - 64px);
+  }
+
+  .page-header {
+    padding: 20px;
+    border-radius: 20px;
+    gap: 16px;
+  }
+
+  .page-title,
+  .page-header h1 {
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
+  .page-subtitle,
+  .page-header p {
+    font-size: 14px;
+  }
+
+  .page-header-right {
+    flex-direction: column;
+  }
+
+  .page-header-right button,
+  .btn-primary,
+  .btn-outline,
+  .btn-ghost,
+  .btn-danger,
+  .btn-secondary {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .kpi-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .kpi-card {
+    min-width: 0;
+  }
+
+  .filters-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .search-input,
+  .filter-select {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .employee-grid,
+  .team-grid,
+  .employe-grid-modern,
+  .cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .employee-admin-card,
+  .employee-card,
+  .team-card {
+    border-radius: 20px;
+  }
+
+  .card-head {
+    gap: 12px;
+  }
+
+  .emp-chips {
+    flex-wrap: wrap;
+  }
+
+  .card-actions,
+  .employee-actions,
+  .detail-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card-actions button,
+  .employee-actions button,
+  .detail-actions button {
+    width: 100%;
+  }
+
+  .table-wrapper,
+  .table-card,
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 760px;
+  }
+}
+
+
+
+/* =========================================================
+   RESPONSIVE MOBILE - DASHBOARD
+========================================================= */
+
+@media (max-width: 1024px) {
+  .dashboard-content {
+    max-width: 100%;
+  }
+
+  .kpi-grid,
+  .finance-grid,
+  .stats-grid,
+  .cards-grid,
+  .activity-grid,
+  .charts-grid,
+  .manager-grid,
+  .employee-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .finance-card.wide,
+  .chart-card.wide,
+  .wide {
+    grid-column: auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-pro {
+    min-height: calc(100vh - 64px);
+  }
+
+  .dashboard-content {
+    padding-bottom: 32px;
+  }
+
+  .welcome-card {
+    padding: 22px;
+    border-radius: 22px;
+    margin-bottom: 18px;
+  }
+
+  .welcome-card h1 {
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
+  .welcome-card p {
+    font-size: 14px;
+  }
+
+  .section {
+    margin-bottom: 20px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .section-header h2 {
+    font-size: 20px;
+  }
+
+  .kpi-grid,
+  .finance-grid,
+  .stats-grid,
+  .cards-grid,
+  .activity-grid,
+  .charts-grid,
+  .manager-grid,
+  .employee-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .kpi-tile,
+  .finance-card,
+  .stat-card,
+  .chart-card,
+  .activity-card {
+    min-width: 0;
+    border-radius: 20px;
+  }
+
+  .dept-stats {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .loader-overlay {
+    padding: 20px;
+    text-align: center;
+  }
+}

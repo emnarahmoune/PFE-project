@@ -1031,5 +1031,59 @@
       </div>
     </div>
 
+    <!-- NOUVELLE PARTIE : COMPÉTENCES ET FORMATIONS -->
+    <div class="detail-layout">
+
+      <div class="detail-card">
+        <div class="card-title">
+          <div class="card-icon">🧠</div>
+          <div>
+            <h2>Compétences</h2>
+            <p>Compétences et niveaux de l’employé</p>
+          </div>
+        </div>
+
+        <div class="mini-list" *ngIf="managerEmploye.competences?.length; else noManagerCompetences">
+          <div class="mini-item" *ngFor="let c of managerEmploye.competences">
+            <strong>{{ c.nom || 'Compétence sans nom' }}</strong>
+            <span>Niveau : {{ c.niveau || 'Non renseigné' }}</span>
+          </div>
+        </div>
+
+        <ng-template #noManagerCompetences>
+          <p class="empty-inline">Aucune compétence renseignée.</p>
+        </ng-template>
+      </div>
+
+      <div class="detail-card">
+        <div class="card-title">
+          <div class="card-icon">📚</div>
+          <div>
+            <h2>Formations suivies</h2>
+            <p>Progression des formations de l’employé</p>
+          </div>
+        </div>
+
+        <div class="mini-list" *ngIf="managerEmploye.formations?.length; else noManagerFormations">
+          <div class="mini-item" *ngFor="let f of managerEmploye.formations">
+            <strong>{{ f.titre || 'Formation sans titre' }}</strong>
+
+            <span>
+              {{ f.statut || 'En cours' }} · {{ f.progression || 0 }}%
+            </span>
+
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="f.progression || 0"></div>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #noManagerFormations>
+          <p class="empty-inline">Aucune formation suivie.</p>
+        </ng-template>
+      </div>
+
+    </div>
+
   </section>
 </div>

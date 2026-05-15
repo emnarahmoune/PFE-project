@@ -50,12 +50,12 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import multiMonthPlugin from '@fullcalendar/multimonth';
 
-import { EmployeeCongeService } from '../employee/services/employee-conge.service';
+import { EmployeeCongeService } from '../../core/services/employee-conge.service';
 import {
   CongeResponse,
   DemandeConge,
   SoldeConges
-} from '../employee/models/conge.model';
+} from '../../core/models/conge.model';
 
 import { WorkflowService, Task } from '../../core/services/workflow.service';
 import { ManagerService } from '../../core/services/manager.service';

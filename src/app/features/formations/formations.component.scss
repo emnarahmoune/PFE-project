@@ -1338,3 +1338,133 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   RESPONSIVE MOBILE - FORMATIONS
+========================================================= */
+
+@media (max-width: 1024px) {
+  .hero-content,
+  .header,
+  .hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats-dashboard,
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .filter-toolbar {
+    grid-template-columns: 1fr !important;
+  }
+
+  .formations-grid,
+  .grid,
+  .cards-grid,
+  .recommendations-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .formations-saas,
+  .formation-container,
+  .formation-detail-container,
+  .container {
+    min-height: calc(100vh - 64px);
+  }
+
+  .hero-section,
+  .header,
+  .hero,
+  .section-title {
+    padding: 20px;
+    border-radius: 20px;
+    margin-bottom: 18px;
+  }
+
+  .hero-content h1,
+  .header h1,
+  .hero h1 {
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
+  .hero-content p,
+  .header p,
+  .hero p {
+    font-size: 14px;
+  }
+
+  .hero-actions,
+  .domain-filters,
+  .view-toggle {
+    width: 100%;
+  }
+
+  .hero-actions button,
+  .btn-primary,
+  .btn-outline,
+  .btn-ghost,
+  .btn-danger,
+  .btn-secondary,
+  .reset-btn,
+  .toggle-btn,
+  .filter-chip {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .stats-dashboard,
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .filter-toolbar {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .search-box,
+  .search-box input {
+    width: 100%;
+  }
+
+  .domain-filters {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .view-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .formations-grid,
+  .grid,
+  .cards-grid,
+  .recommendations-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .formation-card,
+  .card,
+  .reco-card {
+    border-radius: 20px;
+  }
+
+  .table-wrapper,
+  .table-card,
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 760px;
+  }
+}

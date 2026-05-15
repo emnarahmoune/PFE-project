@@ -1655,11 +1655,26 @@ input[type="range"]::-moz-range-thumb {
   background: linear-gradient(135deg, var(--primary), var(--success));
   box-shadow: 0 8px 18px rgba(67, 97, 238, 0.32);
 }
-
 .save {
-  margin-top: 34px;
-  width: 100%;
-  min-height: 52px;
+  display: block;
+  width: fit-content;
+  min-width: 260px;
+  margin: 28px auto 0;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 16px;
+  background: #4361ee;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(67, 97, 238, 0.22);
+  transition: all 0.2s ease;
+}
+
+.save:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(67, 97, 238, 0.3);
 }
 
 /* =========================================================

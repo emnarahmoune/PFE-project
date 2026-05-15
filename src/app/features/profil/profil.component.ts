@@ -48,7 +48,7 @@ import {
   EmployeProfil,
   EmployeProfilResponse,
   UpdateProfilRequest
-} from '../employee/models/employe-profil.model';
+} from '../../core/models/employe-profil.model';
 
 import { PictureService } from '../../core/services/picture.service';
 

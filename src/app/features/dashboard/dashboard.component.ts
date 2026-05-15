@@ -11,7 +11,10 @@ import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/services/auth.service';
 import { FormationService } from '../../core/services/formation.service';
 import { ManagerService, ManagerStats } from '../../core/services/manager.service';
-
+import {
+  EmployeeDashboardService,
+  EmployeeDashboardStats
+} from '../../core/services/employee-dashboard.service';
 import {
   BiDashboardService,
   DashboardAdminBi,
@@ -19,8 +22,10 @@ import {
   RecentEmployeeBi,
   TopCompetenceBi
 } from '../../core/services/bi-dashboard.service';
-
-import { DemandeConge } from '../employee/models/conge.model';
+import {
+  FormationRecommendationService,
+} from '../../core/services/formation-recommendation.service';
+import { DemandeConge } from '../../core/models/conge.model';
 import { EmployeeAvatarComponent } from '../../shared/layouts/components/employee-avatar/employee-avatar.component';
 
 type DashboardRole = 'ADMIN' | 'MANAGER' | 'EMPLOYE';
@@ -103,6 +108,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
   recommendations: any[] = [];
   powerBiEmployeeUrl: SafeResourceUrl | null = null;
 
+
+  employeeStats: EmployeeDashboardStats | null = null;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
@@ -110,7 +118,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private formationService: FormationService,
     private managerService: ManagerService,
-    private biDashboardService: BiDashboardService
+    private biDashboardService: BiDashboardService,
+    private employeeDashboardService: EmployeeDashboardService,
+    private formationRecommendationService: FormationRecommendationService,
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -162,24 +172,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.roleActif = this.normalizeRole(rawRole);
   }
 
-  private normalizeRole(role: string): DashboardRole {
-    const value = String(role || '').toUpperCase();
+private normalizeRole(role: string): DashboardRole {
+  const value = String(role || '').toUpperCase();
 
-    if (
-      value.includes('ADMIN') ||
-      value.includes('ADMIN_RH') ||
-      value.includes('RH')
-    ) {
-      return 'ADMIN';
-    }
-
-    if (value.includes('MANAGER')) {
-      return 'MANAGER';
-    }
-
-    return 'EMPLOYE';
+  if (
+    value.includes('MANAGER') ||
+    value.includes('ROLE_MANAGER')
+  ) {
+    return 'MANAGER';
   }
 
+  if (
+    value.includes('ADMIN_RH') ||
+    value.includes('ROLE_ADMIN_RH') ||
+    value.includes('ADMIN') ||
+    value.includes('ROLE_ADMIN')
+  ) {
+    return 'ADMIN';
+  }
+
+  return 'EMPLOYE';
+}
   isAdmin(): boolean {
     return this.roleActif === 'ADMIN';
   }
@@ -262,48 +275,66 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  getAdminDisplayName(): string {
-    const name = `${this.userPrenom || ''} ${this.userNom || ''}`.trim();
-
-    if (name) return name;
-    if (this.userEmail) return this.userEmail;
-
-    return 'Administrateur';
+ getAdminDisplayName(): string {
+  if (this.fullName && this.fullName !== 'Employé') {
+    return this.fullName;
   }
 
-  getManagerDisplayName(): string {
-    const name = `${this.userPrenom || ''} ${this.userNom || ''}`.trim();
+  const name = `${this.userPrenom || ''} ${this.userNom || ''}`.trim();
 
-    if (name) return name;
-    if (this.userEmail) return this.userEmail;
+  if (name) return name;
+  if (this.username && this.username !== 'Employé') return this.username;
+  if (this.email) return this.email;
+  if (this.userEmail) return this.userEmail;
 
-    return 'Manager';
+  return 'Administrateur';
+}
+
+getManagerDisplayName(): string {
+  if (this.fullName && this.fullName !== 'Employé') {
+    return this.fullName;
   }
 
-  getEmployeeDisplayName(): string {
-    return this.username || this.fullName || 'Employé';
+  const name = `${this.userPrenom || ''} ${this.userNom || ''}`.trim();
+
+  if (name) return name;
+  if (this.username && this.username !== 'Employé') return this.username;
+  if (this.email) return this.email;
+  if (this.userEmail) return this.userEmail;
+
+  return 'Manager';
+}
+
+getEmployeeDisplayName(): string {
+  if (this.fullName && this.fullName !== 'Employé') {
+    return this.fullName;
   }
+
+  if (this.username && this.username !== 'Employé') {
+    return this.username;
+  }
+
+  if (this.email) {
+    return this.email;
+  }
+
+  return 'Employé';
+}
+
 
   // =========================================================
   // POWER BI
   // =========================================================
 
   private initPowerBiUrls(): void {
-    if (environment.powerBiAdminUrl) {
-      this.powerBiAdminUrl =
-        this.sanitizer.bypassSecurityTrustResourceUrl(environment.powerBiAdminUrl);
-    }
-
-    if (environment.powerBiManagerUrl) {
-      this.powerBiManagerUrl =
-        this.sanitizer.bypassSecurityTrustResourceUrl(environment.powerBiManagerUrl);
-    }
-
-    if (environment.powerBiEmployeeUrl) {
-      this.powerBiEmployeeUrl =
-        this.sanitizer.bypassSecurityTrustResourceUrl(environment.powerBiEmployeeUrl);
-    }
+  if (environment.powerBiAdminUrl) {
+    this.powerBiAdminUrl =
+      this.sanitizer.bypassSecurityTrustResourceUrl(environment.powerBiAdminUrl);
   }
+
+  this.powerBiManagerUrl = null;
+  this.powerBiEmployeeUrl = null;
+}
 
   // =========================================================
   // ADMIN
@@ -867,27 +898,57 @@ export class DashboardComponent implements OnInit, OnDestroy {
   // EMPLOYE
   // =========================================================
 
-  loadEmployeeDashboard(): void {
-    this.loading = false;
-    this.errorMessage = null;
-    this.loadRecommendations();
+ loadEmployeeDashboard(): void {
+  this.loading = true;
+  this.errorMessage = null;
+
+  this.employeeDashboardService
+    .getMesStats()
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (response) => {
+        this.employeeStats = response.data;
+        this.loading = false;
+        this.loadRecommendations();
+      },
+      error: (err) => {
+        console.error('Erreur stats employé:', err);
+        this.employeeStats = null;
+        this.loading = false;
+        this.loadRecommendations();
+      }
+    });
+}
+loadRecommendations(): void {
+  this.formationRecommendationService
+    .generateMyRecommendations()
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (data: any[]) => {
+        console.log('DASHBOARD RECOMMANDATIONS IA =', data);
+        this.recommendations = Array.isArray(data) ? data : [];
+      },
+      error: (err: any) => {
+        console.error('Erreur recommandations dashboard:', err);
+        this.recommendations = [];
+      }
+    });
+}
+private getCurrentEmployeId(): number | null {
+  const currentUser = this.authService.getCurrentUser() as any;
+
+  const id =
+    currentUser?.employeId ||
+    currentUser?.employeeId ||
+    currentUser?.userId ||
+    currentUser?.id;
+
+  if (id && !Number.isNaN(Number(id))) {
+    return Number(id);
   }
 
-  loadRecommendations(): void {
-    this.formationService
-      .getRecommendations()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (data: any[]) => {
-          this.recommendations = data || [];
-        },
-        error: (err: any) => {
-          console.error('Erreur recommandations:', err);
-          this.recommendations = [];
-        }
-      });
-  }
-
+  return null;
+}
   // =========================================================
   // ACTIONS
   // =========================================================
@@ -975,4 +1036,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
   formatNumber(value?: number): string {
     return Number(value || 0).toFixed(1);
   }
+
+
+getProgressionChartStyle(): string {
+  const value = Math.min(Math.max(Number(this.employeeStats?.progressionFormations || 0), 0), 100);
+
+  return `conic-gradient(#ffffff ${value * 3.6}deg, rgba(255,255,255,0.25) 0deg)`;
+}
+
+getEmployeeBarWidth(value?: number): number {
+  const max = Math.max(
+    Number(this.employeeStats?.formationsTerminees || 0),
+    Number(this.employeeStats?.competencesValidees || 0),
+    Number(this.employeeStats?.certificatsObtenus || 0),
+    Number(this.employeeStats?.recommandationsIA || 0),
+    1
+  );
+
+  return Math.round((Number(value || 0) / max) * 100);
+}
+  
 }

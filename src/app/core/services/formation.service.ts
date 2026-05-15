@@ -86,4 +86,6 @@ export class FormationService {
   getRecommendations(): Observable<any[]> {
   return this.http.get<any[]>(`${this.apiUrl}/recommendations`);
 }
+
+
 }

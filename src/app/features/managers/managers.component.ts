@@ -9,7 +9,7 @@ import { EmployeService } from '../../core/services/employe.service';
 import { EmployeeAvatarComponent } from '../../shared/layouts/components/employee-avatar/employee-avatar.component';
 
 import { Employe } from '../../core/models/employe.model';
-import { DemandeConge } from '../employee/models/conge.model';
+import { DemandeConge } from '../../core/models/conge.model';
 
 type ManagersMode =
   | 'ADMIN_MANAGER_LISTE'

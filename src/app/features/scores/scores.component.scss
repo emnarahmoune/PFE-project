@@ -959,3 +959,101 @@ tr:hover td {
     text-align: left;
   }
 }
+
+
+/* =========================================================
+   RESPONSIVE MOBILE - SCORES RISQUE
+========================================================= */
+
+@media (max-width: 1024px) {
+  .hero-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .filters-section {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-scores {
+    padding: 0 0 32px;
+  }
+
+  .hero-section {
+    padding: 20px;
+    border-radius: 20px;
+    gap: 18px;
+  }
+
+  .hero-text h1 {
+    font-size: clamp(24px, 7vw, 30px);
+  }
+
+  .hero-text p {
+    font-size: 14px;
+  }
+
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    min-width: 0;
+    min-height: auto;
+    padding: 16px;
+  }
+
+  .distribution-section,
+  .filters-section,
+  .results-section,
+  .table-section {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .distribution-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .btn-export,
+  .btn-refresh,
+  .chip {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .chips {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dist-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dist-count {
+    text-align: left;
+  }
+
+  .table-wrapper,
+  .table-card,
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 760px;
+  }
+}

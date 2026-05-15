@@ -841,36 +841,39 @@ this.supportsArray.clear();
   // ADMIN DETAIL
   // =========================================================
 
-  loadFormationDetail(id: number): void {
-    this.loading = true;
+ loadFormationDetail(id: number): void {
+  this.loading = true;
+  this.participants = [];
 
-    this.formationService.getById(id)
-      .pipe(
-        finalize(() => this.loading = false),
-        takeUntil(this.destroy$)
-      )
-      .subscribe({
-        next: (res: any) => {
-          this.formation = this.extractFormation(res);
+  this.formationService.getById(id)
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (res: any) => {
+        this.formation = this.extractFormation(res);
 
-          if (res && Array.isArray(res.employes)) {
-            this.participants = res.employes;
-          } else if (Array.isArray(this.formation?.employes)) {
-            this.participants = this.formation.employes;
-          } else if (Array.isArray(this.formation?.participants)) {
-            this.participants = this.formation.participants;
-          } else {
-            this.participants = [];
-          }
-        },
-        error: (err: any) => {
-          console.error('Erreur chargement formation:', err);
-          this.participants = [];
-          this.toast('Erreur chargement formation');
-        }
-      });
-  }
-
+        this.formationService.getParticipants(id)
+          .pipe(finalize(() => this.loading = false), takeUntil(this.destroy$))
+          .subscribe({
+            next: (participantsData: any) => {
+              this.participants = Array.isArray(participantsData)
+                ? participantsData
+                : participantsData?.data || [];
+            },
+            error: (err: any) => {
+              console.error('Erreur chargement participants détail:', err);
+              this.participants = [];
+            }
+          });
+      },
+      error: (err: any) => {
+        console.error('Erreur chargement formation:', err);
+        this.formation = null;
+        this.participants = [];
+        this.loading = false;
+        this.toast('Erreur chargement formation');
+      }
+    });
+}
   goBack(): void {
     this.location.back();
   }
@@ -914,19 +917,41 @@ this.supportsArray.clear();
       });
   }
 
-  retirerParticipant(p: any): void {
-    if (!this.formation?.id || !p?.id) return;
-
-    this.formationService.retirerParticipant(this.formation.id, p.id)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => this.loadFormationDetail(this.formation.id),
-       error: (err: any) => {
-          console.error(err);
-          this.toast('Erreur retrait participant');
-        }
-      });
+retirerParticipant(p: any): void {
+  if (!this.formation?.id) {
+    this.toast('Formation invalide');
+    return;
   }
+
+  const employeId =
+    p?.employeId ||
+    p?.employeeId ||
+    p?.employe?.id ||
+    p?.id;
+
+  if (!employeId) {
+    console.error('Participant sans employeId:', p);
+    this.toast('Employé introuvable');
+    return;
+  }
+
+  if (!confirm(`Retirer ${p.prenom || ''} ${p.nom || ''} de cette formation ?`)) {
+    return;
+  }
+
+  this.formationService.retirerParticipant(this.formation.id, employeId)
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: () => {
+        this.toast('Participant retiré avec succès ✅', 'OK');
+        this.loadFormationDetail(this.formation.id);
+      },
+      error: (err: any) => {
+        console.error('Erreur retrait participant:', err);
+        this.toast('Erreur retrait participant ❌');
+      }
+    });
+}
 
   getCompletionRate(): number {
     if (!this.participants.length) return 0;
@@ -1150,6 +1175,66 @@ voirFormation(formation: any): void {
       error: (err: any) => {
         console.error('Erreur chargement vidéos:', err);
         this.videos = [];
+      }
+    });
+}
+
+
+
+
+handleFormationMainButton(ef: any, index: number): void {
+  if ((ef?.progression || 0) >= 100 && this.selectedFormationIndex !== index) {
+    this.restartFormationAndOpen(ef, index);
+    return;
+  }
+
+  this.handleFormationButton(ef, index);
+}
+
+
+
+
+restartFormationAndOpen(ef: any, index: number): void {
+  const formation = ef?.formation || ef;
+  const formationId = formation?.id;
+
+  if (!formationId) {
+    this.toast('Formation invalide');
+    return;
+  }
+
+  this.formationService.resetFormationProgress(formationId)
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: () => {
+        ef.progression = 0;
+        ef.statut = 'EN_COURS';
+
+        this.completedVideos = [];
+        this.videos = [];
+        this.selectedFormationIndex = index;
+        this.selectedFormationId = formationId;
+        this.revoirModeFormationId = formationId;
+
+        this.formationService.getVideos(formationId)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: (videosData: any[]) => {
+              this.videos = (Array.isArray(videosData) ? videosData : []).map((v: any) => ({
+                ...v,
+                urlYoutube: v.urlYoutube || v.url_youtube || v.url || '',
+                completedView: false
+              }));
+            },
+            error: (err: any) => {
+              console.error('Erreur chargement vidéos après reset:', err);
+              this.videos = [];
+            }
+          });
+      },
+      error: (err: any) => {
+        console.error('Erreur reset formation:', err);
+        this.toast('Erreur lors de la réinitialisation ❌');
       }
     });
 }

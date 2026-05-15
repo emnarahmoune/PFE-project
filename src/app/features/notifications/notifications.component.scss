@@ -828,3 +828,86 @@
     font-size: 0.58rem;
   }
 }
+
+
+/* =========================================================
+   RESPONSIVE MOBILE - NOTIFICATIONS
+========================================================= */
+
+@media (max-width: 1024px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .notifications-list,
+  .notif-list {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .notifications-container {
+    min-height: calc(100vh - 64px);
+    padding: 0 0 28px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .header-content h1 {
+    font-size: clamp(24px, 8vw, 30px);
+  }
+
+  .header-content .subtitle {
+    font-size: 14px;
+  }
+
+  .header-actions,
+  .header-actions button,
+  .btn-refresh {
+    width: 100%;
+  }
+
+  .btn-refresh {
+    min-height: 46px;
+  }
+
+  .stats-cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  .stat-card {
+    min-width: 0;
+    padding: 16px;
+  }
+
+  .filters,
+  .filter-tabs {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .notification-card,
+  .notif-card,
+  .notif-item {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .notif-item {
+    align-items: flex-start;
+  }
+
+  .notif-body {
+    min-width: 0;
+  }
+
+  .notif-message {
+    overflow-wrap: anywhere;
+  }
+}

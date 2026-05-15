@@ -8,7 +8,7 @@ import {
   EmployeProfil,
   EmployeProfilResponse,
   UpdateProfilRequest
-} from '../../features/employee/models/employe-profil.model';
+} from '../models/employe-profil.model';
 
 export interface ChangePasswordData {
   oldPassword: string;

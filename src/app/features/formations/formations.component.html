@@ -672,24 +672,24 @@
         </button>
 
         <!-- VOIR CONTENU -->
-        <button
-          class="btn-primary"
-          type="button"
-          *ngIf="ef?.formation?.id || ef?.id"
-          (click)="handleFormationButton(ef, i)">
+       <button
+  class="btn-primary"
+  type="button"
+  *ngIf="ef?.formation?.id || ef?.id"
+  (click)="handleFormationMainButton(ef, i)">
 
-          <span *ngIf="selectedFormationIndex !== i && (ef?.progression || 0) < 100">
-            ▶ Voir contenu
-          </span>
+  <span *ngIf="selectedFormationIndex !== i && (ef?.progression || 0) < 100">
+    ▶ Voir contenu
+  </span>
 
-          <span *ngIf="selectedFormationIndex !== i && (ef?.progression || 0) === 100">
-            🔁 Revoir la formation
-          </span>
+  <span *ngIf="selectedFormationIndex !== i && (ef?.progression || 0) === 100">
+    🔁 Revoir la formation
+  </span>
 
-          <span *ngIf="selectedFormationIndex === i">
-            ✖ Fermer
-          </span>
-        </button>
+  <span *ngIf="selectedFormationIndex === i">
+    ✖ Fermer
+  </span>
+</button>
 
         <!-- VIDEOS -->
         <div *ngIf="selectedFormationIndex === i" class="video-section">
@@ -728,21 +728,21 @@
               ⚠️ URL vidéo indisponible
             </p>
 
-            <button
-              *ngIf="!v.completedView"
-              class="btn-secondary"
-              type="button"
-              (click)="completeVideo(v, ef)">
-              ✔ Marquer comme terminé
-            </button>
+ <button
+  *ngIf="!v.completedView && (ef?.progression || 0) < 100"
+  class="btn-secondary"
+  type="button"
+  (click)="completeVideo(v, ef)">
+  ✔ Marquer comme terminé
+</button>
 
-            <button
-              *ngIf="v.completedView"
-              class="btn-secondary done"
-              type="button"
-              disabled>
-              ✅ Terminé
-            </button>
+<button
+  *ngIf="v.completedView"
+  class="btn-secondary done"
+  type="button"
+  disabled>
+  ✅ Vidéo terminée
+</button>
 
           </div>
 

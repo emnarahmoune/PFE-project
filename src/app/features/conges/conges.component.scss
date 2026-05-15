@@ -2520,3 +2520,141 @@ a {
     padding: 18px;
   }
 }
+
+
+/* =========================================================
+   RESPONSIVE MOBILE - CONGES
+========================================================= */
+
+@media (max-width: 1024px) {
+  .hero-content,
+  .glass-hero .hero-content,
+  .page-header,
+  .approval-header,
+  .validation-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats-rainbow,
+  .stats-grid,
+  .solde-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .requests-grid,
+  .cards-grid,
+  .conges-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .form-grid,
+  .form-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .conges-page,
+  .glass-conges,
+  .demande-conge-container,
+  .approbation-page,
+  .validation-container,
+  .conges-container {
+    min-height: calc(100vh - 64px);
+    padding: 14px;
+    padding-bottom: 32px;
+  }
+
+  .glass-hero,
+  .page-header,
+  .form-card,
+  .validation-card,
+  .approval-card,
+  .glass-progress,
+  .selection-toolbar {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .hero-content {
+    gap: 16px;
+  }
+
+  .hero-text h1,
+  .page-header h1 {
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
+  .stats-rainbow,
+  .stats-grid,
+  .solde-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .stat-glass,
+  .stat-card {
+    min-width: 0;
+  }
+
+  .selection-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .selection-toolbar button,
+  .floating-btn,
+  .select-mode-btn,
+  .delete-selected,
+  .refresh-btn,
+  .back-button,
+  .btn-submit,
+  .btn-cancel,
+  .btn-danger,
+  .btn-confirm,
+  .btn-refresh,
+  .action-btn {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .request-card {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .request-header {
+    grid-template-columns: auto 1fr;
+    align-items: flex-start;
+  }
+
+  .status-badge {
+    grid-column: 1 / -1;
+    justify-self: flex-start;
+  }
+
+  .request-body {
+    grid-template-columns: 1fr !important;
+  }
+
+  .card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-link {
+    width: 100%;
+  }
+
+  .table-wrapper,
+  .table-card,
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 760px;
+  }
+}
