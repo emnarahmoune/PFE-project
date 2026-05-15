@@ -19,7 +19,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -171,7 +171,11 @@ public class ManagerServiceImpl implements ManagerService {
         manager.setPassword(employe.getPassword());
         manager.setDateEmbauche(employe.getDateEmbauche());
         manager.setPoste(employe.getPoste());
-        manager.setSalaire(employe.getSalaire());
+        manager.setSalaire(
+    dto.getSalaire() != null
+        ? java.math.BigDecimal.valueOf(dto.getSalaire())
+        : null
+);
         manager.setStatut(employe.getStatut());
         manager.setDepartement(dto.getDepartement() != null ? dto.getDepartement() : employe.getDepartement());
         manager.setSoldeConges(employe.getSoldeConges());
@@ -236,7 +240,11 @@ public class ManagerServiceImpl implements ManagerService {
         }
 
         if (dto.getSalaire() != null) {
-            manager.setSalaire(dto.getSalaire());
+            manager.setSalaire(
+    dto.getSalaire() != null
+        ? java.math.BigDecimal.valueOf(dto.getSalaire())
+        : null
+);
         }
 
         if (dto.getStatut() != null) {

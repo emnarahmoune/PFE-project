@@ -17,4 +17,7 @@ public interface FormationRecommendationRepository extends JpaRepository<Formati
 
     @Transactional
     void deleteByEmployeIdAndOffreIdIsNullAndType(Long employeId, String type);
+
+
+    List<FormationRecommendation> findByEmployeId(Long employeId);
 }

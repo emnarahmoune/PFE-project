@@ -5,7 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.math.BigDecimal;
 /**
  * Entité Service - Représente un département ou service de l'entreprise
  *
@@ -140,7 +140,8 @@ public class Service {
         return this.employes.stream()
                 .filter(e -> "ACTIF".equals(e.getStatut()))
                 .filter(e -> e.getSalaire() != null)
-                .mapToDouble(Employe::getSalaire)
+                .map(Employe::getSalaire)
+.mapToDouble(BigDecimal::doubleValue)
                 .sum();
     }
 

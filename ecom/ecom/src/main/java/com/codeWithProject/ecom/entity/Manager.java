@@ -126,4 +126,23 @@ public class Manager extends Employe {
 
         return rapport.toString();
     }
+
+
+
+    @Transient
+public boolean peutSeConnecter() {
+    return Boolean.TRUE.equals(this.getActif())
+            && !Boolean.TRUE.equals(this.getCompteVerrouille());
+}
+
+public void activer() {
+    this.setActif(true);
+    this.setCompteVerrouille(false);
+    this.setStatut("ACTIF");
+}
+
+public void desactiver() {
+    this.setActif(false);
+    this.setStatut("INACTIF");
+}
 }

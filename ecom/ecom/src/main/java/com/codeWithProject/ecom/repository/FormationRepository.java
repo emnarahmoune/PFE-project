@@ -127,4 +127,17 @@ List<Formation> findRecommendedByCompetenceIds(
     WHERE f.actif = true OR f.actif IS NULL
 """)
 List<Formation> findActiveWithDetails();
+
+
+
+
+@Query("""
+    SELECT f FROM Formation f
+    WHERE f.id NOT IN (
+        SELECT ef.formation.id
+        FROM EmployeFormation ef
+        WHERE ef.employe.id = :employeId
+    )
+""")
+List<Formation> findFormationsNonSuiviesParEmploye(@Param("employeId") Long employeId);
 }

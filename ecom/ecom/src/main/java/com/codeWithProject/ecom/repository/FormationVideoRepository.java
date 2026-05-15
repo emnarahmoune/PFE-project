@@ -22,4 +22,10 @@ public interface FormationVideoRepository extends JpaRepository<FormationVideo, 
             Long formationId,
             String keyword
     );
+
+
+
+  long countByFormationId(Long formationId);
+
+List<FormationVideo> findByFormation_IdOrderByOrdre(Long formationId);
 }

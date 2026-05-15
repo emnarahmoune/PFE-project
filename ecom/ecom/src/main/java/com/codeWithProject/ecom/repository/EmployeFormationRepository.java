@@ -16,6 +16,15 @@ public interface EmployeFormationRepository extends JpaRepository<EmployeFormati
 
 
 
+    Optional<EmployeFormation> findByEmploye_IdAndFormation_Id(
+        Long employeId,
+        Long formationId
+);
+
+void deleteByEmploye_IdAndFormation_Id(
+        Long employeId,
+        Long formationId
+);
 
     //  formations d’un employé
 List<EmployeFormation> findByEmploye_Id(Long employeId);
@@ -24,9 +33,6 @@ List<EmployeFormation> findByEmploye_Id(Long employeId);
 
     //  vérifier si déjà inscrit
     boolean existsByEmploye_IdAndFormation_Id(Long employeId, Long formationId);
-
-    //  récupérer une inscription spécifique
-    Optional<EmployeFormation> findByEmploye_IdAndFormation_Id(Long employeId, Long formationId);
 
     //  formations en cours
     List<EmployeFormation> findByEmploye_IdAndStatut(Long employeId, String statut);

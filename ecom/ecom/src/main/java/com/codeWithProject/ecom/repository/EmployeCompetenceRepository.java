@@ -16,6 +16,7 @@ public interface EmployeCompetenceRepository extends JpaRepository<EmployeCompet
 
 
 
+
     // ===== RECHERCHES PAR EMPLOYÉ =====
 
     @Query("SELECT ec FROM EmployeCompetence ec WHERE ec.employe.id = :employeId ORDER BY ec.dateAcquisition DESC")

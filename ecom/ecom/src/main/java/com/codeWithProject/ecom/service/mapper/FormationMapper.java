@@ -140,7 +140,7 @@ public class FormationMapper {
             }
         }
 
-        formation.setVideos(videos);
+        formation.setVideos(new java.util.HashSet<>(videos));
 
         // ===== SUPPORTS PDF =====
         List<FormationSupport> supports = new ArrayList<>();
@@ -161,7 +161,7 @@ public class FormationMapper {
             }
         }
 
-        formation.setSupports(supports);
+        formation.setSupports(new java.util.HashSet<>(supports));
 
         return formation;
     }

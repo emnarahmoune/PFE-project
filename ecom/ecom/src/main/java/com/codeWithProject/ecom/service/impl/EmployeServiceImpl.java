@@ -9,7 +9,7 @@ import com.codeWithProject.ecom.service.mapper.EmployeMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
+import java.math.BigDecimal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -75,7 +75,11 @@ public class EmployeServiceImpl implements EmployeService {
         employe.setDepartement(dto.getDepartement());
         employe.setAdresse(dto.getAdresse());
         employe.setMatricule(dto.getMatricule());
-        employe.setSalaire(dto.getSalaire());
+        employe.setSalaire(
+        dto.getSalaire() != null
+                ? dto.getSalaire()
+                : null
+);
         employe.setDateEmbauche(dto.getDateEmbauche());
         employe.setSoldeConges(dto.getSoldeConges());
         employe.setPhotoUrl(dto.getPhotoUrl());
@@ -293,15 +297,40 @@ public class EmployeServiceImpl implements EmployeService {
                 .map(mapper::toDto);
     }
 
-    @Override
-    public Optional<EmployeDTO> findByEmail(String email) {
-        if (email == null || email.isBlank()) {
-            return Optional.empty();
-        }
-
-        return employeRepository.findByEmailIgnoreCase(email.trim())
-                .map(mapper::toDto);
+   @Override
+public Optional<EmployeDTO> findByEmail(String email) {
+    if (email == null || email.isBlank()) {
+        return Optional.empty();
     }
+
+    return employeRepository.findByEmailIgnoreCase(email.trim())
+            .map(employe -> {
+
+                EmployeDTO dto = mapper.toDto(employe);
+
+                Integer soldeTotal = employe.getSoldeConges() == null
+                        ? 0
+                        : employe.getSoldeConges();
+
+                int joursPris = demandeCongeRepository
+                        .findByEmploye_IdOrderByDateDemandeDesc(employe.getId())
+                        .stream()
+                        .filter(c ->
+                                "APPROUVE".equalsIgnoreCase(String.valueOf(c.getStatut()))
+                                        || "APPROUVÉ".equalsIgnoreCase(String.valueOf(c.getStatut()))
+                                        || "ACCEPTE".equalsIgnoreCase(String.valueOf(c.getStatut()))
+                                        || "ACCEPTÉ".equalsIgnoreCase(String.valueOf(c.getStatut()))
+                        )
+                        .mapToInt(c -> c.getJoursOuvres() == null ? 0 : c.getJoursOuvres())
+                        .sum();
+
+                int soldeRestant = Math.max(soldeTotal - joursPris, 0);
+
+                dto.setSoldeConges(soldeRestant);
+
+                return dto;
+            });
+}
 
     @Override
     public Optional<EmployeDTO> findByMatricule(String matricule) {
@@ -741,8 +770,8 @@ public void changePassword(Jwt jwt, ChangePasswordRequest dto) {
         }
 
         if (salaire != null) {
-            emp.setSalaire(salaire);
-        }
+    emp.setSalaire(BigDecimal.valueOf(salaire));
+}
 
         if (departement != null) {
             emp.setDepartement(departement);
@@ -913,57 +942,75 @@ public void delete(Long id) {
         return result;
     }
 
-    @Override
-    public Double calculerMasseSalariale() {
-        return employeRepository.findAll()
-                .stream()
-                .map(Employe::getSalaire)
-                .filter(Objects::nonNull)
-                .mapToDouble(Double::doubleValue)
-                .sum();
+ @Override
+public Double calculerMasseSalariale() {
+    return employeRepository.findAll()
+            .stream()
+            .map(Employe::getSalaire)
+            .filter(Objects::nonNull)
+            .mapToDouble(BigDecimal::doubleValue)
+            .sum();
+}
+
+@Override
+public Double calculerSalaireMoyen() {
+    List<BigDecimal> salaires = employeRepository.findAll()
+            .stream()
+            .map(Employe::getSalaire)
+            .filter(Objects::nonNull)
+            .toList();
+
+    if (salaires.isEmpty()) {
+        return 0.0;
     }
 
-    @Override
-    public Double calculerSalaireMoyen() {
-        List<Double> salaires = employeRepository.findAll()
-                .stream()
-                .map(Employe::getSalaire)
-                .filter(Objects::nonNull)
-                .toList();
-
-        if (salaires.isEmpty()) {
-            return 0.0;
-        }
-
-        return salaires.stream()
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0);
-    }
+    return salaires.stream()
+            .mapToDouble(BigDecimal::doubleValue)
+            .average()
+            .orElse(0.0);
+}
 
     @Override
     public TableauBordEmployeDTO getStatsTableauBord() {
         return new TableauBordEmployeDTO();
     }
 
-    @Override
-    public SoldeCongesDTO getSoldeCongesByEmail(String email) {
-        Employe employe = employeRepository.findByEmailIgnoreCase(email.trim())
-                .orElseThrow(() -> new RuntimeException("Employé introuvable avec email: " + email));
+   @Override
+public SoldeCongesDTO getSoldeCongesByEmail(String email) {
+    Employe employe = employeRepository.findByEmailIgnoreCase(email.trim())
+            .orElseThrow(() -> new RuntimeException("Employé introuvable avec email: " + email));
 
-        SoldeCongesDTO dto = new SoldeCongesDTO();
+    Integer soldeTotal = employe.getSoldeConges() == null ? 0 : employe.getSoldeConges();
 
-        try {
-            dto.getClass().getMethod("setEmployeId", Long.class).invoke(dto, employe.getId());
-        } catch (Exception ignored) {}
+    int joursPris = demandeCongeRepository.findByEmploye_IdOrderByDateDemandeDesc(employe.getId())
+            .stream()
+            .filter(c ->
+                    "APPROUVE".equalsIgnoreCase(String.valueOf(c.getStatut()))
+                            || "APPROUVÉ".equalsIgnoreCase(String.valueOf(c.getStatut()))
+                            || "ACCEPTE".equalsIgnoreCase(String.valueOf(c.getStatut()))
+                            || "ACCEPTÉ".equalsIgnoreCase(String.valueOf(c.getStatut()))
+            )
+            .mapToInt(c -> c.getJoursOuvres() == null ? 0 : c.getJoursOuvres())
+            .sum();
 
-        try {
-            dto.getClass().getMethod("setSoldeConges", Integer.class).invoke(dto, employe.getSoldeConges());
-        } catch (Exception ignored) {}
+    int soldeRestant = Math.max(soldeTotal - joursPris, 0);
 
-        return dto;
-    }
+    SoldeCongesDTO dto = new SoldeCongesDTO();
 
+    try {
+        dto.getClass().getMethod("setEmployeId", Long.class).invoke(dto, employe.getId());
+    } catch (Exception ignored) {}
+
+    try {
+        dto.getClass().getMethod("setSoldeConges", Integer.class).invoke(dto, soldeRestant);
+    } catch (Exception ignored) {}
+
+    try {
+        dto.getClass().getMethod("setSoldeCongesRestants", Integer.class).invoke(dto, soldeRestant);
+    } catch (Exception ignored) {}
+
+    return dto;
+}
     // =========================
     // HELPERS
     // =========================

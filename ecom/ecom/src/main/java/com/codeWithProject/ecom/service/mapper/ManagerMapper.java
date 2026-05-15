@@ -19,7 +19,11 @@ public class ManagerMapper {
         dto.setEmail(entity.getEmail());
         dto.setTelephone(entity.getTelephone());
         dto.setPoste(entity.getPoste());
-        dto.setSalaire(entity.getSalaire());
+        dto.setSalaire(
+    entity.getSalaire() != null
+        ? entity.getSalaire().doubleValue()
+        : null
+);
         dto.setStatut(entity.getStatut());
         dto.setDepartement(entity.getDepartement());
         dto.setSoldeConges(entity.getSoldeConges());
@@ -76,7 +80,11 @@ public class ManagerMapper {
         entity.setTelephone(dto.getTelephone());
         entity.setDateEmbauche(dto.getDateEmbauche());
         entity.setPoste(dto.getPoste());
-        entity.setSalaire(dto.getSalaire());
+        entity.setSalaire(
+    dto.getSalaire() != null
+        ? java.math.BigDecimal.valueOf(dto.getSalaire())
+        : null
+);
         entity.setStatut(dto.getStatut() != null ? dto.getStatut() : "ACTIF");
         entity.setDepartement(dto.getDepartement());
         entity.setSoldeConges(dto.getSoldeConges() != null ? dto.getSoldeConges() : 25);

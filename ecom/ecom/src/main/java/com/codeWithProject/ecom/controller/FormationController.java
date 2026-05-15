@@ -999,4 +999,14 @@ private void addCertificateInfoCell(
 
     table.addCell(cell);
 }
+
+
+@DeleteMapping("/{formationId}/participants/{employeId}")
+public ResponseEntity<Void> retirerParticipant(
+        @PathVariable Long formationId,
+        @PathVariable Long employeId
+) {
+    formationService.retirerParticipant(formationId, employeId);
+    return ResponseEntity.noContent().build();
+}
 }

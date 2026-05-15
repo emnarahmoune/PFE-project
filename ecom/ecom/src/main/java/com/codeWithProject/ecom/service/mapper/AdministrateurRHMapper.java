@@ -19,7 +19,11 @@ public class AdministrateurRHMapper {
         dto.setTelephone(entity.getTelephone());
         dto.setPoste(entity.getPoste());
         dto.setDepartement(entity.getDepartement());
-        dto.setSalaire(entity.getSalaire());
+        dto.setSalaire(
+    entity.getSalaire() != null
+        ? entity.getSalaire().doubleValue()
+        : null
+);
         dto.setStatut(entity.getStatut());
         dto.setActif(entity.getActif());
         dto.setDateEmbauche(entity.getDateEmbauche());
@@ -53,14 +57,17 @@ public class AdministrateurRHMapper {
         entity.setTelephone(dto.getTelephone());
         entity.setPoste(dto.getPoste());
         entity.setDepartement(dto.getDepartement());
-        entity.setSalaire(dto.getSalaire());
+        entity.setSalaire(
+    dto.getSalaire() != null
+        ? java.math.BigDecimal.valueOf(dto.getSalaire())
+        : null
+);
         entity.setStatut(dto.getStatut() != null ? dto.getStatut() : "ACTIF");
         entity.setActif(dto.getActif() != null ? dto.getActif() : true);
         entity.setDateEmbauche(dto.getDateEmbauche());
         entity.setDateCreation(dto.getDateCreation());
         entity.setSoldeConges(dto.getSoldeConges() != null ? dto.getSoldeConges() : 25);
         entity.setRole(dto.getRole() != null ? dto.getRole() : "ADMIN_RH");
-        entity.setTypeEmploye(com.codeWithProject.ecom.entity.Employe.TYPE_ADMIN_RH);
         return entity;
     }
 }

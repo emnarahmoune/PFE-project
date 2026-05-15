@@ -1,5 +1,5 @@
 package com.codeWithProject.ecom.service.impl;
-
+import java.math.BigDecimal;
 import com.codeWithProject.ecom.dto.auth.AuthResponse;
 import com.codeWithProject.ecom.dto.auth.LoginRequest;
 import com.codeWithProject.ecom.dto.auth.RegisterRequest;
@@ -45,7 +45,7 @@ public class AuthServiceImpl implements AuthService {
                 .telephone(request.getTelephone())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .dateEmbauche(LocalDate.now())
-                .salaire(0.0)
+                .salaire(BigDecimal.ZERO)
                 .statut("ACTIF")
                 .soldeConges(25)
                 .actif(true)
@@ -53,7 +53,6 @@ public class AuthServiceImpl implements AuthService {
                 .tentativesEchec(0)
                 .compteVerrouille(false)
                 .role("user")
-                .typeEmploye(Employe.TYPE_EMPLOYE)
                 .build();
 
         Employe saved = employeRepository.save(employe);

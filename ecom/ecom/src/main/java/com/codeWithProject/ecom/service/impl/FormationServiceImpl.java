@@ -671,4 +671,25 @@ private List<Formation> callFlaskAndMapToFormations(
     private int convertLevelToInt(Integer niveau) {
         return niveau != null ? niveau : 0;
     }
+
+
+    @Override
+@Transactional
+public void retirerParticipant(Long formationId, Long employeId) {
+
+    Formation formation = formationRepository.findById(formationId)
+            .orElseThrow(() -> new RuntimeException("Formation introuvable"));
+
+    Employe employe = employeRepository.findById(employeId)
+            .orElseThrow(() -> new RuntimeException("Employé introuvable"));
+
+    EmployeFormation employeFormation =
+            employeFormationRepository
+                    .findByEmploye_IdAndFormation_Id(employeId, formationId)
+                    .orElseThrow(() ->
+                            new RuntimeException("Inscription employé-formation introuvable"));
+
+    employeFormationRepository.delete(employeFormation);
+
+}
 }

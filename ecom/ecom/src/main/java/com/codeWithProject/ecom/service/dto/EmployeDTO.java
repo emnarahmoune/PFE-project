@@ -88,6 +88,7 @@ private List<FormationEmployeDTO> formations;
 private String employePhotoProfil;
 private String photoUrl;
 
+private Integer soldeCongesRestants;
 
 private List<HistoriqueCongeDTO> conges;
 private List<EvaluationDTO> evaluations;

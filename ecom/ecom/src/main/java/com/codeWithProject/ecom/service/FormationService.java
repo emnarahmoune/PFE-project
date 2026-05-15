@@ -15,6 +15,9 @@ public interface FormationService {
 
     Formation getById(Long id);
 
+
+    void retirerParticipant(Long formationId, Long employeId);
+    
     Map<String, Object> getByIdComplete(Long id);
 
     Map<String, Object> getByIdWithEmployes(Long id);

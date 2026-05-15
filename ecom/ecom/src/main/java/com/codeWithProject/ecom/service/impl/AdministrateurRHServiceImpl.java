@@ -173,7 +173,9 @@ public class AdministrateurRHServiceImpl implements AdministrateurRHService {
 
         // Mise à jour d'autres champs si nécessaire
         if (dto.getPoste() != null) admin.setPoste(dto.getPoste());
-        if (dto.getSalaire() != null) admin.setSalaire(dto.getSalaire());
+        if (dto.getSalaire() != null) {
+    admin.setSalaire(java.math.BigDecimal.valueOf(dto.getSalaire()));
+}
         if (dto.getDepartement() != null) admin.setDepartement(dto.getDepartement());
 
         AdministrateurRH saved = administrateurRHRepository.save(admin);

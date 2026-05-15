@@ -1,5 +1,5 @@
 package com.codeWithProject.ecom.controller.auth;
-
+import java.math.BigDecimal;
 import com.codeWithProject.ecom.entity.Employe;
 import com.codeWithProject.ecom.repository.EmployeRepository;
 import com.codeWithProject.ecom.service.RoleProvisioningService;
@@ -75,7 +75,7 @@ public class AuthController {
                     .password("keycloak-auth")
                     .dateEmbauche(LocalDate.now())
                     .poste("À définir")
-                    .salaire(0.0)
+                    .salaire(BigDecimal.ZERO)
                     .statut("ACTIF")
                     .departement("À définir")
                     .soldeConges(25)

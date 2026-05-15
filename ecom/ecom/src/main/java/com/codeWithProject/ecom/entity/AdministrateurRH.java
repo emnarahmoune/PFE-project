@@ -1,5 +1,5 @@
 package com.codeWithProject.ecom.entity;
-
+import java.math.BigDecimal;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -56,7 +56,7 @@ public class AdministrateurRH extends Employe {
         admin.setPassword(password);
         admin.setDateEmbauche(dateEmbauche);
 
-        admin.setSalaire(0.0);
+        admin.setSalaire(BigDecimal.ZERO);
         admin.setStatut("ACTIF");
         admin.setSoldeConges(25);
 
@@ -70,6 +70,13 @@ public class AdministrateurRH extends Employe {
         return admin;
     }
 
+
+
+    @Transient
+public boolean peutSeConnecter() {
+    return Boolean.TRUE.equals(this.getActif())
+            && !Boolean.TRUE.equals(this.getCompteVerrouille());
+}
     @Transient
     public boolean isActif() {
         return Boolean.TRUE.equals(this.getActif());
