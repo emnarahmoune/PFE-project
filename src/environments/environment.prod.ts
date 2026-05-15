@@ -1,17 +1,16 @@
 export const environment = {
   production: true,
 
-  apiUrl: '/api',
-  appName: 'Portail RH',
+apiUrl: 'https://pfe-project-6txv.onrender.com/api',  appName: 'Portail RH',
   version: '1.0.0',
 
   keycloak: {
-    url: 'https://keycloak.votre-domaine.com',
+    url: 'https://tremble-exhaust-prankish.ngrok-free.dev',
     realm: 'portail_rh',
     clientId: 'portail_rh_frontend',
 
-    redirectUri: 'https://votre-domaine.com/',
-    postLogoutRedirectUri: 'https://votre-domaine.com/auth/login',
+    redirectUri: 'https://front-gules-theta.vercel.app/',
+    postLogoutRedirectUri: 'https://front-gules-theta.vercel.app/auth/login',
 
     sslRequired: 'external',
     publicClient: true,

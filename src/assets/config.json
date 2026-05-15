@@ -1,0 +1,6 @@
+{
+  "keycloakUrl": "https://tremble-exhaust-prankish.ngrok-free.dev",
+  "realm": "portail_rh",
+  "clientId": "portail_rh_frontend",
+  "frontendUrl": "https://front-gules-theta.vercel.app"
+}
