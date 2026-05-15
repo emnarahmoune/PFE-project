@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -30,16 +30,17 @@ public class Manager extends Employe {
 
     // ================= RELATIONS =================
 
-    @OneToMany(mappedBy = "manager", fetch = FetchType.LAZY)
-    @ToString.Exclude
-    @Builder.Default
-    private List<Employe> employesGeres = new ArrayList<>();
+  @OneToMany(mappedBy = "manager", fetch = FetchType.LAZY)
+@ToString.Exclude
+@JsonIgnore
+@Builder.Default
+private List<Employe> employesGeres = new ArrayList<>();
 
-    @OneToMany(mappedBy = "manager", fetch = FetchType.LAZY)
-    @ToString.Exclude
-    @JsonIgnoreProperties({"employe", "manager"})
-    @Builder.Default
-    private List<DemandeConge> demandesCongeAValider = new ArrayList<>();
+   @OneToMany(mappedBy = "manager", fetch = FetchType.LAZY)
+@ToString.Exclude
+@JsonIgnore
+@Builder.Default
+private List<DemandeConge> demandesCongeAValider = new ArrayList<>();
 
     // ================= MÉTHODES =================
 

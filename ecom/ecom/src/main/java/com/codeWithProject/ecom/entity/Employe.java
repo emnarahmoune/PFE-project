@@ -115,11 +115,17 @@ public void deduireConges(Integer jours) {
     // RELATIONS
     // =========================
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "manager_id")
-    @Fetch(FetchMode.SELECT)
-    @JsonIgnoreProperties({"employesGeres"})
-    private Employe manager;
+    @ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(name = "manager_id")
+@JsonIgnoreProperties({
+        "manager",
+        "employesGeres",
+        "demandesConge",
+        "competences",
+        "employeFormations",
+        "service"
+})
+private Employe manager;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id")

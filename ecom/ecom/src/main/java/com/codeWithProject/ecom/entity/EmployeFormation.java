@@ -45,12 +45,12 @@ public class EmployeFormation {
     }
 
 
-@ManyToOne(fetch = FetchType.EAGER)
+@ManyToOne(fetch = FetchType.LAZY)
 @JoinColumn(name = "employe_id")
 @JsonIgnore // ✅ PLUS SIMPLE ET SÛR
 private Employe employe;
 
-@ManyToOne(fetch = FetchType.EAGER)
+@ManyToOne(fetch = FetchType.LAZY)
 @JoinColumn(name = "formation_id")
 @JsonIgnore // ✅ IMPORTANT
 private Formation formation;

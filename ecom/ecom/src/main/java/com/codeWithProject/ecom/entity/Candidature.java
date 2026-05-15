@@ -2,6 +2,8 @@ package com.codeWithProject.ecom.entity;
 
 
 import com.codeWithProject.ecom.entity.enums.StatutCandidature;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -29,10 +31,12 @@ public class Candidature {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnore
     @JoinColumn(name = "offre_id", nullable = false)
     private OffreRecrutement offre;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnore
     @JoinColumn(name = "employe_id", nullable = false)
     private Employe employe;
 
