@@ -63,7 +63,8 @@ public class SecurityConfig {
                         // =========================
                         // Public / Auth
                         // =========================
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/uploads/**").permitAll()
                         .requestMatchers("/api/photos/**").permitAll()
 
