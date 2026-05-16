@@ -8,12 +8,9 @@ ENV KC_DB_PASSWORD=jjSBExZKZlqveOOfnVwwgXWKVYdWgyHm
 ENV KEYCLOAK_ADMIN=admin
 ENV KEYCLOAK_ADMIN_PASSWORD=admin123456
 
-ENV KC_HTTP_ENABLED=true
-ENV KC_HOSTNAME_STRICT=false
-
 COPY import/ /opt/keycloak/data/import/
 
 EXPOSE 8080
 
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
-CMD ["start", "--http-enabled=true", "--hostname-strict=false", "--import-realm", "--http-port=8080", "--http-host=0.0.0.0"]
+CMD ["start-dev", "--http-host=0.0.0.0", "--http-port=8080", "--import-realm"]
