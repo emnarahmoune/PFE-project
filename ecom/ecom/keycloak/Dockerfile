@@ -8,6 +8,8 @@ ENV KC_DB_PASSWORD=jjSBExZKZlqveOOfnVwwgXWKVYdWgyHm
 ENV KEYCLOAK_ADMIN=admin
 ENV KEYCLOAK_ADMIN_PASSWORD=admin123456
 
+ENV KC_CACHE=local
+
 COPY import/ /opt/keycloak/data/import/
 
 EXPOSE 8080
