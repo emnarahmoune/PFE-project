@@ -5,7 +5,7 @@ export const environment = {
   version: '1.0.0',
 
   keycloak: {
-    url: 'https://pfe-project-1-979y.onrender.com/',
+    url: 'https://pfe-project-1-s20t.onrender.com/',
     realm: 'portail_rh',
     clientId: 'portail_rh_frontend',
     redirectUri: 'https://front-gules-theta.vercel.app/',
