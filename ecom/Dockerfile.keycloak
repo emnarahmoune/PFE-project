@@ -9,7 +9,11 @@ ENV KC_BOOTSTRAP_ADMIN_USERNAME=admin
 ENV KC_BOOTSTRAP_ADMIN_PASSWORD=admin123456
 
 ENV KC_CACHE=local
+ENV KC_HTTP_ENABLED=true
+ENV KC_HOSTNAME_STRICT=false
+
+RUN /opt/keycloak/bin/kc.sh build
 
 EXPOSE 8080
 
-CMD ["start-dev", "--http-port=8080", "--http-host=0.0.0.0"]
+CMD ["start", "--optimized", "--http-enabled=true", "--http-host=0.0.0.0", "--http-port=8080", "--hostname-strict=false"]
