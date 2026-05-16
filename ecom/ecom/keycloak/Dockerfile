@@ -1,4 +1,4 @@
-FROM quay.io/keycloak/keycloak:24.0.5
+FROM quay.io/keycloak/keycloak:21.1.2
 
 ENV KC_DB=mysql
 ENV KC_DB_URL_HOST=yamanote.proxy.rlwy.net
