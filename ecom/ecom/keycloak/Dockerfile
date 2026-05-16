@@ -1,4 +1,4 @@
-FROM quay.io/keycloak/keycloak:21.1.2
+FROM quay.io/keycloak/keycloak:26.0.7
 
 ENV KC_DB=mysql
 ENV KC_DB_URL_HOST=yamanote.proxy.rlwy.net
@@ -9,8 +9,11 @@ ENV KC_DB_PASSWORD=jjSBExZKZlqveOOfnVwwgXWKVYdWgyHm
 
 ENV KC_HTTP_ENABLED=true
 ENV KC_HOSTNAME_STRICT=false
-ENV KC_PROXY=edge
+ENV KC_PROXY_HEADERS=xforwarded
+ENV KC_CACHE=local
 
 RUN /opt/keycloak/bin/kc.sh build
+
+EXPOSE 8080
 
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--optimized", "--http-port=8080"]
