@@ -1,4 +1,4 @@
-package com.codeWithProject.ecom.controller;
+package com.codeWithProject.ecom.controller.dto;
 
 import com.codeWithProject.ecom.controller.dto.ApiResponse;
 import com.codeWithProject.ecom.entity.Employe;
