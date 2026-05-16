@@ -11,11 +11,10 @@ ENV KC_HTTP_ENABLED=true
 ENV KC_HOSTNAME_STRICT=false
 ENV KC_PROXY_HEADERS=xforwarded
 ENV KC_HOSTNAME=pfe-project-1-979y.onrender.com
+ENV KC_HTTP_PORT=${PORT}
 
 COPY import/ /opt/keycloak/data/import/
 
 RUN /opt/keycloak/bin/kc.sh build
 
-EXPOSE 8080
-
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--optimized", "--http-enabled=true", "--hostname-strict=false", "--http-port=8080"]
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--optimized"]
