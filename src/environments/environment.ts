@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://pfe-project-6txv.https://pfe-projectonrender.com/api',
+  apiUrl: 'https://pfe-project-6txv.onrender.com/api',
   appName: 'Portail RH',
   version: '1.0.0',
 
