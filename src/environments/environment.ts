@@ -1,11 +1,11 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://pfe-project-6txv.onrender.com/api',
+  apiUrl: 'https://pfe-project-6txv.https://pfe-projectonrender.com/api',
   appName: 'Portail RH',
   version: '1.0.0',
 
   keycloak: {
-    url: 'https://pfe-project-1-979y.onrender.com',
+    url: '-1-979y.onrender.com/',
     realm: 'portail_rh',
     clientId: 'portail_rh_frontend',
     redirectUri: 'https://front-gules-theta.vercel.app/',
