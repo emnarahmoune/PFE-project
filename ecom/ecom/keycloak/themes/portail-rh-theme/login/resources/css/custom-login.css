@@ -1,0 +1,419 @@
+/* =====================================================
+   PORTAIL RH - KEYCLOAK V2 CLEAN PROFESSIONAL THEME
+===================================================== */
+
+:root {
+  --rh-primary: #2563eb;
+  --rh-primary-dark: #1d4ed8;
+  --rh-secondary: #7c3aed;
+  --rh-bg: #020617;
+  --rh-card: #ffffff;
+  --rh-text: #0f172a;
+  --rh-muted: #64748b;
+  --rh-border: #e2e8f0;
+}
+
+/* =========================
+   BACKGROUND
+========================= */
+
+html,
+body {
+  width: 100% !important;
+  min-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body {
+  min-height: 100vh !important;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif !important;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.28), transparent 30%),
+    radial-gradient(circle at 80% 80%, rgba(124, 58, 237, 0.24), transparent 32%),
+    linear-gradient(135deg, #020617 0%, #0f172a 50%, #111827 100%) !important;
+  color: var(--rh-text) !important;
+}
+
+/* =========================
+   FORCE KEYCLOAK V2 CENTERED LAYOUT
+========================= */
+
+.pf-v5-c-login,
+.pf-c-login {
+  min-height: 100vh !important;
+  background: transparent !important;
+}
+
+.pf-v5-c-login__container,
+.pf-c-login__container {
+  min-height: 100vh !important;
+  width: 100% !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  grid-template-columns: none !important;
+  grid-template-areas: none !important;
+
+  padding: 32px !important;
+  box-sizing: border-box !important;
+}
+
+/* Cache le texte portail_rh à droite */
+.pf-v5-c-login__header,
+.pf-c-login__header,
+#kc-header,
+#kc-header-wrapper {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* =========================
+   LOGIN CARD
+========================= */
+
+.pf-v5-c-login__main,
+.pf-c-login__main {
+  width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
+
+  background: var(--rh-card) !important;
+  border-radius: 26px !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+
+  overflow: hidden !important;
+  grid-area: unset !important;
+}
+
+/* Logo texte */
+.pf-v5-c-login__main::before,
+.pf-c-login__main::before {
+  content: "PORTAIL RH";
+  display: block;
+  text-align: center;
+  padding: 34px 36px 8px 36px;
+
+  color: var(--rh-primary);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+/* Header + body */
+.pf-v5-c-login__main-header,
+.pf-c-login__main-header {
+  padding: 18px 36px 0 36px !important;
+  background: #ffffff !important;
+}
+
+.pf-v5-c-login__main-body,
+.pf-c-login__main-body {
+  padding: 24px 36px 38px 36px !important;
+  background: #ffffff !important;
+}
+
+/* =========================
+   TITLE
+========================= */
+
+#kc-page-title {
+  color: var(--rh-text) !important;
+  font-size: 25px !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+  text-align: center !important;
+  margin: 0 0 28px 0 !important;
+}
+
+/* =========================
+   ALERTS
+========================= */
+
+.pf-v5-c-alert,
+.pf-c-alert,
+.alert,
+.alert-error {
+  border-radius: 14px !important;
+  border: 1px solid #fecaca !important;
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  margin-bottom: 22px !important;
+  font-weight: 600 !important;
+}
+
+.pf-v5-c-alert__title,
+.pf-c-alert__title {
+  color: #991b1b !important;
+}
+
+/* =========================
+   FORM
+========================= */
+
+form {
+  width: 100% !important;
+}
+
+.pf-v5-c-form__group,
+.pf-c-form__group,
+.form-group {
+  margin-bottom: 18px !important;
+}
+
+label,
+.pf-v5-c-form__label-text,
+.pf-c-form__label-text {
+  color: #334155 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  margin-bottom: 7px !important;
+}
+
+/* =========================
+   INPUTS - KEYCLOAK V2 FIX
+========================= */
+
+.pf-v5-c-form-control,
+.pf-c-form-control {
+  width: 100% !important;
+}
+
+/* Champ normal */
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  width: 100% !important;
+  height: 52px !important;
+  min-height: 52px !important;
+
+  background: #f8fafc !important;
+  color: #0f172a !important;
+
+  border: 1px solid #dbe3ee !important;
+  border-radius: 14px !important;
+
+  padding: 0 16px !important;
+  box-sizing: border-box !important;
+
+  font-size: 15px !important;
+  font-weight: 600 !important;
+
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Focus */
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+  background: #ffffff !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14) !important;
+}
+
+/* =========================
+   PASSWORD FIELD FIX
+========================= */
+
+.pf-v5-c-input-group,
+.pf-c-input-group,
+.input-group {
+  display: flex !important;
+  align-items: stretch !important;
+  width: 100% !important;
+
+  border: 1px solid #dbe3ee !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+
+  background: #f8fafc !important;
+}
+
+/* Input dans groupe password */
+.pf-v5-c-input-group input[type="password"],
+.pf-c-input-group input[type="password"],
+.input-group input[type="password"] {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+
+  height: 52px !important;
+  min-height: 52px !important;
+
+  border: none !important;
+  border-radius: 0 !important;
+
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Bouton œil */
+.pf-v5-c-input-group button,
+.pf-c-input-group button,
+.input-group button {
+  flex: 0 0 56px !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  height: 52px !important;
+
+  border: none !important;
+  border-left: 1px solid #dbe3ee !important;
+  border-radius: 0 !important;
+
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Focus du groupe password */
+.pf-v5-c-input-group:focus-within,
+.pf-c-input-group:focus-within,
+.input-group:focus-within {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14) !important;
+  background: #ffffff !important;
+}
+
+/* Évite le double focus dans le password */
+.pf-v5-c-input-group input[type="password"]:focus,
+.pf-c-input-group input[type="password"]:focus,
+.input-group input[type="password"]:focus {
+  box-shadow: none !important;
+  border: none !important;
+}
+/* =========================
+   BUTTON
+========================= */
+
+#kc-login,
+input[type="submit"],
+.pf-v5-c-button.pf-m-primary,
+.pf-c-button.pf-m-primary,
+.btn-primary {
+  width: 100% !important;
+  height: 52px !important;
+  min-height: 52px !important;
+
+  border-radius: 14px !important;
+  border: none !important;
+
+  background: linear-gradient(135deg, var(--rh-primary), var(--rh-secondary)) !important;
+  color: #ffffff !important;
+
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.2px !important;
+
+  box-shadow: 0 16px 32px rgba(37, 99, 235, 0.28) !important;
+  transition: all 0.2s ease-in-out !important;
+
+  margin-top: 8px !important;
+}
+
+#kc-login:hover,
+input[type="submit"]:hover,
+.pf-v5-c-button.pf-m-primary:hover,
+.pf-c-button.pf-m-primary:hover,
+.btn-primary:hover {
+  transform: translateY(-1px) !important;
+  background: linear-gradient(135deg, var(--rh-primary-dark), #6d28d9) !important;
+  box-shadow: 0 20px 40px rgba(37, 99, 235, 0.38) !important;
+}
+
+/* =========================
+   LINKS / FOOTER
+========================= */
+
+a {
+  color: var(--rh-primary) !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+}
+
+a:hover {
+  color: var(--rh-primary-dark) !important;
+  text-decoration: underline !important;
+}
+
+#kc-form-options,
+#kc-registration-container,
+.pf-v5-c-login__main-footer,
+.pf-c-login__main-footer {
+  text-align: center !important;
+  color: var(--rh-muted) !important;
+  font-size: 14px !important;
+}
+
+/* Remove ugly dividers */
+hr,
+.pf-v5-c-divider,
+.pf-c-divider {
+  display: none !important;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 640px) {
+  .pf-v5-c-login__container,
+  .pf-c-login__container {
+    padding: 18px !important;
+  }
+
+  .pf-v5-c-login__main,
+  .pf-c-login__main {
+    max-width: 100% !important;
+    border-radius: 22px !important;
+  }
+
+  .pf-v5-c-login__main::before,
+  .pf-c-login__main::before {
+    font-size: 19px !important;
+    padding-top: 28px !important;
+  }
+
+  .pf-v5-c-login__main-header,
+  .pf-c-login__main-header,
+  .pf-v5-c-login__main-body,
+  .pf-c-login__main-body {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  #kc-page-title {
+    font-size: 22px !important;
+  }
+
+  .pf-v5-c-login__container {
+  grid-template-columns: 1fr !important;
+  grid-template-areas: "main" !important;
+  display: grid !important;
+  place-items: center !important;
+  min-height: 100vh !important;
+}
+
+.pf-v5-c-login__header,
+#kc-header,
+#kc-header-wrapper {
+  display: none !important;
+}
+
+.pf-v5-c-login__main {
+  width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
+}
+}

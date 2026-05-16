@@ -15,6 +15,8 @@ ENV KC_HOSTNAME=https://pfe-project-1-s20t.onrender.com
 ENV KC_PROXY_HEADERS=xforwarded
 RUN /opt/keycloak/bin/kc.sh build
 
+COPY keycloak/themes/ /opt/keycloak/themes/
+
 EXPOSE 8080
 
 CMD ["start", "--http-enabled=true", "--http-port=8080", "--http-host=0.0.0.0", "--hostname=https://pfe-project-1-s20t.onrender.com", "--hostname-strict=false", "--proxy-headers=xforwarded"]
