@@ -12,4 +12,4 @@ ENV KC_CACHE=local
 
 EXPOSE 8080
 
-CMD ["/opt/keycloak/bin/kc.sh", "start-dev", "--http-port=8080", "--http-host=0.0.0.0"]
+CMD ["start-dev", "--http-port=8080", "--http-host=0.0.0.0"]
