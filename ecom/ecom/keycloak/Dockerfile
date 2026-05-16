@@ -15,4 +15,5 @@ COPY import/ /opt/keycloak/data/import/
 
 EXPOSE 8080
 
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--http-enabled=true", "--hostname-strict=false", "--import-realm"]
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
+CMD ["start", "--http-enabled=true", "--hostname-strict=false", "--import-realm", "--http-port=8080", "--http-host=0.0.0.0"]
