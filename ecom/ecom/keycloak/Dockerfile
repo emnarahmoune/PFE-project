@@ -16,4 +16,4 @@ COPY import/ /opt/keycloak/data/import/
 
 RUN /opt/keycloak/bin/kc.sh build
 
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--optimized", "--http-port=8080"]
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start-dev", "--http-port=8080", "--http-host=0.0.0.0"]
