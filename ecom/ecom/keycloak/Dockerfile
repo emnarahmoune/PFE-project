@@ -19,4 +19,4 @@ RUN /opt/keycloak/bin/kc.sh build
 
 EXPOSE 8080
 
-CMD /opt/keycloak/bin/kc.sh start --optimized --http-enabled=true --http-host=0.0.0.0 --http-port=${PORT:-8080} --hostname-strict=false --proxy-headers=xforwarded
+CMD ["/opt/keycloak/bin/kc.sh", "start", "--optimized", "--http-enabled=true", "--http-host=0.0.0.0", "--http-port=8080", "--hostname-strict=false", "--proxy-headers=xforwarded"]
