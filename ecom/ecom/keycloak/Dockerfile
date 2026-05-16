@@ -10,10 +10,10 @@ ENV KC_DB_PASSWORD=jjSBExZKZlqveOOfnVwwgXWKVYdWgyHm
 ENV KC_HTTP_ENABLED=true
 ENV KC_HOSTNAME_STRICT=false
 ENV KC_PROXY_HEADERS=xforwarded
-ENV KC_CACHE=local
+ENV KC_HOSTNAME=pfe-project-1-979y.onrender.com
 
 RUN /opt/keycloak/bin/kc.sh build
 
 EXPOSE 8080
 
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--optimized", "--http-port=8080"]
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--optimized", "--http-enabled=true", "--hostname-strict=false", "--http-port=8080"]
