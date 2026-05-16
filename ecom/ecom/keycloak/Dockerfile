@@ -12,7 +12,8 @@ ENV KC_CACHE=local
 
 COPY import/ /opt/keycloak/data/import/
 
+RUN /opt/keycloak/bin/kc.sh build
+
 EXPOSE 8080
 
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
-CMD ["start-dev", "--http-host=0.0.0.0", "--http-port=8080", "--import-realm"]
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--optimized", "--http-enabled=true", "--hostname-strict=false", "--http-port=8080", "--http-host=0.0.0.0", "--import-realm"]
