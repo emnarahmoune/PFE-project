@@ -10,10 +10,7 @@ ENV KC_DB_PASSWORD=jjSBExZKZlqveOOfnVwwgXWKVYdWgyHm
 ENV KC_HTTP_ENABLED=true
 ENV KC_HOSTNAME_STRICT=false
 ENV KC_PROXY=edge
-ENV KC_MIGRATION_STRATEGY=IGNORE_EXISTING
 
 RUN /opt/keycloak/bin/kc.sh build
-
-EXPOSE 8080
 
 ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--optimized", "--http-port=8080"]
