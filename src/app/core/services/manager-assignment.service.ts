@@ -4,7 +4,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
-
+import { environment } from '../../../environments/environment';
 export interface Manager {
   id: number;
   nom: string;
@@ -23,8 +23,7 @@ export interface AssignManagerDTO {
   providedIn: 'root'
 })
 export class ManagerAssignmentService {
-  private apiUrl = 'http://localhost:8082/api/admin/manager-assignment';
-
+private apiUrl = `${environment.apiUrl}/admin/manager-assignment`;
   constructor(
     private http: HttpClient,
     private authService: AuthService

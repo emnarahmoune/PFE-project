@@ -1,10 +1,11 @@
 export const environment = {
   production: false,
-apiUrl: 'https://pfe-project-6txv.onrender.com/api',  appName: 'Portail RH (Dev)',
+apiUrl: 'https://pfe-project-6txv.onrender.com/api', 
+ appName: 'Portail RH (Dev)',
   version: '1.0.0-dev',
   
   keycloak: {
-    url: 'https://tremble-exhaust-prankish.ngrok-free.dev',
+    url: 'https://pfe-project-1-979y.onrender.com',
     realm: 'portail_rh',
     clientId: 'portail_rh_frontend',
     redirectUri: 'https://front-gules-theta.vercel.app',

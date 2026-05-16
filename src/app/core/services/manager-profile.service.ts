@@ -35,7 +35,7 @@ export class ManagerProfileService {
   }
   
 changePassword(data: ChangePasswordData) {
-  return this.http.post<any>('/api/manager/change-password', data);
+  return this.http.post<any>(`${this.managerUrl}/change-password`, data);
 }
 
   uploadPhoto(file: File): Observable<{ success: boolean; data: { photoUrl: string; message?: string }; message: string }> {

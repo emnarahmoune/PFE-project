@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -13,15 +14,10 @@ export class PictureService {
   }
 
   static buildDisplayUrl(url?: string | null): string | null {
-    if (!url) {
-      return null;
-    }
+    if (!url) return null;
 
     let cleanUrl = String(url).trim();
-
-    if (!cleanUrl) {
-      return null;
-    }
+    if (!cleanUrl) return null;
 
     cleanUrl = cleanUrl.split('?')[0];
 
@@ -33,34 +29,32 @@ export class PictureService {
       return `${cleanUrl}?t=${Date.now()}`;
     }
 
-    // ✅ Déjà une URL API correcte
+    const baseApi = environment.apiUrl;
+
     if (cleanUrl.startsWith('/api/')) {
-      return `${cleanUrl}?t=${Date.now()}`;
+      return `${baseApi}${cleanUrl.replace('/api', '')}?t=${Date.now()}`;
     }
 
     if (cleanUrl.startsWith('api/')) {
-      return `/${cleanUrl}?t=${Date.now()}`;
+      return `${baseApi}/${cleanUrl.replace('api/', '')}?t=${Date.now()}`;
     }
 
-    // ✅ Ton backend retourne visiblement /photos/xxx.jpg
     if (cleanUrl.startsWith('/photos/')) {
-      return `/api${cleanUrl}?t=${Date.now()}`;
+      return `${baseApi}${cleanUrl}?t=${Date.now()}`;
     }
 
     if (cleanUrl.startsWith('photos/')) {
-      return `/api/${cleanUrl}?t=${Date.now()}`;
+      return `${baseApi}/${cleanUrl}?t=${Date.now()}`;
     }
 
-    // ✅ Si jamais backend retourne /uploads/...
     if (cleanUrl.startsWith('/uploads/')) {
-      return `/api${cleanUrl}?t=${Date.now()}`;
+      return `${baseApi}${cleanUrl}?t=${Date.now()}`;
     }
 
     if (cleanUrl.startsWith('uploads/')) {
-      return `/api/${cleanUrl}?t=${Date.now()}`;
+      return `${baseApi}/${cleanUrl}?t=${Date.now()}`;
     }
 
-    // ✅ Si backend retourne seulement le nom du fichier
-    return `/api/photos/${cleanUrl}?t=${Date.now()}`;
+    return `${baseApi}/photos/${cleanUrl}?t=${Date.now()}`;
   }
 }

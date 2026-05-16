@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, map, of } from 'rxjs';
-
+import { environment } from '../../../environments/environment';
 import {
   OffreRecrutement,
   CreateOffreRecrutementRequest,
@@ -13,8 +13,7 @@ import {
   providedIn: 'root'
 })
 export class RecrutementService {
-  private readonly apiUrl = '/api/recrutement';
-
+private readonly apiUrl = `${environment.apiUrl}/recrutement`;
   constructor(private http: HttpClient) {}
 
   getAllOffres(): Observable<OffreRecrutement[]> {

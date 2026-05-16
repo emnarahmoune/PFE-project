@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, of } from 'rxjs';
-
+import { environment } from '../../../environments/environment';
 import {
   Candidature,
   DecisionCandidatureRequest,
@@ -12,8 +12,7 @@ import {
   providedIn: 'root'
 })
 export class CandidatureService {
-  private readonly apiUrl = '/api/candidatures';
-
+private readonly apiUrl = `${environment.apiUrl}/candidatures`;
   constructor(private http: HttpClient) {}
 
   // =========================

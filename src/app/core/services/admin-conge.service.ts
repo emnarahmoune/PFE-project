@@ -3,7 +3,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, map, tap } from 'rxjs';
 import { AuthService } from './auth.service';
 import { EventInput } from '@fullcalendar/core/index.js';
-
+import { environment } from '../../../environments/environment';
 interface ApiResponse<T> {
   success: boolean;
   message: string;
@@ -81,8 +81,7 @@ export interface DemandeRefusDetails {
 
 @Injectable({ providedIn: 'root' })
 export class AdminCongeService {
-  private apiUrl = '/api/admin/conges';
-
+private apiUrl = `${environment.apiUrl}/admin/conges`;
   constructor(
     private http: HttpClient,
     private authService: AuthService

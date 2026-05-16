@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of } from 'rxjs';
-
+import { environment } from '../../../environments/environment';
 import { CvAnalyse } from '../models/cv-analyse.model';
 import { MatchingResult } from '../models/recrutement-score.model';
 
@@ -9,8 +9,7 @@ import { MatchingResult } from '../models/recrutement-score.model';
   providedIn: 'root'
 })
 export class CvAnalysisService {
-  private readonly apiUrl = '/api/cv-analysis';
-
+private readonly apiUrl = `${environment.apiUrl}/cv-analysis`;
   constructor(private http: HttpClient) {}
 
   analyserCandidature(candidatureId: number): Observable<MatchingResult | null> {

@@ -2,13 +2,12 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { FormationRecommendation } from '../models/formation-recommendation.model';
-
+import { environment } from '../../../environments/environment';
 @Injectable({
   providedIn: 'root'
 })
 export class FormationRecommendationService {
-  private readonly apiUrl = 'http://localhost:8082/api/formations/recommendations';
-
+private readonly apiUrl = `${environment.apiUrl}/formations/recommendations`;
   constructor(private http: HttpClient) {}
 
   getMyRecommendations(): Observable<FormationRecommendation[]> {
