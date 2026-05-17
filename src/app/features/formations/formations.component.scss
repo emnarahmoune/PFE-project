@@ -1468,3 +1468,77 @@ button:disabled {
     min-width: 760px;
   }
 }
+
+
+
+/* FIX dark + mobile mes formations/certificats */
+.training-card,
+.formation-card,
+.info-card,
+.stats-card,
+.participants-card,
+.card,
+.form-card {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+.training-body,
+.card-body,
+.card-footer,
+.card-meta {
+  color: var(--text) !important;
+}
+
+.training-body p,
+.card-meta,
+.progress-text,
+.formation-description {
+  color: var(--muted) !important;
+}
+
+.certificate-btn,
+.btn-certificate,
+button[class*="certificate"],
+a[class*="certificate"] {
+  background: var(--success-soft) !important;
+  color: var(--success-dark) !important;
+  border: 1px solid rgba(16, 185, 129, 0.28) !important;
+}
+
+:host-context(body.dark-theme) .certificate-btn,
+:host-context(.dark-theme) .certificate-btn,
+:host-context(body.dark-theme) .btn-certificate,
+:host-context(.dark-theme) .btn-certificate {
+  color: #4ade80 !important;
+}
+
+@media (max-width: 768px) {
+  .grid-formations,
+  .formations-grid,
+  .content-grid,
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .training-card,
+  .formation-card {
+    min-height: auto;
+  }
+
+  .card-footer,
+  .card-actions,
+  .actions,
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card-footer button,
+  .card-actions button,
+  .actions button,
+  .form-actions button {
+    width: 100%;
+  }
+}

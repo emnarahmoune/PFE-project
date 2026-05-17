@@ -1768,3 +1768,59 @@ button:disabled {
     min-height: 44px;
   }
 }
+
+
+
+/* FIX dark + mobile candidature detail */
+.candidature-detail,
+.candidature-card,
+.candidature-row,
+.top-candidate,
+.application-card,
+.details-card {
+  background: var(--rec-surface) !important;
+  color: var(--rec-text) !important;
+  border-color: var(--rec-border) !important;
+}
+
+.candidature-detail *,
+.candidature-card *,
+.details-card * {
+  color: inherit;
+}
+
+@media (max-width: 768px) {
+  .content-grid,
+  .stats-grid,
+  .offre-top,
+  .offre-footer,
+  .section-title,
+  .form-header,
+  .application-card,
+  .top-candidate,
+  .candidature-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .recrutement-page {
+    padding: 1rem;
+  }
+
+  .page-header,
+  .details-card,
+  .offre-card,
+  .application-card {
+    padding: 1rem;
+    border-radius: 18px;
+  }
+
+  .primary-btn,
+  .secondary-btn,
+  .success-btn,
+  .warning-btn,
+  .danger-btn {
+    width: 100%;
+  }
+}
