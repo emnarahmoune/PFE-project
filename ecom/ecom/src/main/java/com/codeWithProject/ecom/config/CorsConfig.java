@@ -30,7 +30,11 @@ public class CorsConfig {
         ));
 
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Authorization", "Content-Type"));
+        config.setExposedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Location"
+        ));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
