@@ -11,7 +11,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @Service
@@ -293,14 +293,17 @@ public class FormationServiceImpl implements FormationService {
     // PARTICIPANTS
     // =========================
 
-    @Override
-    public List<EmployeDTO> getParticipants(Long formationId) {
-        return employeFormationRepository.findByFormation_Id(formationId)
-                .stream()
-                .map(ef -> toEmployeDTO(ef.getEmploye()))
-                .filter(Objects::nonNull)
-                .toList();
-    }
+    @Transactional(readOnly = true)
+public List<EmployeDTO> getParticipants(Long formationId) {
+
+    Formation formation = formationRepository.findById(formationId)
+            .orElseThrow(() -> new RuntimeException("Formation introuvable"));
+
+    return formation.getEmployes()
+            .stream()
+            .map(this::toEmployeDTO)
+            .toList();
+}
 
     // =========================
     // FORMATIONS PAR EMPLOYE
