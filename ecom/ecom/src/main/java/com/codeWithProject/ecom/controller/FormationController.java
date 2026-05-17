@@ -889,7 +889,7 @@ ColumnText.showTextAligned(
 ColumnText.showTextAligned(
         canvas,
         Element.ALIGN_CENTER,
-        new Phrase("Document généré automatiquement par la plateforme PeopleOS Academy", refFont),
+        new Phrase("Document généré automatiquement par la plateforme Portail RH", refFont),
         pageWidth / 2,
         24,
         0
