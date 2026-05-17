@@ -19,7 +19,7 @@ export class EmployeService {
   // =========================
 
   getAll(): Observable<any> {
-    return this.api.get(this.endpoint)
+    return this.api.get(this.endpoint, { page: 0, size: 20 })
       .pipe(catchError(this.handleError('getAll', [])));
   }
 

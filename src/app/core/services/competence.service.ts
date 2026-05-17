@@ -14,7 +14,7 @@ private apiUrl = `${environment.apiUrl}/competences`;
   // 📥 GET ALL
   // ===============================
   getAll(): Observable<any> {
-    return this.http.get(this.apiUrl);
+     return this.http.get(`${this.apiUrl}?page=0&size=20`);
   }
 
 

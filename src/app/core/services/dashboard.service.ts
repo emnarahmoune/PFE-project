@@ -200,7 +200,7 @@ export class DashboardService {
       formations: this.http.get<any>(`${this.apiUrl}/formations/populaires?limit=1`).pipe(
         catchError(err => of({ data: [] }))
       ),
-      employes: this.http.get<any>(`${this.apiUrl}/employes/actifs`).pipe(
+      employes: this.http.get<any>(`${this.apiUrl}/employes/actifs?page=0&size=20`).pipe(
         catchError(err => of({ data: [] }))
       )
     }).pipe(

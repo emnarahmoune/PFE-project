@@ -11,7 +11,7 @@ private readonly apiUrl = `${environment.apiUrl}/formations`;
   constructor(private http: HttpClient) {}
 
   getAll(): Observable<Formation[]> {
-    return this.http.get<Formation[]>(this.apiUrl);
+    return this.http.get<Formation[]>(`${this.apiUrl}?page=0&size=20`);
   }
 
   getById(id: number): Observable<any> {

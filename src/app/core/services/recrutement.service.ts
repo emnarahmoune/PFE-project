@@ -17,7 +17,7 @@ private readonly apiUrl = `${environment.apiUrl}/recrutement`;
   constructor(private http: HttpClient) {}
 
   getAllOffres(): Observable<OffreRecrutement[]> {
-    return this.http.get<OffreRecrutement[]>(`${this.apiUrl}/offres`).pipe(
+    return this.http.get<OffreRecrutement[]>(`${this.apiUrl}/offres?page=0&size=20`).pipe(
       catchError(error => {
         console.error('Erreur chargement offres recrutement', error);
         return of([]);
