@@ -601,9 +601,10 @@
 
   <div class="grid-formations" *ngIf="formationsSuivies && formationsSuivies.length > 0">
 
-    <div
-      *ngFor="let ef of formationsSuivies; let i = index"
-      class="training-card">
+   <div
+  *ngFor="let ef of formationsSuivies; let i = index"
+  class="training-card"
+  [class.expanded]="selectedFormationIndex === i">
 
       <!-- COVER -->
       <div class="card-cover">

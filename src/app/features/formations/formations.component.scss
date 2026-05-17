@@ -1542,3 +1542,118 @@ a[class*="certificate"] {
     width: 100%;
   }
 }
+
+
+
+/* =========================================================
+   FIX MES FORMATIONS : une seule carte ouverte + mobile
+========================================================= */
+
+.grid-formations,
+.formations-grid {
+  align-items: start !important;
+}
+
+.training-card,
+.formation-card {
+  height: fit-content !important;
+  align-self: start !important;
+}
+
+.training-card .video-section,
+.formation-card .video-section {
+  width: 100%;
+}
+
+.video-card iframe,
+.video-card video {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 220px !important;
+  border: 0;
+  display: block;
+  border-radius: 16px;
+}
+
+.training-card:not(.expanded) .video-section,
+.formation-card:not(.expanded) .video-section {
+  display: none;
+}
+
+.training-card.expanded,
+.formation-card.expanded {
+  grid-row: span 2;
+}
+
+.training-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-footer,
+.card-actions,
+.actions {
+  margin-top: auto;
+}
+
+.btn-primary,
+.btn-outline,
+.btn-ghost,
+.btn-danger,
+.btn-secondary,
+.done,
+button {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .grid-formations,
+  .formations-grid {
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+  }
+
+  .training-card,
+  .formation-card {
+    width: 100% !important;
+    min-height: auto !important;
+    border-radius: 20px !important;
+  }
+
+  .card-cover {
+    min-height: 110px !important;
+    padding: 20px !important;
+  }
+
+  .training-body,
+  .card-body {
+    padding: 18px !important;
+  }
+
+  .video-section {
+    margin-top: 16px !important;
+  }
+
+  .video-card {
+    padding: 12px !important;
+  }
+
+  .video-card iframe,
+  .video-card video {
+    height: 190px !important;
+  }
+
+  .btn-primary,
+  .btn-outline,
+  .btn-ghost,
+  .btn-danger,
+  .btn-secondary,
+  .done,
+  .card-footer button,
+  .card-actions button,
+  .actions button {
+    width: 100% !important;
+    min-height: 46px !important;
+    justify-content: center !important;
+  }
+}
