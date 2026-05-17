@@ -293,9 +293,8 @@ public class FormationServiceImpl implements FormationService {
     // PARTICIPANTS
     // =========================
 
-    @Transactional(readOnly = true)
+@Transactional(readOnly = true)
 public List<EmployeDTO> getParticipants(Long formationId) {
-
     Formation formation = formationRepository.findById(formationId)
             .orElseThrow(() -> new RuntimeException("Formation introuvable"));
 
