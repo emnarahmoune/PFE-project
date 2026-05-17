@@ -27,8 +27,8 @@ public class FormationServiceImpl implements FormationService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${ai.recommendation.url:http://localhost:5000/recommend}")
-    private String aiRecommendationUrl;
+    @Value("${ai.recommendation.url}")
+private String aiRecommendationUrl;
 
     // =========================
     // CREATE
@@ -559,11 +559,11 @@ private List<Formation> callFlaskAndMapToFormations(
         List<Formation> formationsDisponibles
 ) {
     try {
-        Map<String, Object> response = restTemplate.postForObject(
-                aiRecommendationUrl,
-                payload,
-                Map.class
-        );
+       Map<String, Object> response = restTemplate.postForObject(
+        aiRecommendationUrl + "/recommend",
+        payload,
+        Map.class
+);
 
         if (response == null || response.isEmpty()) {
             return List.of();

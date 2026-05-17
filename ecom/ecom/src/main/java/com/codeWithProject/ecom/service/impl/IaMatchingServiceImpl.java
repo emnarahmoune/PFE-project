@@ -34,8 +34,8 @@ public class IaMatchingServiceImpl implements IaMatchingService {
     private final CandidatureRepository candidatureRepository;
     private final CvStorageService cvStorageService;
 
-    @Value("${ia.matching.url:http://localhost:8001/api/matching/analyze}")
-    private String iaMatchingUrl;
+   @Value("${ai.matching.url}")
+private String aiMatchingUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -88,11 +88,11 @@ public class IaMatchingServiceImpl implements IaMatchingService {
 
  private IaMatchingResponseDTO callIaService(IaMatchingRequestDTO request) {
     try {
-        IaMatchingResponseDTO response = restTemplate.postForObject(
-                iaMatchingUrl,
-                request,
-                IaMatchingResponseDTO.class
-        );
+       IaMatchingResponseDTO response = restTemplate.postForObject(
+        aiMatchingUrl + "/api/matching/analyze",
+        request,
+        IaMatchingResponseDTO.class
+);
 
         if (response == null) {
             throw new RuntimeException("Le service IA n'a retourné aucune réponse.");
