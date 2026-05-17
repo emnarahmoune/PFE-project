@@ -174,7 +174,7 @@ List<Employe> findAllManagers();
 @Query(value = """
     SELECT e.*
     FROM employes e
-    INNER JOIN formations_employes fe ON fe.employe_id = e.id
+    INNER JOIN employe_formation fe ON fe.employe_id = e.id
     WHERE fe.formation_id = :formationId
 """, nativeQuery = true)
 List<Employe> findParticipantsByFormationId(@Param("formationId") Long formationId);

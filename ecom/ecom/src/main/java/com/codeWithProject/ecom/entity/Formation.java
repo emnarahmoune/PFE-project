@@ -80,12 +80,13 @@ public class Formation {
     // =========================
     @ManyToMany(fetch = FetchType.LAZY)
 @JoinTable(
-    name = "formations_employes",
+    name = "employe_formation",
     joinColumns = @JoinColumn(name = "formation_id"),
     inverseJoinColumns = @JoinColumn(name = "employe_id")
 )
 @JsonIgnore
 private Set<Employe> employes = new HashSet<>();
+
 
     public void setEmployes(Set<Employe> employes) {
         this.employes = employes;
