@@ -12,6 +12,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -163,5 +166,17 @@ List<Employe> findByManagerId(@Param("managerId") Long managerId);
     WHERE UPPER(e.role) = 'MANAGER'
 """)
 List<Employe> findAllManagers();
+
+
+
+
+
+@Query(value = """
+    SELECT e.*
+    FROM employes e
+    INNER JOIN formations_employes fe ON fe.employe_id = e.id
+    WHERE fe.formation_id = :formationId
+""", nativeQuery = true)
+List<Employe> findParticipantsByFormationId(@Param("formationId") Long formationId);
 
 }

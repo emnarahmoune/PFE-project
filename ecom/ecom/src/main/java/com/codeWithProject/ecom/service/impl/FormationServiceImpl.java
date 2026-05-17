@@ -297,15 +297,11 @@ public class FormationServiceImpl implements FormationService {
 @Override
 @Transactional(readOnly = true)
 public List<EmployeDTO> getParticipants(Long formationId) {
-    Formation formation = formationRepository.findByIdWithEmployes(formationId)
-            .orElseThrow(() -> new RuntimeException("Formation introuvable"));
-
-    return formation.getEmployes()
+    return employeRepository.findParticipantsByFormationId(formationId)
             .stream()
             .map(this::toEmployeDTO)
             .toList();
 }
-
     // =========================
     // FORMATIONS PAR EMPLOYE
     // =========================

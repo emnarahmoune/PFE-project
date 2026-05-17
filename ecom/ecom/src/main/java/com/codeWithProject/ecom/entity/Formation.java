@@ -78,9 +78,14 @@ public class Formation {
     // =========================
     // 👥 EMPLOYES
     // =========================
-    @ManyToMany
-    @JsonIgnore
-    private Set<Employe> employes = new HashSet<>();
+    @ManyToMany(fetch = FetchType.LAZY)
+@JoinTable(
+    name = "formations_employes",
+    joinColumns = @JoinColumn(name = "formation_id"),
+    inverseJoinColumns = @JoinColumn(name = "employe_id")
+)
+@JsonIgnore
+private Set<Employe> employes = new HashSet<>();
 
     public void setEmployes(Set<Employe> employes) {
         this.employes = employes;
