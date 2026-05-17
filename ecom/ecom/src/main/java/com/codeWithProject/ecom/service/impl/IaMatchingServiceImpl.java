@@ -88,23 +88,22 @@ private String aiMatchingUrl;
 
  private IaMatchingResponseDTO callIaService(IaMatchingRequestDTO request) {
     try {
-       IaMatchingResponseDTO response = restTemplate.postForObject(
-        aiMatchingUrl + "/api/matching/analyze",
-        request,
-        IaMatchingResponseDTO.class
-);
+        IaMatchingResponseDTO response = restTemplate.postForObject(
+                aiMatchingUrl + "/api/matching/analyze",
+                request,
+                IaMatchingResponseDTO.class
+        );
 
         if (response == null) {
-            throw new RuntimeException("Le service IA n'a retourné aucune réponse.");
+            System.err.println("⚠️ Service IA sans réponse, utilisation fallback.");
+            return fallbackMatching(request);
         }
 
         return response;
 
     } catch (Exception e) {
-        throw new RuntimeException(
-                "Service IA indisponible. Lancez le microservice IA Python sur le port 8001.",
-                e
-        );
+        System.err.println("⚠️ Service IA indisponible, utilisation fallback : " + e.getMessage());
+        return fallbackMatching(request);
     }
 }
 

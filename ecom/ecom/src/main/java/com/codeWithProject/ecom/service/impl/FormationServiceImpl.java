@@ -351,10 +351,18 @@ public List<Formation> getRecommendationsAI(Long employeId) {
     System.out.println("⚠️ Aucune formation interne non suivie trouvée, l’IA utilisera les recommandations externes.");
 }
 
-        List<String> formationTitles = formationsNonSuivies.stream()
-                .map(Formation::getTitre)
-                .filter(Objects::nonNull)
-                .toList();
+      List<Map<String, Object>> formationsPayload = formationsNonSuivies.stream()
+        .map(f -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", f.getId());
+            map.put("titre", f.getTitre());
+            map.put("description", f.getDescription());
+            map.put("domaine", f.getDomaine());
+            map.put("niveau", "");
+            map.put("competences", List.of());
+            return map;
+        })
+        .toList();
 
         List<String> formationsSuivies = buildFormationsSuivies(employeId);
 
@@ -363,7 +371,7 @@ public List<Formation> getRecommendationsAI(Long employeId) {
         payload.put("poste", employe.getPoste());
         payload.put("userSkills", userSkills);
         payload.put("requiredSkills", requiredSkills);
-        payload.put("formations", formationTitles);
+       payload.put("formations", formationsPayload);
         payload.put("formationsSuivies", formationsSuivies);
 
         System.out.println("PAYLOAD GAP POSTE = " + payload);
@@ -404,10 +412,18 @@ public List<Formation> getRecommendationsBySkills(Long employeId) {
             return List.of();
         }
 
-        List<String> formationTitles = formationsNonSuivies.stream()
-                .map(Formation::getTitre)
-                .filter(Objects::nonNull)
-                .toList();
+     List<Map<String, Object>> formationsPayload = formationsNonSuivies.stream()
+        .map(f -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", f.getId());
+            map.put("titre", f.getTitre());
+            map.put("description", f.getDescription());
+            map.put("domaine", f.getDomaine());
+            map.put("niveau", "");
+            map.put("competences", List.of());
+            return map;
+        })
+        .toList();
 
         List<String> formationsSuivies = buildFormationsSuivies(employeId);
 
@@ -416,7 +432,7 @@ public List<Formation> getRecommendationsBySkills(Long employeId) {
         payload.put("poste", employe.getPoste());
         payload.put("userSkills", userSkills);
         payload.put("requiredSkills", Map.of());
-        payload.put("formations", formationTitles);
+        payload.put("formations", formationsPayload);
         payload.put("formationsSuivies", formationsSuivies);
 
         return callFlaskAndMapToFormations(payload, formationsNonSuivies);
