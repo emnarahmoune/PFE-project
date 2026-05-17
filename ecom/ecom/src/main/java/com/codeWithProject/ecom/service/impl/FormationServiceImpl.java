@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -293,9 +294,11 @@ public class FormationServiceImpl implements FormationService {
     // PARTICIPANTS
     // =========================
 
+@Override
 @Transactional(readOnly = true)
 public List<EmployeDTO> getParticipants(Long formationId) {
-    Formation formation = formationRepository.findById(formationId)
+
+    Formation formation = formationRepository.findByIdWithEmployes(formationId)
             .orElseThrow(() -> new RuntimeException("Formation introuvable"));
 
     return formation.getEmployes()

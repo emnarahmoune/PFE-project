@@ -7,6 +7,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 import java.util.List;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.util.Optional;
 
 @Repository
 public interface FormationRepository extends JpaRepository<Formation, Long> {
@@ -129,7 +132,8 @@ List<Formation> findRecommendedByCompetenceIds(
 List<Formation> findActiveWithDetails();
 
 
-
+@Query("SELECT f FROM Formation f LEFT JOIN FETCH f.employes WHERE f.id = :id")
+Optional<Formation> findByIdWithEmployes(@Param("id") Long id);
 
 @Query("""
     SELECT f FROM Formation f
