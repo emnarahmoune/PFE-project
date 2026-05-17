@@ -14,17 +14,17 @@ public class FormationAiRecommendationServiceImpl implements FormationAiRecommen
 
     private final RestTemplate restTemplate;
 
-    @Value("${ia.recommendation.url:http://localhost:5000/recommend}")
-    private String iaRecommendationUrl;
+ @Value("${ai.recommendation.url}")
+private String aiRecommendationUrl;
 
     @Override
     public FormationRecommendationResponse recommend(FormationRecommendationRequest request) {
         try {
             FormationRecommendationResponse response = restTemplate.postForObject(
-                    iaRecommendationUrl,
-                    request,
-                    FormationRecommendationResponse.class
-            );
+    aiRecommendationUrl + "/recommend",
+    payload,
+    Map.class
+);
 
             if (response == null) {
                 throw new RuntimeException("Le service IA n'a retourné aucune recommandation.");
