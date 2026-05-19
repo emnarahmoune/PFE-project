@@ -56,8 +56,7 @@ export class ScoresComponent implements OnInit, OnDestroy {
   totalEmployes = 0;
   nbCritiques = 0;
 
-  viewMode: 'table' | 'cards' = 'table';
-  showDetail = false;
+viewMode: 'table' | 'cards' = window.innerWidth <= 600 ? 'cards' : 'table';  showDetail = false;
 
   detail: EmployeScoreDetail | null = null;
   detailLoading = false;
