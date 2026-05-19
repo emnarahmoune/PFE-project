@@ -691,3 +691,42 @@
     min-width: 720px;
   }
 }
+
+
+@media (max-width: 560px) {
+  .stats-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .stat-card {
+    min-height: 150px !important;
+    padding: 22px 24px !important;
+    overflow: hidden !important;
+  }
+
+  .stat-card::after {
+    width: 95px !important;
+    height: 95px !important;
+    right: 18px !important;
+    bottom: 22px !important;
+    opacity: 0.55 !important;
+  }
+
+  .stat-icon {
+    width: 44px !important;
+    height: 44px !important;
+    margin-bottom: 12px !important;
+    font-size: 1.2rem !important;
+  }
+
+  .stat-value {
+    font-size: 1.65rem !important;
+  }
+
+  .stat-label {
+    max-width: 180px !important;
+    font-size: 0.72rem !important;
+  }
+}
