@@ -1,3 +1,5 @@
+// src/app/features/conges/conges.component.ts
+
 import {
   ChangeDetectorRef,
   Component,
@@ -91,6 +93,19 @@ interface TypeCongeOption {
   icon: string;
   color: string;
 }
+
+// =========================================================
+// ✅ NOUVEAU : Durées maximales par type (synchronisées avec le backend)
+// =========================================================
+const MAX_JOURS_PAR_TYPE: Record<string, number> = {
+  PATERNITE: 5,
+  MATERNITE: 30,
+  MALADIE: 6,
+  ANNUEL: 30,
+  SANS_SOLDE: 365,
+  FORMATION: 3,
+  URGENCE: 1
+};
 
 @Component({
   selector: 'app-conges',
@@ -835,11 +850,47 @@ export class CongesComponent implements OnInit, OnDestroy {
     this.loadDemandeForEdit();
   }
 
+  // ✅ NOUVELLE MÉTHODE : Vérification de la durée maximale
+  verifierDureeMax(): boolean {
+    const type = this.demandeForm.get('type')?.value;
+    if (!type) return true;
+   
+    const maxJours = MAX_JOURS_PAR_TYPE[type];
+    if (!maxJours) return true;
+   
+    const joursDemandes = this.calculerNombreJours();
+    return joursDemandes <= maxJours;
+  }
+
+  // ✅ NOUVELLE MÉTHODE : Message d'erreur pour durée maximale
+  getMessageDureeMax(): string {
+    const type = this.demandeForm.get('type')?.value;
+    if (!type) return '';
+   
+    const maxJours = MAX_JOURS_PAR_TYPE[type];
+    if (!maxJours) return '';
+   
+    const jours = this.calculerNombreJours();
+    if (jours > maxJours) {
+      return `⚠️ La durée sélectionnée (${jours} jours) dépasse le maximum autorisé (${maxJours} jours) pour ce type de congé.`;
+    }
+    return '';
+  }
+
   onSubmit(): void {
     if (this.demandeForm.invalid) {
       this.demandeForm.markAllAsTouched();
       this.snackBar.open('Veuillez corriger les erreurs du formulaire', 'Fermer', {
         duration: 3000,
+        panelClass: 'snackbar-error'
+      });
+      return;
+    }
+
+    // ✅ AJOUT : Vérification de la durée maximale
+    if (!this.verifierDureeMax()) {
+      this.snackBar.open(this.getMessageDureeMax(), 'Fermer', {
+        duration: 5000,
         panelClass: 'snackbar-error'
       });
       return;
@@ -933,104 +984,101 @@ export class CongesComponent implements OnInit, OnDestroy {
   }
 
   private submitEditDemande(): void {
-  if (!this.demandeId) {
-    this.snackBar.open('ID de demande invalide', 'Fermer', {
-      duration: 3000,
-      panelClass: 'snackbar-error'
-    });
-    return;
-  }
+    if (!this.demandeId) {
+      this.snackBar.open('ID de demande invalide', 'Fermer', {
+        duration: 3000,
+        panelClass: 'snackbar-error'
+      });
+      return;
+    }
 
-  if (this.demandeForm.invalid) {
-    this.demandeForm.markAllAsTouched();
-    this.snackBar.open('Veuillez corriger les champs du formulaire', 'Fermer', {
-      duration: 3000,
-      panelClass: 'snackbar-error'
-    });
-    return;
-  }
+    if (this.demandeForm.invalid) {
+      this.demandeForm.markAllAsTouched();
+      this.snackBar.open('Veuillez corriger les champs du formulaire', 'Fermer', {
+        duration: 3000,
+        panelClass: 'snackbar-error'
+      });
+      return;
+    }
 
-  const formValue = this.demandeForm.getRawValue();
-  const urgenteValue = formValue.urgente === true;
+    const formValue = this.demandeForm.getRawValue();
+    const urgenteValue = formValue.urgente === true;
 
-  const demande: DemandeConge = {
-    ...(this.demande || {}),
-    id: this.demandeId,
-    type: formValue.type,
-    dateDebut: formValue.dateDebut,
-    dateFin: formValue.dateFin,
-    commentaire: formValue.commentaire || '',
+    const demande: DemandeConge = {
+      ...(this.demande || {}),
+      id: this.demandeId,
+      type: formValue.type,
+      dateDebut: formValue.dateDebut,
+      dateFin: formValue.dateFin,
+      commentaire: formValue.commentaire || '',
+      urgente: urgenteValue,
+      urgent: urgenteValue,
+      isUrgent: urgenteValue
+    } as any;
 
-    // ✅ les 3 noms pour compatibilité frontend/backend/manager
-    urgente: urgenteValue,
-    urgent: urgenteValue,
-    isUrgent: urgenteValue
-  } as any;
+    console.log('DEMANDE MODIFICATION COMPONENT = ', demande);
 
-  console.log('DEMANDE MODIFICATION COMPONENT = ', demande);
+    this.isSubmitting = true;
 
-  this.isSubmitting = true;
+    this.employeeCongeService
+      .modifierDemande(this.demandeId, demande)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: CongeResponse) => {
+          this.isSubmitting = false;
 
-  this.employeeCongeService
-    .modifierDemande(this.demandeId, demande)
-    .pipe(takeUntil(this.destroy$))
-    .subscribe({
-      next: (response: CongeResponse) => {
-        this.isSubmitting = false;
+          console.log('RÉPONSE MODIFICATION BACKEND = ', response);
 
-        console.log('RÉPONSE MODIFICATION BACKEND = ', response);
+          if (response?.success || response?.statusCode === 200) {
+            const updatedFromBackend = this.extractDemandeFromResponse(response);
 
-        if (response?.success || response?.statusCode === 200) {
-          const updatedFromBackend = this.extractDemandeFromResponse(response);
+            this.demande = this.normalizeConge(updatedFromBackend || demande);
 
-          // ✅ On met à jour l’objet local immédiatement
-          this.demande = this.normalizeConge(updatedFromBackend || demande);
+            this.snackBar.open('Demande modifiée avec succès', 'Fermer', {
+              duration: 3000,
+              panelClass: 'snackbar-success'
+            });
 
-          this.snackBar.open('Demande modifiée avec succès', 'Fermer', {
-            duration: 3000,
-            panelClass: 'snackbar-success'
-          });
+            this.notificationService.loadNotifications();
+            this.notificationService.loadUnreadCount();
 
-          this.notificationService.loadNotifications();
-          this.notificationService.loadUnreadCount();
+            this.router.navigate(['/employee/mes-conges', this.demandeId], {
+              queryParams: {
+                refresh: Date.now()
+              }
+            });
 
-          // ✅ Force un vrai rechargement du détail
-          this.router.navigate(['/employee/mes-conges', this.demandeId], {
-            queryParams: {
-              refresh: Date.now()
-            }
-          });
-
-          return;
-        }
-
-        this.snackBar.open(
-          response?.message || response?.error || 'Modification refusée par le serveur',
-          'Fermer',
-          {
-            duration: 6000,
-            panelClass: 'snackbar-error'
+            return;
           }
-        );
-      },
-      error: (error: any) => {
-        this.isSubmitting = false;
 
-        console.error('ERREUR MODIFICATION BACKEND = ', error);
+          this.snackBar.open(
+            response?.message || response?.error || 'Modification refusée par le serveur',
+            'Fermer',
+            {
+              duration: 6000,
+              panelClass: 'snackbar-error'
+            }
+          );
+        },
+        error: (error: any) => {
+          this.isSubmitting = false;
 
-        const message =
-          error?.error?.message ||
-          error?.error?.error ||
-          error?.message ||
-          'Erreur lors de la modification';
+          console.error('ERREUR MODIFICATION BACKEND = ', error);
 
-        this.snackBar.open(message, 'Fermer', {
-          duration: 7000,
-          panelClass: 'snackbar-error'
-        });
-      }
-    });
-}
+          const message =
+            error?.error?.message ||
+            error?.error?.error ||
+            error?.message ||
+            'Erreur lors de la modification';
+
+          this.snackBar.open(message, 'Fermer', {
+            duration: 7000,
+            panelClass: 'snackbar-error'
+          });
+        }
+      });
+  }
+
   dateRangeValidator(form: FormGroup): { [key: string]: boolean } | null {
     const debut = form.get('dateDebut')?.value;
     const fin = form.get('dateFin')?.value;
@@ -1311,95 +1359,95 @@ export class CongesComponent implements OnInit, OnDestroy {
   }
 
   annulerDemande(target: DemandeConge | null = this.demande): void {
-  if (!target?.id) {
-    return;
-  }
+    if (!target?.id) {
+      return;
+    }
 
-  const targetId = target.id;
+    const targetId = target.id;
 
-  const confirmed = confirm('Êtes-vous sûr de vouloir annuler cette demande de congé ?');
+    const confirmed = confirm('Êtes-vous sûr de vouloir annuler cette demande de congé ?');
 
-  if (!confirmed) {
-    return;
-  }
+    if (!confirmed) {
+      return;
+    }
 
-  this.loading = true;
-  this.error = null;
+    this.loading = true;
+    this.error = null;
 
-  this.employeeCongeService
-    .annulerConge(targetId)
-    .pipe(takeUntil(this.destroy$))
-    .subscribe({
-      next: (response: CongeResponse) => {
-        this.loading = false;
+    this.employeeCongeService
+      .annulerConge(targetId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response: CongeResponse) => {
+          this.loading = false;
 
-        if (response?.success !== false) {
-          const updated = this.extractDemandeFromResponse(response);
+          if (response?.success !== false) {
+            const updated = this.extractDemandeFromResponse(response);
 
-          if (this.demande) {
-            this.demande = this.normalizeConge({
-              ...this.demande,
-              ...(updated || {}),
-              statut: 'ANNULE'
+            if (this.demande) {
+              this.demande = this.normalizeConge({
+                ...this.demande,
+                ...(updated || {}),
+                statut: 'ANNULE'
+              });
+            }
+
+            this.conges = this.sortCongesRecentFirst(
+              this.conges.map(c =>
+                c.id === targetId
+                  ? this.normalizeConge({
+                      ...c,
+                      ...(updated || {}),
+                      statut: 'ANNULE'
+                    })
+                  : c
+              )
+            );
+
+            this.previousStatuts.set(targetId, 'ANNULE');
+            this.canAnnuler = false;
+
+            this.notificationService.loadNotifications();
+            this.notificationService.loadUnreadCount();
+            this.loadSolde();
+
+            this.snackBar.open('Demande annulée avec succès', 'Fermer', {
+              duration: 3000,
+              panelClass: 'snackbar-success'
             });
+
+            this.router.navigate(['/employee/mes-conges'], {
+              queryParams: { refresh: Date.now() }
+            });
+
+            setTimeout(() => {
+              this.loadConges();
+            }, 300);
+
+            return;
           }
 
-          this.conges = this.sortCongesRecentFirst(
-            this.conges.map(c =>
-              c.id === targetId
-                ? this.normalizeConge({
-                    ...c,
-                    ...(updated || {}),
-                    statut: 'ANNULE'
-                  })
-                : c
-            )
+          this.snackBar.open(
+            response?.message || 'Erreur lors de l’annulation',
+            'Fermer',
+            { duration: 5000, panelClass: 'snackbar-error' }
           );
+        },
+        error: (err: any) => {
+          this.loading = false;
 
-          this.previousStatuts.set(targetId, 'ANNULE');
-          this.canAnnuler = false;
+          this.error =
+            err?.error?.error ||
+            err?.error?.message ||
+            'Erreur lors de l’annulation de la demande.';
 
-          this.notificationService.loadNotifications();
-          this.notificationService.loadUnreadCount();
-          this.loadSolde();
-
-          this.snackBar.open('Demande annulée avec succès', 'Fermer', {
-            duration: 3000,
-            panelClass: 'snackbar-success'
+          this.snackBar.open(this.error || 'Erreur', 'Fermer', {
+            duration: 5000,
+            panelClass: 'snackbar-error'
           });
-
-          this.router.navigate(['/employee/mes-conges'], {
-            queryParams: { refresh: Date.now() }
-          });
-
-          setTimeout(() => {
-            this.loadConges();
-          }, 300);
-
-          return;
         }
-
-        this.snackBar.open(
-          response?.message || 'Erreur lors de l’annulation',
-          'Fermer',
-          { duration: 5000, panelClass: 'snackbar-error' }
-        );
-      },
-      error: (err: any) => {
-        this.loading = false;
-
-        this.error =
-          err?.error?.error ||
-          err?.error?.message ||
-          'Erreur lors de l’annulation de la demande.';
-
-        this.snackBar.open(this.error || 'Erreur', 'Fermer', {
-          duration: 5000,
-          panelClass: 'snackbar-error'
-        });
-      }
-    });
-}
+      });
+  }
 
   peutModifier(conge: DemandeConge | null): boolean {
     return !!conge?.id && conge.statut === 'EN_ATTENTE';
@@ -1434,8 +1482,8 @@ export class CongesComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (tasks: Task[]) => {
           this.tasks = Array.isArray(tasks)
-  ? tasks.map(task => this.normalizeTask(task))
-  : [];
+            ? tasks.map(task => this.normalizeTask(task))
+            : [];
 
           this.loading = false;
         },
@@ -2219,6 +2267,7 @@ export class CongesComponent implements OnInit, OnDestroy {
 
     return null;
   }
+
   private sortCongesRecentFirst(demandes: DemandeConge[]): DemandeConge[] {
     return [...(demandes || [])].sort((a, b) => {
       const idA = Number(a.id || 0);
@@ -2526,61 +2575,49 @@ export class CongesComponent implements OnInit, OnDestroy {
     });
   }
 
-isUrgenteValue(value: any): boolean {
-  return value === true || String(value).toLowerCase() === 'true';
-}
-
-getUrgenceFromObject(obj: any): boolean {
-  if (!obj) {
-    return false;
+  isUrgenteValue(value: any): boolean {
+    return value === true || String(value).toLowerCase() === 'true';
   }
 
-  return (
-    this.isUrgenteValue(obj.urgente) ||
-    this.isUrgenteValue(obj.urgent) ||
-    this.isUrgenteValue(obj.isUrgent)
-  );
-}
+  getUrgenceFromObject(obj: any): boolean {
+    if (!obj) {
+      return false;
+    }
 
-private normalizeConge(conge: DemandeConge): DemandeConge {
-  const urgenteValue = this.getUrgenceFromObject(conge as any);
+    return (
+      this.isUrgenteValue(obj.urgente) ||
+      this.isUrgenteValue(obj.urgent) ||
+      this.isUrgenteValue(obj.isUrgent)
+    );
+  }
 
-  return {
-    ...conge,
-    urgente: urgenteValue,
-    urgent: urgenteValue,
-    isUrgent: urgenteValue
-  } as any;
-}
+  private normalizeConge(conge: DemandeConge): DemandeConge {
+    const urgenteValue = this.getUrgenceFromObject(conge as any);
 
-private normalizeConges(conges: DemandeConge[]): DemandeConge[] {
-  return (conges || []).map(c => this.normalizeConge(c));
-}
+    return {
+      ...conge,
+      urgente: urgenteValue,
+      urgent: urgenteValue,
+      isUrgent: urgenteValue
+    } as any;
+  }
 
-private normalizeTask(task: any): any {
-  const urgenteValue = this.getUrgenceFromObject(task);
+  private normalizeConges(conges: DemandeConge[]): DemandeConge[] {
+    return (conges || []).map(c => this.normalizeConge(c));
+  }
 
-  return {
-    ...task,
-    urgente: urgenteValue,
-    urgent: urgenteValue,
-    isUrgent: urgenteValue
-  };
-}
+  private normalizeTask(task: any): any {
+    const urgenteValue = this.getUrgenceFromObject(task);
 
-isTaskUrgent(task: any): boolean {
-  return this.getUrgenceFromObject(task);
-}
+    return {
+      ...task,
+      urgente: urgenteValue,
+      urgent: urgenteValue,
+      isUrgent: urgenteValue
+    };
+  }
 
-
-
-
-
-
-
-
-
-
-
-
+  isTaskUrgent(task: any): boolean {
+    return this.getUrgenceFromObject(task);
+  }
 }

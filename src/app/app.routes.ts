@@ -9,6 +9,7 @@ import { LoginComponent } from './features/login/login.component';
 
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
+import { ScoresComponent } from './features/scores/scores.component';
 
 export const routes: Routes = [
   {
@@ -169,13 +170,16 @@ export const routes: Routes = [
       },
 
       // ==================== SCORES ====================
-      {
-        path: 'scores',
-        loadComponent: () =>
-          import('./features/scores/scores.component')
-            .then(m => m.ScoresComponent),
-        data: { scoresMode: 'ADMIN_SCORES' }
-      },
+  
+{
+  path: 'scores',
+  component: ScoresComponent
+},
+{
+  path: 'scores/:id',
+  component: ScoresComponent
+},
+
 
       // ==================== RECRUTEMENT INTERNE ====================
       {
