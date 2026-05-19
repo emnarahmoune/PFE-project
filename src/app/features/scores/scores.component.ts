@@ -42,31 +42,32 @@ export interface ScoreTurnover {
 export class ScoresComponent implements OnInit, OnDestroy {
   scores: ScoreTurnover[] = [];
   filteredScores: ScoreTurnover[] = [];
-  loading = true;
+
+  loading = false;
   error = false;
-  
+
   niveauFilter = 'TOUS';
   departementFilter = '';
   searchText = '';
   niveaux = ['TOUS', 'FAIBLE', 'MOYEN', 'ELEVE', 'CRITIQUE'];
   departements: string[] = [];
-  
+
   scoreMoyen = 0;
   totalEmployes = 0;
   nbCritiques = 0;
-  
+
   viewMode: 'table' | 'cards' = 'table';
   showDetail = false;
-  
+
   detail: EmployeScoreDetail | null = null;
   detailLoading = false;
   detailError = false;
   activeTab: 'overview' | 'factors' | 'history' | 'actions' | 'params' = 'overview';
-  
+
   niveauxRisque = [
-    { niveau: 'FAIBLE',   min: 0,  max: 20,  couleur: '#10b981' },
-    { niveau: 'MOYEN',    min: 20, max: 40,  couleur: '#f59e0b' },
-    { niveau: 'ÉLEVÉ',    min: 40, max: 70,  couleur: '#ef4444' },
+    { niveau: 'FAIBLE', min: 0, max: 20, couleur: '#10b981' },
+    { niveau: 'MOYEN', min: 20, max: 40, couleur: '#f59e0b' },
+    { niveau: 'ÉLEVÉ', min: 40, max: 70, couleur: '#ef4444' },
     { niveau: 'CRITIQUE', min: 70, max: 100, couleur: '#7f1d1d' }
   ];
 
@@ -81,16 +82,22 @@ export class ScoresComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    
-    
-    // Puis écouter les changements de route pour le détail
     this.route.params
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
-        const id = params['id'];
-        if (id) {
-          this.loadDetail(+id);
+        const id = Number(params['id']);
+
+        if (id && id > 0) {
+          this.loadDetail(id);
+        } else {
+          this.loading = false;
+          this.showDetail = false;
+          this.detail = null;
+          this.detailError = false;
+          this.detailLoading = false;
         }
+
+        this.cdr.detectChanges();
       });
   }
 
@@ -99,15 +106,12 @@ export class ScoresComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // ==================== LISTE OPTIMISÉE ====================
-  
   loadScores(): void {
-    // Éviter les chargements multiples simultanés
     if (this.isLoadingScores) {
       console.log('Chargement déjà en cours...');
       return;
     }
-    
+
     console.log('Début chargement des scores...');
     this.isLoadingScores = true;
     this.loading = true;
@@ -119,25 +123,21 @@ export class ScoresComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response: any) => {
           console.log('Réponse reçue:', response);
-          
+
           const scoresData = this.extractScoresData(response);
-          
+
           if (!scoresData || scoresData.length === 0) {
-            console.log('Aucune donnée reçue');
             this.handleEmptyResponse();
             return;
           }
-          
-          console.log(`Données extraites: ${scoresData.length} employés`);
-          
-          // Mapping optimisé
-          this.scores = this.mapScoresData(scoresData);
+
+          this.scores = this.mapScoresData(scoresData)
+            .filter(s => s.employeId && s.employeId > 0);
+
           this.updateDepartements();
           this.calculerStats();
           this.applyFilters();
-          
-          console.log(`Scores chargés: ${this.scores.length} employés`);
-          
+
           this.loading = false;
           this.isLoadingScores = false;
           this.cdr.detectChanges();
@@ -150,37 +150,17 @@ export class ScoresComponent implements OnInit, OnDestroy {
   }
 
   private extractScoresData(response: any): any[] {
-    if (!response) {
-      console.log('Réponse vide');
-      return [];
-    }
-    
-    if (response && response.success && Array.isArray(response.data)) {
-      console.log('Format: { success, data }');
-      return response.data;
-    }
-    if (response && Array.isArray(response)) {
-      console.log('Format: Array direct');
-      return response;
-    }
-    if (response && response.data && Array.isArray(response.data)) {
-      console.log('Format: { data }');
-      return response.data;
-    }
-    if (response && response.items && Array.isArray(response.items)) {
-      console.log('Format: { items }');
-      return response.items;
-    }
-    
-    console.log('Format non reconnu, tentative de récupération...');
-    // Dernière tentative: chercher un tableau dans la réponse
+    if (!response) return [];
+
+    if (response.success && Array.isArray(response.data)) return response.data;
+    if (Array.isArray(response)) return response;
+    if (response.data && Array.isArray(response.data)) return response.data;
+    if (response.items && Array.isArray(response.items)) return response.items;
+
     for (const key in response) {
-      if (Array.isArray(response[key])) {
-        console.log(`Tableau trouvé dans la clé '${key}'`);
-        return response[key];
-      }
+      if (Array.isArray(response[key])) return response[key];
     }
-    
+
     return [];
   }
 
@@ -188,16 +168,17 @@ export class ScoresComponent implements OnInit, OnDestroy {
     return scoresData.map((item: any, index: number) => {
       const scoreValue = this.extractScoreValue(item);
       const niveauRisque = this.extractNiveauRisque(item);
-      
+      const employeId = Number(item.employeId || item.id || 0);
+
       return {
-        id: item.id || item.employeId || index,
-        employeId: item.employeId || item.id || index,
+        id: Number(item.id || employeId || index + 1),
+        employeId,
         employeNom: item.employeNom || item.nom || item.lastName || item.name || '',
         employePrenom: item.employePrenom || item.prenom || item.firstName || '',
         employeMatricule: item.employeMatricule || item.matricule || '',
         employeDepartement: item.employeDepartement || item.departement || '',
         score: scoreValue,
-        niveauRisque: niveauRisque,
+        niveauRisque,
         datePrediction: item.datePrediction || item.dateCalcul || item.date || new Date().toISOString(),
         facteursPrincipaux: item.facteursPrincipaux || item.facteurs,
         actionRecommandee: item.actionRecommandee || item.action,
@@ -208,7 +189,6 @@ export class ScoresComponent implements OnInit, OnDestroy {
   }
 
   private extractScoreValue(item: any): number {
-    // Ordre de priorité pour trouver le score
     if (typeof item.score === 'number') return item.score;
     if (typeof item.score === 'string') return parseFloat(item.score) || 0;
     if (typeof item.valeur === 'number') return item.valeur;
@@ -219,21 +199,15 @@ export class ScoresComponent implements OnInit, OnDestroy {
     if (typeof item.prediction === 'number') return item.prediction;
     if (typeof item.probabilite === 'number') return item.probabilite;
     if (typeof item.turnoverRisk === 'number') return item.turnoverRisk;
-    
-    // Recherche automatique dans les propriétés
+
     for (const key of Object.keys(item)) {
       const val = item[key];
-      if (typeof val === 'number' && val >= 0 && val <= 100) {
-        console.log(`Score trouvé dans '${key}': ${val}`);
-        return val;
-      }
+      if (typeof val === 'number' && val >= 0 && val <= 100) return val;
       if (typeof val === 'string' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0 && parseFloat(val) <= 100) {
-        const numVal = parseFloat(val);
-        console.log(`Score (string) trouvé dans '${key}': ${numVal}`);
-        return numVal;
+        return parseFloat(val);
       }
     }
-    
+
     return 0;
   }
 
@@ -242,8 +216,7 @@ export class ScoresComponent implements OnInit, OnDestroy {
     if (item.niveau) return item.niveau;
     if (item.riskLevel) return item.riskLevel;
     if (item.categorie) return item.categorie;
-    
-    // Déterminer par le score
+
     const score = this.extractScoreValue(item);
     if (score < 20) return 'FAIBLE';
     if (score < 40) return 'MOYEN';
@@ -262,7 +235,7 @@ export class ScoresComponent implements OnInit, OnDestroy {
   private handleEmptyResponse(): void {
     this.scores = [];
     this.filteredScores = [];
-    this.error = true;
+    this.error = false;
     this.loading = false;
     this.isLoadingScores = false;
     this.cdr.detectChanges();
@@ -279,30 +252,18 @@ export class ScoresComponent implements OnInit, OnDestroy {
 
   calculerStats(): void {
     this.totalEmployes = this.scores.length;
+
     if (this.totalEmployes === 0) {
       this.scoreMoyen = 0;
       this.nbCritiques = 0;
       return;
     }
-    
-    let sum = 0;
-    let count = 0;
-    let critiques = 0;
-    
-    for (const score of this.scores) {
-      if (typeof score.score === 'number' && !isNaN(score.score) && score.score > 0) {
-        sum += score.score;
-        count++;
-      }
-      if (this.normalizeNiveau(score.niveauRisque) === 'CRITIQUE') {
-        critiques++;
-      }
-    }
-    
-    this.scoreMoyen = count > 0 ? Math.round(sum / count) : 0;
-    this.nbCritiques = critiques;
-    
-    console.log(`Stats: total=${this.totalEmployes}, scoreMoyen=${this.scoreMoyen}, nbCritiques=${this.nbCritiques}`);
+
+    const validScores = this.scores.filter(s => typeof s.score === 'number' && !isNaN(s.score));
+    const sum = validScores.reduce((acc, s) => acc + s.score, 0);
+
+    this.scoreMoyen = validScores.length > 0 ? Math.round(sum / validScores.length) : 0;
+    this.nbCritiques = this.scores.filter(s => this.normalizeNiveau(s.niveauRisque) === 'CRITIQUE').length;
   }
 
   applyFilters(): void {
@@ -310,24 +271,24 @@ export class ScoresComponent implements OnInit, OnDestroy {
     const hasSearch = searchLower.length > 0;
     const hasDepartement = !!this.departementFilter;
     const hasNiveau = this.niveauFilter !== 'TOUS';
-    
+
     this.filteredScores = this.scores.filter(score => {
       if (hasNiveau && this.normalizeNiveau(score.niveauRisque) !== this.niveauFilter) return false;
       if (hasDepartement && score.employeDepartement !== this.departementFilter) return false;
-      
+
       if (hasSearch) {
         const fullName = `${score.employePrenom || ''} ${score.employeNom || ''}`.toLowerCase();
         const reverseName = `${score.employeNom || ''} ${score.employePrenom || ''}`.toLowerCase();
-        if (!fullName.includes(searchLower) && 
-            !reverseName.includes(searchLower) && 
-            !(score.employeMatricule || '').toLowerCase().includes(searchLower) && 
-            !(score.employeDepartement || '').toLowerCase().includes(searchLower)) {
-          return false;
-        }
+
+        return fullName.includes(searchLower)
+          || reverseName.includes(searchLower)
+          || (score.employeMatricule || '').toLowerCase().includes(searchLower)
+          || (score.employeDepartement || '').toLowerCase().includes(searchLower);
       }
+
       return true;
     });
-    
+
     this.filteredScores.sort((a, b) => (b.score || 0) - (a.score || 0));
     this.cdr.detectChanges();
   }
@@ -340,11 +301,7 @@ export class ScoresComponent implements OnInit, OnDestroy {
   }
 
   getCountNiveau(niveau: string): number {
-    let count = 0;
-    for (const score of this.scores) {
-      if (this.normalizeNiveau(score.niveauRisque) === niveau) count++;
-    }
-    return count;
+    return this.scores.filter(score => this.normalizeNiveau(score.niveauRisque) === niveau).length;
   }
 
   getPourcentageNiveau(niveau: string): number {
@@ -352,15 +309,28 @@ export class ScoresComponent implements OnInit, OnDestroy {
     return Math.round((this.getCountNiveau(niveau) / this.totalEmployes) * 100);
   }
 
-  // ==================== DÉTAIL ====================
-  
   viewDetail(employeId: number): void {
+    if (!employeId || employeId <= 0) {
+      console.error('ID employé invalide:', employeId);
+      return;
+    }
+
     this.router.navigate(['/admin/scores', employeId]);
   }
 
   loadDetail(employeId: number): void {
+    if (!employeId || employeId <= 0) {
+      console.error('ID employé invalide:', employeId);
+      this.detailError = true;
+      this.detailLoading = false;
+      this.showDetail = true;
+      this.loading = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
     if (this.detailLoading) return;
-    
+
     this.detailLoading = true;
     this.detailError = false;
     this.showDetail = true;
@@ -393,14 +363,21 @@ export class ScoresComponent implements OnInit, OnDestroy {
     this.showDetail = false;
     this.detail = null;
     this.activeTab = 'overview';
-    // Recharger la liste quand on revient
-    this.loadScores();
+    this.loading = false;
+    this.detailLoading = false;
+    this.detailError = false;
+    this.cdr.detectChanges();
   }
 
   recalculerScore(employeId: number): void {
+    if (!employeId || employeId <= 0) {
+      console.error('ID employé invalide:', employeId);
+      return;
+    }
+
     const confirmed = confirm('Recalculer le score de risque pour cet employé ?');
     if (!confirmed) return;
-    
+
     this.managerService.recalculerScoreTurnover(employeId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -408,7 +385,6 @@ export class ScoresComponent implements OnInit, OnDestroy {
           if (this.showDetail) {
             this.loadDetail(employeId);
           }
-          this.loadScores();
         },
         error: (err: any) => {
           console.error('Erreur recalcul:', err);
@@ -432,27 +408,28 @@ export class ScoresComponent implements OnInit, OnDestroy {
       score.niveauRisque || '',
       this.formatDate(score.datePrediction)
     ]);
-    
+
     const csvContent = [headers, ...rows]
       .map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(';'))
       .join('\n');
-    
+
     const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
+
     link.setAttribute('href', url);
     link.setAttribute('download', `scores_turnover_${new Date().toISOString().slice(0, 19)}.csv`);
     link.style.visibility = 'hidden';
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+
     URL.revokeObjectURL(url);
   }
 
-  // ==================== HELPERS ====================
-  
   trackByScoreId(index: number, score: ScoreTurnover): number {
-    return score.employeId;
+    return score.employeId || index;
   }
 
   trackByDept(index: number, dept: string): string {
@@ -466,6 +443,7 @@ export class ScoresComponent implements OnInit, OnDestroy {
       ELEVE: 'niveau-eleve',
       CRITIQUE: 'niveau-critique'
     };
+
     return map[this.normalizeNiveau(niveau)] || '';
   }
 
@@ -515,19 +493,23 @@ export class ScoresComponent implements OnInit, OnDestroy {
     if (typeof score?.score === 'string') return parseFloat(score.score) || 0;
     if (typeof score?.valeur === 'number') return score.valeur;
     if (typeof score?.valeur === 'string') return parseFloat(score.valeur) || 0;
+
     if (score && typeof score === 'object') {
       for (const key of Object.keys(score)) {
         const val = score[key];
         if (typeof val === 'number' && val >= 0 && val <= 100) return val;
       }
     }
+
     return 0;
   }
 
   formatDate(dateStr?: string): string {
     if (!dateStr) return '—';
+
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '—';
+
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: 'long',
@@ -548,8 +530,13 @@ export class ScoresComponent implements OnInit, OnDestroy {
   }
 
   private normalizeNiveau(niveau: string): string {
-    const value = String(niveau || '').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    if (value === 'ELEVE' || value === 'ÉLEVÉ') return 'ELEVE';
+    const value = String(niveau || '')
+      .trim()
+      .toUpperCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    if (value === 'ELEVE') return 'ELEVE';
     return value;
   }
 }
