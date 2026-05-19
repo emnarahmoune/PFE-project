@@ -613,3 +613,81 @@
     padding: 20px 22px 22px !important;
   }
 }
+
+
+/* =========================================================
+   MOBILE FIX - MANAGER STATS
+========================================================= */
+
+@media (max-width: 560px) {
+  .stats-container {
+    padding: 0 12px 32px;
+  }
+
+  .page-header {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .stats-container h2 {
+    font-size: 1.25rem;
+  }
+
+  .page-header p {
+    font-size: 0.82rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .stat-card {
+    width: 100%;
+    min-height: 118px;
+    padding: 18px 20px;
+    border-radius: 20px !important;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .stat-card::after {
+    width: 120px;
+    height: 120px;
+    right: -30px;
+    bottom: -36px;
+  }
+
+  .stat-icon {
+    width: 46px;
+    height: 46px;
+    margin-bottom: 12px;
+    border-radius: 16px;
+    font-size: 1.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.55rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
+
+  .btn-refresh {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .recent-requests {
+    border-radius: 20px !important;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+  }
+
+  .requests-table {
+    min-width: 720px;
+  }
+}
