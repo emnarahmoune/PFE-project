@@ -15,7 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.codeWithProject.ecom.service.dto.EmployeScoreDetailDTO;
 import java.util.List;
 import java.util.Map;
 
@@ -185,4 +185,20 @@ public ResponseEntity<ApiResponse<List<ScoreTurnoverDTO>>> calculerScoresPourTou
         Map<String, Object> stats = scoreTurnoverService.getStatsTableauBord();
         return ResponseEntity.ok(ApiResponse.success(stats, "Statistiques tableau de bord récupérées"));
     }
+
+
+
+
+    @GetMapping("/employe/{employeId}/detail")
+public ResponseEntity<ApiResponse<EmployeScoreDetailDTO>> getEmployeScoreDetail(
+        @PathVariable Long employeId) {
+
+    log.info("GET /api/scores-turnover/employe/{}/detail", employeId);
+
+    EmployeScoreDetailDTO detail = scoreTurnoverService.getEmployeScoreDetail(employeId);
+
+    return ResponseEntity.ok(
+            ApiResponse.success(detail, "Détail du score employé récupéré")
+    );
+}
 }
