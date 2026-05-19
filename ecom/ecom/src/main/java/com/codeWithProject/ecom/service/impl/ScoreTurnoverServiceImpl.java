@@ -23,7 +23,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.codeWithProject.ecom.service.dto.EmployeScoreDetailDTO;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -658,4 +658,149 @@ public class ScoreTurnoverServiceImpl implements ScoreTurnoverService {
     private double round2(double value) {
         return Math.round(value * 100.0) / 100.0;
     }
+
+
+
+@Override
+@Transactional(readOnly = true)
+public EmployeScoreDetailDTO getEmployeScoreDetail(Long employeId) {
+    Employe employe = employeRepository.findById(employeId)
+            .orElseThrow(() -> new ResourceNotFoundException("Employé", employeId));
+
+    ScoreTurnoverDTO dernierScore = findDernierScoreEmploye(employeId).orElse(null);
+    List<ScoreTurnoverDTO> historique = findHistoriqueEmploye(employeId);
+    ScoreTurnoverDTO precedentScore = historique.size() > 1 ? historique.get(1) : null;
+
+    Double evolution = null;
+    Double evolutionPct = null;
+    if (dernierScore != null && precedentScore != null
+            && precedentScore.getScore() != null && precedentScore.getScore() != 0) {
+        evolution = round2(dernierScore.getScore() - precedentScore.getScore());
+        evolutionPct = round2((evolution / precedentScore.getScore()) * 100);
+    }
+
+    List<ScoreTurnoverDTO> tousScores = findDerniersScores();
+    int totalEmployes = tousScores.size();
+    Integer rang = null;
+    Integer percentile = null;
+
+    if (dernierScore != null && totalEmployes > 0) {
+        double scoreActuel = dernierScore.getScore();
+        rang = (int) tousScores.stream()
+                .filter(s -> s.getScore() != null && s.getScore() > scoreActuel)
+                .count() + 1;
+
+        percentile = (int) Math.round(((double) (totalEmployes - rang) / totalEmployes) * 100);
+    }
+
+    List<EmployeScoreDetailDTO.SousScoreItem> sousScores = new ArrayList<>();
+    if (dernierScore != null) {
+        sousScores.add(buildSousScore("Ancienneté", dernierScore.getScoreAnciennete(), 100.0, "#3b82f6"));
+        sousScores.add(buildSousScore("Salaire", dernierScore.getScoreSalaire(), 100.0, "#ef4444"));
+        sousScores.add(buildSousScore("Performance", dernierScore.getScorePerformance(), 100.0, "#f59e0b"));
+        sousScores.add(buildSousScore("Formation", dernierScore.getScoreFormation(), 100.0, "#10b981"));
+        sousScores.add(buildSousScore("Absentéisme", dernierScore.getScoreAbsenteisme(), 100.0, "#8b5cf6"));
+    }
+
+    List<EmployeScoreDetailDTO.FacteurItem> facteurs = new ArrayList<>();
+    if (dernierScore != null && dernierScore.getFacteursPrincipaux() != null) {
+        for (String f : dernierScore.getFacteursPrincipaux().split("; ")) {
+            if (!f.isBlank()) {
+                facteurs.add(EmployeScoreDetailDTO.FacteurItem.builder()
+                        .libelle(f)
+                        .score(0.0)
+                        .niveauImpact("Élevé")
+                        .build());
+            }
+        }
+    }
+
+    List<EmployeScoreDetailDTO.ActionItem> actions = new ArrayList<>();
+    if (dernierScore != null && dernierScore.getActionRecommandee() != null) {
+        for (String ligne : dernierScore.getActionRecommandee().split("\n")) {
+            if (!ligne.isBlank()) {
+                String actionText = ligne.replaceFirst("^-\\s*", "");
+                String type = (ligne.contains("rémunération") || ligne.contains("salariale"))
+                        ? "RH"
+                        : "Manager";
+
+                actions.add(EmployeScoreDetailDTO.ActionItem.builder()
+                        .action(actionText)
+                        .type(type)
+                        .build());
+            }
+        }
+    }
+
+    List<EmployeScoreDetailDTO.HistoriqueLigne> historiqueLignes = historique.stream()
+            .limit(5)
+            .map(s -> EmployeScoreDetailDTO.HistoriqueLigne.builder()
+                    .date(s.getDatePrediction() != null ? s.getDatePrediction().toString() : null)
+                    .scoreGlobal(s.getScore())
+                    .niveau(s.getNiveauRisque())
+                    .anciennete(s.getScoreAnciennete() != null ? String.valueOf(s.getScoreAnciennete()) : "N/A")
+                    .salaire(s.getScoreSalaire() != null ? String.valueOf(s.getScoreSalaire()) : "N/A")
+                    .performance(s.getScorePerformance() != null ? String.valueOf(s.getScorePerformance()) : "N/A")
+                    .formations(s.getScoreFormation() != null ? String.valueOf(s.getScoreFormation()) : "N/A")
+                    .absenteisme(s.getScoreAbsenteisme() != null ? String.valueOf(s.getScoreAbsenteisme()) : "N/A")
+                    .facteursMajeurs(s.getFacteursPrincipaux())
+                    .build())
+            .collect(Collectors.toList());
+
+    EmployeScoreDetailDTO.InfoCalcul infoCalcul = EmployeScoreDetailDTO.InfoCalcul.builder()
+            .periodeDebut("2025-01-01")
+            .periodeFin(LocalDate.now().toString())
+            .methode("Score turnover pondéré (5 critères)")
+            .source("Scores turnover v" + (dernierScore != null ? dernierScore.getVersionModele() : "inconnue"))
+            .dernierBatch(dernierScore != null && dernierScore.getDatePrediction() != null
+                    ? dernierScore.getDatePrediction().toString()
+                    : null)
+            .prochainBatch(LocalDate.now().plusDays(7).toString())
+            .build();
+
+    return EmployeScoreDetailDTO.builder()
+            .employeId(employe.getId())
+            .nom(employe.getNom())
+            .prenom(employe.getPrenom())
+            .matricule(employe.getMatricule())
+            .poste(employe.getPoste())
+            .departement(employe.getDepartement())
+            .dateEmbauche(employe.getDateEmbauche() != null ? employe.getDateEmbauche().toString() : null)
+            .anciennete(employe.getAnciennete() + " ans")
+            .salaireAnnuel(employe.getSalaire() != null ? employe.getSalaire().doubleValue() : 0.0)
+            .managerNom(employe.getManager() != null ? employe.getManager().getNomComplet() : null)
+            .photoUrl(employe.getPhotoUrl())
+            .scoreActuel(dernierScore)
+            .scorePrecedent(precedentScore)
+            .evolutionScore(evolution)
+            .evolutionPourcentage(evolutionPct)
+            .rang(rang)
+            .percentile(percentile)
+            .totalEmployes(totalEmployes)
+            .sousScores(sousScores)
+            .facteursContributifs(facteurs)
+            .actionsRecommandees(actions)
+            .historique(historiqueLignes)
+            .infoCalcul(infoCalcul)
+            .build();
+}
+
+private EmployeScoreDetailDTO.SousScoreItem buildSousScore(
+        String critere,
+        Double valeur,
+        Double max,
+        String couleur
+) {
+    double v = valeur != null ? valeur : 0.0;
+
+    return EmployeScoreDetailDTO.SousScoreItem.builder()
+            .critere(critere)
+            .valeur(v)
+            .max(max)
+            .contribution((int) (max > 0 ? (v / max) * 100 : 0))
+            .couleur(couleur)
+            .build();
+}
+
+
 }

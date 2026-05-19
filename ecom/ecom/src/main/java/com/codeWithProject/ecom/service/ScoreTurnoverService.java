@@ -1,5 +1,6 @@
 package com.codeWithProject.ecom.service;
 
+import com.codeWithProject.ecom.service.dto.EmployeScoreDetailDTO;
 import com.codeWithProject.ecom.service.dto.ScoreTurnoverDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -117,4 +118,6 @@ public interface ScoreTurnoverService {
      * Vérifie si un employé a un score récent
      */
     boolean hasScoreRecent(Long employeId, int jours);
+
+    EmployeScoreDetailDTO getEmployeScoreDetail(Long employeId);
 }

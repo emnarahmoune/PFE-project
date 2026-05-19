@@ -41,5 +41,4 @@ public class ScoreTurnover {
     @JoinColumn(name = "systeme_bi_id")
     private SystemeBI systemeBI;
 
-    // Plus de logique métier ici, tout sera fait dans le service
 }

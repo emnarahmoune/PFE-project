@@ -7,7 +7,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.time.LocalDateTime;
 
@@ -128,6 +130,7 @@ private Boolean urgente = false;
         validerDates();
         validerType();
         this.joursOuvres = calculerJoursOuvres();
+        validerDureeMax();
         verifierSoldeSuffisant();
         this.dateDemande = LocalDate.now();
         this.dateSoumission = LocalDateTime.now();
@@ -337,4 +340,31 @@ public void setUrgente(Boolean urgente) {
     this.urgente = urgente;
 }
 
+
+
+    private static final Map<String, Integer> DUREES_MAX_PAR_TYPE = new HashMap<>();
+
+    static {
+        DUREES_MAX_PAR_TYPE.put("PATERNITE", 5);
+        DUREES_MAX_PAR_TYPE.put("MATERNITE", 30);
+        DUREES_MAX_PAR_TYPE.put("MALADIE", 6);
+        DUREES_MAX_PAR_TYPE.put("ANNUEL", 30);
+        DUREES_MAX_PAR_TYPE.put("SANS_SOLDE", 365);
+        DUREES_MAX_PAR_TYPE.put("FORMATION", 3);
+        DUREES_MAX_PAR_TYPE.put("URGENCE", 1);
+        // Valeur par défaut pour tout autre type (optionnel)
+        DUREES_MAX_PAR_TYPE.put("DEFAULT", 30);
+    }
+    private void validerDureeMax() {
+        if (this.type == null || this.joursOuvres == null) return;
+        Integer max = DUREES_MAX_PAR_TYPE.get(this.type);
+        if (max == null) {
+            max = DUREES_MAX_PAR_TYPE.get("DEFAULT");
+        }
+        if (this.joursOuvres > max) {
+            throw new IllegalStateException(
+                    String.format("Le nombre de jours demandé (%d) dépasse la durée maximale autorisée pour ce type de congé (%d jours).",
+                            this.joursOuvres, max));
+        }
+    }
 }

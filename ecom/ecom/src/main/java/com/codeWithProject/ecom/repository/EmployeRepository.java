@@ -179,4 +179,7 @@ List<Employe> findAllManagers();
 """, nativeQuery = true)
 List<Employe> findParticipantsByFormationId(@Param("formationId") Long formationId);
 
+
+List<Employe> findByActifTrue();
+
 }
