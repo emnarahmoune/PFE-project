@@ -1854,3 +1854,275 @@ tr:hover td {
     font-size: 1.6rem;
   }
 }
+
+
+/* =========================================================
+   MOBILE FIX - SCORES PAGE + BTN RETRY
+========================================================= */
+
+.empty-state {
+  width: 100%;
+  margin: 22px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-retry {
+  min-height: 44px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  background: var(--primary);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 900;
+  transition: 180ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.btn-retry:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   RESPONSIVE GLOBAL SCORES
+========================================================= */
+
+@media (max-width: 600px) {
+  .admin-scores {
+    padding: 0 10px 32px;
+  }
+
+  .hero-section,
+  .distribution-section,
+  .filters-section,
+  .content,
+  .detail-container,
+  .profil-section,
+  .score-global-card,
+  .tabs-container,
+  .loading-state,
+  .error-state {
+    border-radius: 18px;
+  }
+
+  .hero-section {
+    padding: 20px;
+    gap: 18px;
+  }
+
+  .hero-text h1 {
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+
+  .hero-text p {
+    font-size: 0.82rem;
+  }
+
+  .stats-cards {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    width: 100%;
+    min-height: 82px;
+  }
+
+  .distribution-section {
+    padding: 18px;
+  }
+
+  .distribution-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dist-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dist-count {
+    text-align: left;
+  }
+
+  .filters-section {
+    padding: 18px;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .chips {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .chip {
+    width: 100%;
+    min-height: 42px;
+    font-size: 0.78rem;
+  }
+
+  .btn-retry,
+  .btn-reset,
+  .btn-export,
+  .back-btn,
+  .btn-recalc-full {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 16px;
+    font-size: 0.9rem;
+    white-space: normal;
+  }
+
+  .empty-state {
+    padding: 0 10px;
+    margin: 20px 0;
+  }
+
+  .view-toggle {
+    justify-content: stretch;
+    flex-direction: column;
+  }
+
+  .toggle-btn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+    border-radius: 18px;
+  }
+
+  table {
+    min-width: 760px;
+  }
+
+  th,
+  td {
+    padding: 12px 14px;
+    font-size: 0.78rem;
+  }
+
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .score-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .card-header {
+    align-items: flex-start;
+  }
+
+  .risk-badge {
+    font-size: 0.68rem;
+    padding: 5px 10px;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .detail-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .profil-section {
+    padding: 20px;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profil-info h2 {
+    font-size: 1.35rem;
+  }
+
+  .meta-grid {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    text-align: left;
+  }
+
+  .score-global-card {
+    padding: 20px;
+    flex-direction: column;
+  }
+
+  .score-evolution {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .evolution-prev,
+  .evolution-delta,
+  .evolution-rang {
+    width: 100%;
+  }
+
+  .circular-progress {
+    width: 120px;
+    height: 120px;
+  }
+
+  .tabs-header {
+    flex-direction: column;
+    padding: 12px;
+  }
+
+  .tab-btn {
+    width: 100%;
+    border-radius: 999px;
+    text-align: center;
+  }
+
+  .tab-btn.active {
+    background: var(--primary);
+    color: white;
+    border-bottom: none;
+  }
+
+  .tab-content {
+    padding: 18px;
+  }
+
+  .sous-scores-section,
+  .legend-section,
+  .facteurs-section,
+  .actions-section,
+  .historique-section,
+  .info-calcul-section {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .facteurs-grid,
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .action-type {
+    margin-left: 0;
+  }
+}
