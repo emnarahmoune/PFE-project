@@ -81,8 +81,7 @@ export class ScoresComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // CORRECTION : Appeler loadScores() immédiatement au démarrage
-    this.loadScores();
+    
     
     // Puis écouter les changements de route pour le détail
     this.route.params
