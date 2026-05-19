@@ -123,29 +123,13 @@ public class ScoreTurnoverServiceImpl implements ScoreTurnoverService {
     }
 
     @Override
-    @Transactional
-    public List<ScoreTurnoverDTO> findDerniersScores() {
-        SystemeBI systemeBI = getSystemeBIActif();
-
-        List<Employe> employes = employeRepository.findAll();
-
-        for (Employe employe : employes) {
-            try {
-                calculerScorePourEmploye(employe.getId(), systemeBI.getId());
-            } catch (Exception e) {
-                log.warn(
-                        "Score turnover non recalculé pour employé {} : {}",
-                        employe.getId(),
-                        e.getMessage()
-                );
-            }
-        }
-
-        return scoreTurnoverRepository.findDerniersScores()
-                .stream()
-                .map(mapper::toDto)
-                .toList();
-    }
+@Transactional(readOnly = true)
+public List<ScoreTurnoverDTO> findDerniersScores() {
+    return scoreTurnoverRepository.findDerniersScores()
+            .stream()
+            .map(mapper::toDto)
+            .toList();
+}
 
     @Override
     @Transactional
@@ -679,7 +663,10 @@ public EmployeScoreDetailDTO getEmployeScoreDetail(Long employeId) {
         evolutionPct = round2((evolution / precedentScore.getScore()) * 100);
     }
 
-    List<ScoreTurnoverDTO> tousScores = findDerniersScores();
+    List<ScoreTurnoverDTO> tousScores = scoreTurnoverRepository.findDerniersScores()
+        .stream()
+        .map(mapper::toDto)
+        .toList();
     int totalEmployes = tousScores.size();
     Integer rang = null;
     Integer percentile = null;
