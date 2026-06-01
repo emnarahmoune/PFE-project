@@ -8,10 +8,13 @@ ENV KC_BOOTSTRAP_ADMIN_PASSWORD=admin123456
 ENV KC_CACHE=local
 ENV KC_HTTP_ENABLED=true
 ENV KC_HOSTNAME_STRICT=false
+ENV KC_HOSTNAME=https://pfe-project-1-s20t.onrender.com
 ENV KC_PROXY_HEADERS=xforwarded
 
 COPY ecom/keycloak/themes/ /opt/keycloak/themes/
 
 RUN /opt/keycloak/bin/kc.sh build
 
-CMD ["start"]
+EXPOSE 8080
+
+CMD ["start", "--http-enabled=true", "--http-port=8080", "--http-host=0.0.0.0", "--hostname=https://pfe-project-1-s20t.onrender.com", "--hostname-strict=false", "--proxy-headers=xforwarded"]
