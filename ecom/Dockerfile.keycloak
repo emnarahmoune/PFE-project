@@ -1,7 +1,8 @@
 FROM quay.io/keycloak/keycloak:26.6.0
 
+
 ENV KC_DB=mysql
-ENV KC_DB_URL=jdbc:mysql://keycloak-db13d64237-emnarahmoune13-53c7.l.aivencloud.com:20867/keycloakdb?sslMode=REQUIRED
+ENV KC_DB_URL=jdbc:mysql://keycloak-db13d64237-emnarahmoune13-53c7.l.aivencloud.com:20867/keycloakdb?sslMode=REQUIRED&enabledTLSProtocols=TLSv1.2&connectTimeout=60000&socketTimeout=60000
 ENV KC_DB_USERNAME=avnadmin
 ENV KC_DB_PASSWORD=${KC_DB_PASSWORD}
 
