@@ -1,4 +1,4 @@
-FROM quay.io/keycloak/keycloak:26.5.5
+FROM quay.io/keycloak/keycloak:26.6.0
 
 ENV KC_DB=mysql
 ENV KC_DB_URL=jdbc:mysql://keycloak-db13d64237-emnarahmoune13-53c7.l.aivencloud.com:20867/keycloakdb?sslMode=REQUIRED
