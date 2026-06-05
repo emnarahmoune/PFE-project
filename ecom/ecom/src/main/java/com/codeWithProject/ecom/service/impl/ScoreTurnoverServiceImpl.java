@@ -1,5 +1,5 @@
 package com.codeWithProject.ecom.service.impl;
-
+import org.springframework.data.domain.PageRequest;
 import com.codeWithProject.ecom.entity.Employe;
 import com.codeWithProject.ecom.entity.EmployeFormation;
 import com.codeWithProject.ecom.entity.IndicateurRH;
@@ -125,7 +125,7 @@ public class ScoreTurnoverServiceImpl implements ScoreTurnoverService {
 @Override
 @Transactional(readOnly = true)
 public List<ScoreTurnoverDTO> findDerniersScores() {
-    return scoreTurnoverRepository.findDerniersScores()
+    return scoreTurnoverRepository.findDerniersScores(PageRequest.of(0, 500))
             .stream()
             .collect(Collectors.toMap(
                     s -> s.getEmploye().getId(),
@@ -138,7 +138,6 @@ public List<ScoreTurnoverDTO> findDerniersScores() {
             .map(mapper::toDto)
             .toList();
 }
-
     @Override
     @Transactional
     public ScoreTurnoverDTO calculerScorePourEmploye(Long employeId, Long systemeBIId) {
