@@ -81,24 +81,26 @@ viewMode: 'table' | 'cards' = window.innerWidth <= 600 ? 'cards' : 'table';  sho
   ) {}
 
   ngOnInit(): void {
-    this.route.params
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(params => {
-        const id = Number(params['id']);
+  this.route.params
+    .pipe(takeUntil(this.destroy$))
+    .subscribe(params => {
+      const id = Number(params['id']);
 
-        if (id && id > 0) {
-          this.loadDetail(id);
-        } else {
-          this.loading = false;
-          this.showDetail = false;
-          this.detail = null;
-          this.detailError = false;
-          this.detailLoading = false;
-        }
+      if (id && id > 0) {
+        this.loadDetail(id);
+      } else {
+        this.showDetail = false;
+        this.detail = null;
+        this.detailError = false;
+        this.detailLoading = false;
 
-        this.cdr.detectChanges();
-      });
-  }
+        // IMPORTANT : charger les scores sauvegardés depuis la DB
+        this.loadScores();
+      }
+
+      this.cdr.detectChanges();
+    });
+}
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -162,6 +164,29 @@ viewMode: 'table' | 'cards' = window.innerWidth <= 600 ? 'cards' : 'table';  sho
 
     return [];
   }
+
+
+  calculerTousLesScores(): void {
+  const confirmed = confirm('Recalculer tous les scores de turnover ?');
+  if (!confirmed) return;
+
+  this.loading = true;
+  this.error = false;
+
+  this.managerService.recalculerTousScoresTurnover()
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: () => {
+        this.loadScores();
+      },
+      error: (err: any) => {
+        console.error('Erreur recalcul tous les scores:', err);
+        this.loading = false;
+        this.error = true;
+        this.cdr.detectChanges();
+      }
+    });
+}
 
   private mapScoresData(scoresData: any[]): ScoreTurnover[] {
     return scoresData.map((item: any, index: number) => {

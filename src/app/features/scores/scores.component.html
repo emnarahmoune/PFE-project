@@ -70,8 +70,8 @@
     </div>
 
 
-    <button class="btn-retry" type="button" (click)="loadScores()" *ngIf="!loading && scores.length === 0">
-  ⚡ Analyser les risques turnover
+    <button class="btn-retry" type="button" (click)="calculerTousLesScores()" *ngIf="!loading">
+  🔄 Recalculer les scores
 </button>
     <div *ngIf="loading" class="loading-state">
       <div class="spinner"></div>
