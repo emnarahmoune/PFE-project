@@ -2,9 +2,9 @@
 
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
 import { EventInput } from '@fullcalendar/core';
 
+import { Observable, map, of, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Employe } from '../models/employe.model';
 import { DemandeConge, SoldeConges } from '../models/conge.model';
@@ -162,6 +162,7 @@ export class ManagerService {
   private apiUrl = `${environment.apiUrl}/employes`;
   private managerApiUrl = `${environment.apiUrl}/manager`;
   private scoresApiUrl = `${environment.apiUrl}/scores-turnover`;
+  private derniersScoresCache: { success: boolean; data: ScoreTurnover[] } | null = null;
 
   constructor(private http: HttpClient) {}
 
@@ -259,11 +260,17 @@ export class ManagerService {
     );
   }
 
-  getDerniersScores(): Observable<{ success: boolean; data: ScoreTurnover[] }> {
-    return this.http.get<{ success: boolean; data: ScoreTurnover[] }>(
-      `${this.scoresApiUrl}/derniers`
-    );
+getDerniersScores(): Observable<{ success: boolean; data: ScoreTurnover[] }> {
+  if (this.derniersScoresCache) {
+    return of(this.derniersScoresCache);
   }
+
+  return this.http.get<{ success: boolean; data: ScoreTurnover[] }>(
+    `${this.scoresApiUrl}/derniers`
+  ).pipe(
+    tap(res => this.derniersScoresCache = res)
+  );
+}
 
   recalculerScoreTurnover(
     employeId: number
@@ -274,12 +281,16 @@ export class ManagerService {
     );
   }
 
-  recalculerTousScoresTurnover(): Observable<{ success: boolean; data: ScoreTurnover[]; message?: string }> {
-    return this.http.post<{ success: boolean; data: ScoreTurnover[]; message?: string }>(
-      `${this.scoresApiUrl}/calculer/tous`,
-      {}
-    );
-  }
+ recalculerTousScoresTurnover(): Observable<{ success: boolean; data: ScoreTurnover[]; message?: string }> {
+  this.derniersScoresCache = null;
+
+  return this.http.post<{ success: boolean; data: ScoreTurnover[]; message?: string }>(
+    `${this.scoresApiUrl}/calculer/tous`,
+    {}
+  ).pipe(
+    tap(() => this.derniersScoresCache = null)
+  );
+}
 
   getStatsScoresTurnover(): Observable<{ success: boolean; data: any; message?: string }> {
     return this.http.get<{ success: boolean; data: any; message?: string }>(
