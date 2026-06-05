@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
-import { Observable, of } from 'rxjs';
+import { Observable, of, map } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { catchError, tap } from 'rxjs/operators';
@@ -20,14 +20,22 @@ export class EmployeService {
   // ===== CRUD ==============
   // =========================
 
- getAll(): Observable<any> {
+getAll(): Observable<any> {
   if (this.employesCache) {
     return of(this.employesCache);
   }
 
   return this.api.get(this.endpoint, { page: 0, size: 20 }).pipe(
+    map((res: any) => {
+      const normalized = {
+        ...res,
+        data: res?.data?.content || res?.data || []
+      };
+
+      return normalized;
+    }),
     tap(res => this.employesCache = res),
-    catchError(this.handleError('getAll', []))
+    catchError(this.handleError('getAll', { success: false, data: [] }))
   );
 }
 
