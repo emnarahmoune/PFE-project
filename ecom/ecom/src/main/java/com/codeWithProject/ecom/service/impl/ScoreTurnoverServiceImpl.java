@@ -51,10 +51,18 @@ public class ScoreTurnoverServiceImpl implements ScoreTurnoverService {
 
     @Override
     public List<ScoreTurnoverDTO> findAll() {
-        return scoreTurnoverRepository.findAll()
-                .stream()
-                .map(mapper::toDto)
-                .toList();
+        return scoreTurnoverRepository.findDerniersScores()
+        .stream()
+        .collect(Collectors.toMap(
+                s -> s.getEmploye().getId(),
+                s -> s,
+                (a, b) -> a.getId() > b.getId() ? a : b
+        ))
+        .values()
+        .stream()
+        .sorted((a, b) -> Double.compare(b.getScore(), a.getScore()))
+        .map(mapper::toDto)
+        .toList();
     }
 
     @Override
