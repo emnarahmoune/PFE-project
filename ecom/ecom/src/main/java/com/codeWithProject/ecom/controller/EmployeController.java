@@ -87,12 +87,17 @@ public class EmployeController {
 
     // ===== LISTES GÉNÉRALES =====
 
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<EmployeDTO>>> getAllEmployes() {
-        return ResponseEntity.ok(
-                ApiResponse.success(employeService.findAll(), "Employés récupérés")
-        );
-    }
+   @GetMapping
+public ResponseEntity<ApiResponse<Page<EmployeDTO>>> getAllEmployes(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size
+) {
+    Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+
+    return ResponseEntity.ok(
+            ApiResponse.success(employeService.findAll(pageable), "Employés récupérés")
+    );
+}
 
     @GetMapping("/paged")
     public ResponseEntity<ApiResponse<Page<EmployeDTO>>> getAllEmployesPaged(
