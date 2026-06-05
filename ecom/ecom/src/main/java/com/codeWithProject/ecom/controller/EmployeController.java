@@ -87,15 +87,53 @@ public class EmployeController {
 
     // ===== LISTES GÉNÉRALES =====
 
-   @GetMapping
-public ResponseEntity<ApiResponse<Page<EmployeDTO>>> getAllEmployes(
+@GetMapping
+public ResponseEntity<ApiResponse<Map<String, Object>>> getAllEmployes(
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
 ) {
     Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
 
+    Page<Employe> employesPage = employeRepository.findAll(pageable);
+
+    List<Map<String, Object>> content = employesPage.getContent()
+            .stream()
+            .map(e -> {
+                Map<String, Object> item = new HashMap<>();
+                item.put("id", e.getId());
+                item.put("matricule", e.getMatricule());
+                item.put("nom", e.getNom());
+                item.put("prenom", e.getPrenom());
+                item.put("email", e.getEmail());
+                item.put("telephone", e.getTelephone());
+                item.put("poste", e.getPoste());
+                item.put("departement", e.getDepartement());
+                item.put("statut", e.getStatut());
+                item.put("actif", e.getActif());
+                item.put("role", e.getRole());
+                item.put("dateEmbauche", e.getDateEmbauche());
+                item.put("salaire", e.getSalaire());
+                item.put("photoUrl", e.getPhotoUrl());
+
+                if (e.getManager() != null) {
+                    item.put("managerId", e.getManager().getId());
+                    item.put("managerNom", e.getManager().getNom());
+                    item.put("managerPrenom", e.getManager().getPrenom());
+                }
+
+                return item;
+            })
+            .toList();
+
+    Map<String, Object> pageData = new HashMap<>();
+    pageData.put("content", content);
+    pageData.put("totalElements", employesPage.getTotalElements());
+    pageData.put("totalPages", employesPage.getTotalPages());
+    pageData.put("number", employesPage.getNumber());
+    pageData.put("size", employesPage.getSize());
+
     return ResponseEntity.ok(
-            ApiResponse.success(employeService.findAll(pageable), "Employés récupérés")
+            ApiResponse.success(pageData, "Employés récupérés")
     );
 }
 
