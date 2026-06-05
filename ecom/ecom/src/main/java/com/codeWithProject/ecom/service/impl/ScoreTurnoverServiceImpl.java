@@ -670,10 +670,17 @@ public EmployeScoreDetailDTO getEmployeScoreDetail(Long employeId) {
         evolutionPct = round2((evolution / precedentScore.getScore()) * 100);
     }
 
-    List<ScoreTurnoverDTO> tousScores = scoreTurnoverRepository.findDerniersScores()
-        .stream()
-        .map(mapper::toDto)
-        .toList();
+    List<ScoreTurnoverDTO> tousScores = scoreTurnoverRepository.findDerniersScores(PageRequest.of(0, 500))
+    .stream()
+    .collect(Collectors.toMap(
+            s -> s.getEmploye().getId(),
+            s -> s,
+            (a, b) -> a.getId() > b.getId() ? a : b
+    ))
+    .values()
+    .stream()
+    .map(mapper::toDto)
+    .toList();
     int totalEmployes = tousScores.size();
     Integer rang = null;
     Integer percentile = null;

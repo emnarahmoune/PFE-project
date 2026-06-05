@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-
+import org.springframework.data.domain.Pageable;
 public interface ScoreTurnoverRepository extends JpaRepository<ScoreTurnover, Long> {
 
     List<ScoreTurnover> findByEmployeId(Long employeId);
@@ -66,6 +66,8 @@ public interface ScoreTurnoverRepository extends JpaRepository<ScoreTurnover, Lo
 @Query("""
     SELECT s
     FROM ScoreTurnover s
+    JOIN FETCH s.employe
+    LEFT JOIN FETCH s.systemeBI
     ORDER BY s.id DESC
 """)
 List<ScoreTurnover> findDerniersScores(Pageable pageable);
