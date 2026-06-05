@@ -1,21 +1,27 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { Observable, of, tap } from 'rxjs';
 @Injectable({
   providedIn: 'root'
 })
 export class CompetenceService {
-
+private competencesCache: any = null;
 private apiUrl = `${environment.apiUrl}/competences`;
   constructor(private http: HttpClient) {}
 
   // ===============================
   // 📥 GET ALL
   // ===============================
-  getAll(): Observable<any> {
-     return this.http.get(`${this.apiUrl}?page=0&size=20`);
+ getAll(): Observable<any> {
+  if (this.competencesCache) {
+    return of(this.competencesCache);
   }
+
+  return this.http.get(`${this.apiUrl}?page=0&size=20`).pipe(
+    tap(res => this.competencesCache = res)
+  );
+}
 
 
 // 📥 GET BY ID (simple)
@@ -30,6 +36,7 @@ getDetails(id: number): Observable<any> {
   // ➕ CREATE
   // ===============================
   create(competence: any): Observable<any> {
+    this.competencesCache = null;
     return this.http.post(this.apiUrl, competence);
   }
 
@@ -37,6 +44,7 @@ getDetails(id: number): Observable<any> {
   // ✏️ UPDATE
   // ===============================
   update(id: number, competence: any): Observable<any> {
+    this.competencesCache = null;
     return this.http.put(`${this.apiUrl}/${id}`, competence);
   }
 
@@ -44,6 +52,7 @@ getDetails(id: number): Observable<any> {
   // 🗑️ DELETE
   // ===============================
   delete(id: number): Observable<any> {
+    this.competencesCache = null;
     return this.http.delete(`${this.apiUrl}/${id}`);
   }
 
@@ -65,6 +74,7 @@ getDetails(id: number): Observable<any> {
   // 🔗 ASSOCIER EMPLOYE
   // ===============================
   addEmploye(competenceId: number, employeId: number): Observable<any> {
+    this.competencesCache = null;
     return this.http.post(`${this.apiUrl}/${competenceId}/employes/${employeId}`, {});
   }
 
@@ -72,6 +82,7 @@ getDetails(id: number): Observable<any> {
   // ❌ RETIRER EMPLOYE
   // ===============================
   removeEmploye(competenceId: number, employeId: number): Observable<any> {
+    this.competencesCache = null;
     return this.http.delete(`${this.apiUrl}/${competenceId}/employes/${employeId}`);
   }
 }

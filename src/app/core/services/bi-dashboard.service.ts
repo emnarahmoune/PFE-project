@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-
+import { Observable, of, tap } from 'rxjs';
 export interface DashboardAdminBi {
   effectifTotal: number;
   employesActifs: number;
@@ -90,12 +89,19 @@ export interface DashboardManagerBi {
 })
 export class BiDashboardService {
   private readonly apiUrl = `${environment.apiUrl}/bi`;
+  private adminDashboardCache: DashboardAdminBi | null = null;
 
   constructor(private http: HttpClient) {}
 
-  getDashboardAdminBi(): Observable<DashboardAdminBi> {
-    return this.http.get<DashboardAdminBi>(`${this.apiUrl}/dashboard-admin`);
+ getDashboardAdminBi(): Observable<DashboardAdminBi> {
+  if (this.adminDashboardCache) {
+    return of(this.adminDashboardCache);
   }
+
+  return this.http.get<DashboardAdminBi>(`${this.apiUrl}/dashboard-admin`).pipe(
+    tap(res => this.adminDashboardCache = res)
+  );
+}
 
 
   getDashboardManagerBi(managerId: number): Observable<DashboardManagerBi> {

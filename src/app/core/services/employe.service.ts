@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { ApiService } from './api.service';
 import { Observable, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { catchError, tap } from 'rxjs/operators';
+
 @Injectable({
   providedIn: 'root'
 })
@@ -11,6 +12,7 @@ export class EmployeService {
 
   private endpoint = 'employes';
 
+  private employesCache: any = null;
   constructor(private api: ApiService, 
     private http: HttpClient) {}
 
@@ -18,10 +20,16 @@ export class EmployeService {
   // ===== CRUD ==============
   // =========================
 
-  getAll(): Observable<any> {
-    return this.api.get(this.endpoint, { page: 0, size: 20 })
-      .pipe(catchError(this.handleError('getAll', [])));
+ getAll(): Observable<any> {
+  if (this.employesCache) {
+    return of(this.employesCache);
   }
+
+  return this.api.get(this.endpoint, { page: 0, size: 20 }).pipe(
+    tap(res => this.employesCache = res),
+    catchError(this.handleError('getAll', []))
+  );
+}
 
   getById(id: number): Observable<any> {
     return this.api.get(`${this.endpoint}/${id}`)
@@ -29,17 +37,20 @@ export class EmployeService {
   }
 
   create(data: any): Observable<any> {
+    this.employesCache=null;
     return this.api.post(this.endpoint, data)
       .pipe(catchError(this.handleError('create', {})));
   }
 
 
   update(id: number, data: any): Observable<any> {
+     this.employesCache=null;
     return this.api.put(this.endpoint, id, data)
       .pipe(catchError(this.handleError('update', {})));
   }
 
   delete(id: number): Observable<any> {
+     this.employesCache=null;
     return this.api.delete(this.endpoint, id)
       .pipe(catchError(this.handleError('delete', {})));
   }
@@ -103,10 +114,12 @@ export class EmployeService {
   }
 
   assignManager(employeId: number, managerId: number): Observable<any> {
+     this.employesCache=null;
     return this.updateManager(employeId, managerId);
   }
 
   unassignManager(employeId: number): Observable<any> {
+     this.employesCache=null;
   return this.http.delete<any>(
     `${environment.apiUrl}/employes/${employeId}/manager`
   ).pipe(
@@ -134,6 +147,7 @@ export class EmployeService {
   // =========================
 
   changeStatut(id: number, statut: string): Observable<any> {
+     this.employesCache=null;
     return this.api.put(`${this.endpoint}/statut`, id, { statut })
       .pipe(catchError(this.handleError('changeStatut', {})));
   }

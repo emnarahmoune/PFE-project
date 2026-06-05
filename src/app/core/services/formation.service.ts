@@ -1,40 +1,52 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
 import { Formation } from '../models/formation.model';
 import { environment } from '../../../environments/environment';
+import { Observable, of, tap } from 'rxjs';
 @Injectable({
   providedIn: 'root'
 })
 export class FormationService {
+  private formationsCache: Formation[] | null = null;
 private readonly apiUrl = `${environment.apiUrl}/formations`;
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<Formation[]> {
-    return this.http.get<Formation[]>(`${this.apiUrl}?page=0&size=20`);
+ getAll(): Observable<Formation[]> {
+  if (this.formationsCache) {
+    return of(this.formationsCache);
   }
+
+  return this.http.get<Formation[]>(`${this.apiUrl}?page=0&size=20`).pipe(
+    tap(res => this.formationsCache = res)
+  );
+}
 
   getById(id: number): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
 
   create(formation: Formation): Observable<any> {
+    this.formationsCache = null;
     return this.http.post<any>(this.apiUrl, formation);
   }
 
   update(id: number, formation: Formation): Observable<any> {
+     this.formationsCache = null;
     return this.http.put<any>(`${this.apiUrl}/${id}`, formation);
   }
 
   delete(id: number): Observable<any> {
+     this.formationsCache = null;
     return this.http.delete<any>(`${this.apiUrl}/${id}`);
   }
 
   activer(id: number): Observable<any> {
+     this.formationsCache = null;
     return this.http.put<any>(`${this.apiUrl}/${id}/activer`, {});
   }
 
   desactiver(id: number): Observable<any> {
+     this.formationsCache = null;
     return this.http.put<any>(`${this.apiUrl}/${id}/desactiver`, {});
   }
 
@@ -49,6 +61,7 @@ private readonly apiUrl = `${environment.apiUrl}/formations`;
   }
 
   uploadPdf(formData: FormData): Observable<any> {
+     this.formationsCache = null;
     return this.http.post<any>(`${this.apiUrl}/upload-pdf`, formData);
   }
 
