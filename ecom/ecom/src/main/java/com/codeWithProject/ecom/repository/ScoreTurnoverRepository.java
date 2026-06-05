@@ -64,22 +64,16 @@ public interface ScoreTurnoverRepository extends JpaRepository<ScoreTurnover, Lo
     List<ScoreTurnover> findByDatePredictionBetween(LocalDate debut, LocalDate fin);
 
     @Query("""
-        SELECT s
-        FROM ScoreTurnover s
-        WHERE s.datePrediction = (
-            SELECT MAX(s2.datePrediction)
-            FROM ScoreTurnover s2
-            WHERE s2.employe.id = s.employe.id
-        )
-        AND s.id = (
-            SELECT MAX(s3.id)
-            FROM ScoreTurnover s3
-            WHERE s3.employe.id = s.employe.id
-            AND s3.datePrediction = s.datePrediction
-        )
-        ORDER BY s.score DESC
-    """)
-    List<ScoreTurnover> findDerniersScores();
+    SELECT s
+    FROM ScoreTurnover s
+    WHERE s.id IN (
+        SELECT MAX(s2.id)
+        FROM ScoreTurnover s2
+        GROUP BY s2.employe.id
+    )
+    ORDER BY s.score DESC
+""")
+List<ScoreTurnover> findDerniersScores();
 
     @Query("""
         SELECT s
