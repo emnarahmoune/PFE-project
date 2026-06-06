@@ -836,6 +836,15 @@
 
           <div class="ai-meta">
             <span>{{ getRecommendationTypeLabel(rec.type) }}</span>
+
+            <span *ngIf="rec.source === 'EXTERNE'" class="badge badge-externe">
+              🌍 Externe
+            </span>
+
+            <span *ngIf="rec.source !== 'EXTERNE'" class="badge badge-interne">
+              Interne
+            </span>
+
             <span *ngIf="rec.poste">Poste : {{ rec.poste }}</span>
           </div>
 
@@ -851,23 +860,6 @@
               class="btn-primary"
               (click)="inscrireRecommendation(rec)">
               S’inscrire
-            </button>
-
-            <a
-              *ngIf="rec.url"
-              [href]="rec.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn-outline">
-              Source externe
-            </a>
-
-            <button
-              *ngIf="!rec.url"
-              type="button"
-              class="btn-outline"
-              disabled>
-              Lien indisponible
             </button>
 
           </div>
@@ -914,6 +906,15 @@
 
           <div class="ai-meta">
             <span>{{ getRecommendationTypeLabel(rec.type) }}</span>
+
+            <span *ngIf="rec.source === 'EXTERNE'" class="badge badge-externe">
+              🌍 Externe
+            </span>
+
+            <span *ngIf="rec.source !== 'EXTERNE'" class="badge badge-interne">
+              Interne
+            </span>
+
             <span *ngIf="rec.poste">Poste : {{ rec.poste }}</span>
           </div>
 
@@ -931,23 +932,6 @@
               S’inscrire
             </button>
 
-            <a
-              *ngIf="rec.url"
-              [href]="rec.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn-outline">
-              Source externe
-            </a>
-
-            <button
-              *ngIf="!rec.url"
-              type="button"
-              class="btn-outline"
-              disabled>
-              Lien indisponible
-            </button>
-
           </div>
 
         </article>
@@ -955,45 +939,6 @@
       </div>
     </div>
 
-    <div
-  class="ai-recommendation-group"
-  *ngIf="!recommendationsLoading && recommandationsExternes.length > 0">
-
-  <div class="ai-group-title">
-    <h3>🌍 Formations externes recommandées</h3>
-    <span>{{ recommandationsExternes.length }} formation(s)</span>
-  </div>
-
-  <div class="ai-recommendations-grid">
-
-    <article
-      class="ai-recommendation-card"
-      *ngFor="let rec of recommandationsExternes">
-
-      <div class="ai-card-top">
-        <div>
-          <h4>{{ rec.formationTitle }}</h4>
-          <span>{{ rec.provider }}</span>
-        </div>
-      </div>
-
-      <p *ngIf="rec.description">
-        {{ rec.description }}
-      </p>
-
-      <div class="ai-actions">
-        <button
-  type="button"
-  class="btn-primary"
-  (click)="inscrireRecommendation(rec)">
-  Accéder à la formation
-</button>
-      </div>
-
-    </article>
-
-  </div>
-</div>
-
+    
   </section>
 </div>

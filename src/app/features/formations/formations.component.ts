@@ -74,7 +74,6 @@ interface DomaineOption {
 })
 export class FormationsComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
-recommandationsExternes: FormationRecommendation[] = [];
 
   mode: FormationMode = 'ADMIN_LISTE';
 
@@ -1055,12 +1054,6 @@ this.recommandationsSkill = this.recommandations.filter(
   (rec: any) => rec?.type === 'BOOST_COMPETENCES'
 );
 
-this.recommandationsExternes = this.recommandations.filter(
-  (rec: any) =>
-    rec?.type === 'EXTERNE' ||
-    (!!rec?.url && !rec?.formationId)
-);
-
         this.recommendationsLoading = false;
       },
       error: (err: any) => {
@@ -1428,7 +1421,6 @@ inscrireRecommendation(rec: FormationRecommendation): void {
         this.recommandations = this.recommandations.filter(r => r.id !== rec.id);
         this.recommandationsPoste = this.recommandationsPoste.filter(r => r.id !== rec.id);
         this.recommandationsSkill = this.recommandationsSkill.filter(r => r.id !== rec.id);
-        this.recommandationsExternes = this.recommandationsExternes.filter(r => r.id !== rec.id);
 
         this.loadMesFormationsAndRecommendations();
       },
