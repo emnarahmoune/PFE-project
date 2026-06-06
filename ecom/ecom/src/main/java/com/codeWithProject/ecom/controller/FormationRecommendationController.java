@@ -115,12 +115,25 @@ public class FormationRecommendationController {
 
         Employe employe = getCurrentEmploye(auth);
 
-        if (recommendation.getFormationId() == null) {
-            throw new RuntimeException("Cette recommandation ne contient pas formationId. Régénère les recommandations IA.");
-        }
+        Formation formation;
 
-        Formation formation = formationRepository.findById(recommendation.getFormationId())
-                .orElseThrow(() -> new RuntimeException("Formation introuvable id=" + recommendation.getFormationId()));
+if (recommendation.getFormationId() == null) {
+    formation = new Formation();
+    formation.setTitre(recommendation.getFormationTitle());
+    formation.setDescription(recommendation.getDescription());
+    formation.setDomaine("INFORMATIQUE");
+    formation.setDureeHeures(0);
+    formation.setActif(true);
+    formation.setDateCreation(LocalDateTime.now());
+
+    formation = formationRepository.save(formation);
+
+    recommendation.setFormationId(formation.getId());
+    formationRecommendationRepository.save(recommendation);
+} else {
+    formation = formationRepository.findById(recommendation.getFormationId())
+            .orElseThrow(() -> new RuntimeException("Formation introuvable id=" + recommendation.getFormationId()));
+}
 
         // 1. Corriger les vidéos de la formation avant inscription
         ensureFormationHasEmbeddableVideos(formation, recommendation);
