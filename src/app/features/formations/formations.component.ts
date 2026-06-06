@@ -1377,22 +1377,30 @@ restartFormationAndOpen(ef: any, index: number): void {
 
 
 
-  inscrireRecommendation(rec: FormationRecommendation): void {
+ 
+inscrireRecommendation(rec: FormationRecommendation): void {
+
+  // Cas formation EXTERNE — ouvrir le lien dans un nouvel onglet
   if (!rec?.id) {
-    this.toast('Recommandation invalide');
+    const url = (rec as any)?.url;
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      this.toast('Formation externe ouverte dans un nouvel onglet 🔗', 'OK');
+    } else {
+      this.toast('Formation externe — aucun lien disponible.');
+    }
     return;
   }
 
+  // Cas formation INTERNE — inscription normale
   this.formationRecommendationService.inscrireRecommendation(rec.id)
     .pipe(takeUntil(this.destroy$))
     .subscribe({
       next: () => {
         this.toast('Formation ajoutée à vos formations ✅', 'OK');
-
         this.recommandations = this.recommandations.filter(r => r.id !== rec.id);
         this.recommandationsPoste = this.recommandationsPoste.filter(r => r.id !== rec.id);
         this.recommandationsSkill = this.recommandationsSkill.filter(r => r.id !== rec.id);
-
         this.loadMesFormations();
       },
       error: (err: unknown) => {
