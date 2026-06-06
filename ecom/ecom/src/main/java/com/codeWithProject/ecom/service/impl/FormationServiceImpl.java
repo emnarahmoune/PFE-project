@@ -395,24 +395,21 @@ System.out.println("=================================");
     // IA LOGIQUE 2 : BOOST COMPETENCES
     // =========================
 
-   @Override
+@Override
 @Transactional(readOnly = true)
 public List<Formation> getRecommendationsBySkills(Long employeId) {
-        Employe employe = getEmployeOrThrow(employeId);
+    Employe employe = getEmployeOrThrow(employeId);
 
-        Map<String, Integer> userSkills = buildUserSkills(employeId);
+    Map<String, Integer> userSkills = buildUserSkills(employeId);
 
-        if (userSkills.isEmpty()) {
-            return List.of();
-        }
+    if (userSkills.isEmpty()) {
+        return List.of();
+    }
 
-        List<Formation> formationsNonSuivies = getFormationsNonSuivies(employeId);
+    // ✅ On ne bloque plus ici — on laisse Python décider
+    List<Formation> formationsNonSuivies = getFormationsNonSuivies(employeId);
 
-        if (formationsNonSuivies.isEmpty()) {
-            return List.of();
-        }
-
-     List<Map<String, Object>> formationsPayload = formationsNonSuivies.stream()
+    List<Map<String, Object>> formationsPayload = formationsNonSuivies.stream()
         .map(f -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", f.getId());
@@ -425,18 +422,18 @@ public List<Formation> getRecommendationsBySkills(Long employeId) {
         })
         .toList();
 
-        List<String> formationsSuivies = buildFormationsSuivies(employeId);
+    List<String> formationsSuivies = buildFormationsSuivies(employeId);
 
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("mode", "BOOST_COMPETENCES");
-        payload.put("poste", employe.getPoste());
-        payload.put("userSkills", userSkills);
-        payload.put("requiredSkills", Map.of());
-        payload.put("formations", formationsPayload);
-        payload.put("formationsSuivies", formationsSuivies);
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("mode", "BOOST_COMPETENCES");
+    payload.put("poste", employe.getPoste());
+    payload.put("userSkills", userSkills);
+    payload.put("requiredSkills", Map.of());
+    payload.put("formations", formationsPayload);
+    payload.put("formationsSuivies", formationsSuivies);
 
-        return callFlaskAndMapToFormations(payload, formationsNonSuivies);
-    }
+    return callFlaskAndMapToFormations(payload, formationsNonSuivies);
+}
 
     // =========================
     // ALIASES ANCIENS
@@ -569,17 +566,17 @@ private Map<String, Integer> buildRequiredSkillsByPoste(String poste) {
                 .toList();
     }
 
-   @SuppressWarnings("unchecked")
+ @SuppressWarnings("unchecked")
 private List<Formation> callFlaskAndMapToFormations(
         Map<String, Object> payload,
         List<Formation> formationsDisponibles
 ) {
     try {
-       Map<String, Object> response = restTemplate.postForObject(
-        aiRecommendationUrl + "/recommend",
-        payload,
-        Map.class
-);
+        Map<String, Object> response = restTemplate.postForObject(
+            aiRecommendationUrl + "/recommend",
+            payload,
+            Map.class
+        );
 
         if (response == null || response.isEmpty()) {
             return List.of();
@@ -592,8 +589,8 @@ private List<Formation> callFlaskAndMapToFormations(
             return List.of();
         }
 
+        // Map des formations internes par titre
         Map<String, Formation> formationByTitle = new LinkedHashMap<>();
-
         for (Formation formation : formationsDisponibles) {
             if (formation.getTitre() != null) {
                 formationByTitle.put(formation.getTitre(), formation);
@@ -608,25 +605,43 @@ private List<Formation> callFlaskAndMapToFormations(
             }
 
             Object titleObject = item.get("formation");
-
             if (titleObject == null) {
                 titleObject = item.get("title");
             }
-
             if (titleObject == null) {
                 continue;
             }
 
-            Formation formation = formationByTitle.get(titleObject.toString());
+            String titre = titleObject.toString();
 
-            if (formation != null) {
-                result.add(formation);
-            }
+            // ✅ CAS 1 : formation interne → on la récupère depuis la BDD
+            Formation formation = formationByTitle.get(titre);
+
+if (formation != null) {
+    result.add(formation);
+} else {
+    // ✅ Cast correct ici
+    Map<String, Object> itemMap = (Map<String, Object>) item;
+    String source = itemMap.getOrDefault("source", "INTERNE").toString();
+
+    if ("EXTERNE".equals(source)) {
+        Formation externe = new Formation();
+        externe.setId(null);
+        externe.setTitre(titre);
+        externe.setDescription(
+            itemMap.getOrDefault("description", "").toString()
+        );
+        externe.setDomaine(
+            itemMap.getOrDefault("provider", "Externe").toString()
+        );
+        externe.setActif(true);
+        result.add(externe);
+    }
+
+       }
         }
 
-        return result.stream()
-                .limit(6)
-                .toList();
+        return result.stream().limit(8).toList();
 
     } catch (Exception e) {
         System.err.println("❌ Erreur appel IA Flask : " + e.getMessage());
