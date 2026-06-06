@@ -982,13 +982,12 @@
       </p>
 
       <div class="ai-actions">
-        <a
-          [href]="rec.url"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="btn-primary">
-          Accéder à la formation
-        </a>
+        <button
+  type="button"
+  class="btn-primary"
+  (click)="inscrireRecommendation(rec)">
+  Accéder à la formation
+</button>
       </div>
 
     </article>
