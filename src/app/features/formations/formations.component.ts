@@ -233,13 +233,31 @@ private sanitizer: DomSanitizer
         }
         break;
 
-      case 'EMPLOYE_MES_FORMATIONS':
-  this.loadMesFormations();
-  this.loadRecommendationsIA();
+   case 'EMPLOYE_MES_FORMATIONS':
+  this.loadMesFormationsAndRecommendations();
   break;
     }
   }
 
+
+  loadMesFormationsAndRecommendations(): void {
+  this.formationService.getMyFormations()
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (data: any[]) => {
+        console.log('MES FORMATIONS REÇUES =', data);
+        this.formationsSuivies = Array.isArray(data) ? data : [];
+
+        this.loadRecommendationsIA();
+      },
+      error: (err: any) => {
+        console.error('Erreur chargement mes formations:', err);
+        this.formationsSuivies = [];
+
+        this.loadRecommendationsIA();
+      }
+    });
+}
   // =========================================================
   // HELPERS
   // =========================================================
@@ -1401,7 +1419,7 @@ inscrireRecommendation(rec: FormationRecommendation): void {
         this.recommandations = this.recommandations.filter(r => r.id !== rec.id);
         this.recommandationsPoste = this.recommandationsPoste.filter(r => r.id !== rec.id);
         this.recommandationsSkill = this.recommandationsSkill.filter(r => r.id !== rec.id);
-        this.loadMesFormations();
+        this.loadMesFormationsAndRecommendations();
       },
       error: (err: unknown) => {
         console.error(err);
