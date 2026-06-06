@@ -217,7 +217,12 @@ public class FormationRecommendationAutoServiceImpl implements FormationRecommen
         }
 
         for (RecommendationItem item : response.getRecommendations()) {
-            if (item.getFormationId() == null) {
+            boolean isExternal =
+                    item.getFormationId() == null
+                            && item.getUrl() != null
+                            && !item.getUrl().isBlank();
+
+            if (item.getFormationId() == null && !isExternal) {
                 continue;
             }
 
