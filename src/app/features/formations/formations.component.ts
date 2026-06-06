@@ -1033,6 +1033,16 @@ loadRecommendationsIA(): void {
     .subscribe({
       next: (data: any[]) => {
         console.log('RECOMMANDATIONS IA CONNECTED USER =', data);
+        data.forEach((r: any) => {
+  console.log(
+    'TYPE =',
+    r.type,
+    'TITLE =',
+    r.formationTitle,
+    'URL =',
+    r.url
+  );
+});
 
         this.recommandations = Array.isArray(data) ? data : [];
 
