@@ -2039,21 +2039,6 @@ detail-card,
 
 
 
-.employee-detail-page .info-card {
-  width: 100%;
-}
-
-
-
-/* Manager detail : supprimer le vide après suppression indicateurs */
-.employee-detail-page .employee-profile > .detail-layout:first-of-type {
-  display: block !important;
-}
-
-.employee-detail-page .employee-profile > .detail-layout:first-of-type .info-card {
-  width: 100% !important;
-}
-
 *
 .info-layout {
   display: block;
