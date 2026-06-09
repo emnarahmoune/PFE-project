@@ -733,7 +733,7 @@
 
       <div>
         <h1>Mon équipe</h1>
-        <p>Suivez vos collaborateurs, leurs indicateurs RH et les signaux de risque.</p>
+        <p>Suivez vos collaborateurs et les informations de votre équipe.</p>
       </div>
     </div>
 
@@ -808,29 +808,7 @@
         </p>
       </div>
 
-      <div class="indicators">
-        <div class="indicator" [ngClass]="getAbsenteismeClass(emp.absenteisme)">
-          <span class="indicator-icon">📉</span>
-
-          <strong>
-            {{ emp.absenteisme != null ? (emp.absenteisme | number:'1.1-1') + '%' : '—' }}
-          </strong>
-
-          <span>Absentéisme</span>
-          <small>Taux d’absence</small>
-        </div>
-
-        <div class="indicator" [ngClass]="getScoreClass(emp.scoreTurnover)">
-          <span class="indicator-icon">⚠️</span>
-
-          <strong>
-            {{ emp.scoreTurnover != null ? emp.scoreTurnover : '—' }}
-          </strong>
-
-          <span>Risque turnover</span>
-          <small>Score 0-100</small>
-        </div>
-      </div>
+     
 
       <div class="card-footer">
         <span class="dept-pill">{{ emp.departement || 'Sans département' }}</span>
@@ -858,9 +836,7 @@
     </p>
   </section>
 
-  <div *ngIf="loadingIndicators && !loading" class="indicators-loading">
-    Mise à jour des indicateurs RH...
-  </div>
+  
 
 </div>
 
@@ -990,45 +966,7 @@
         </div>
       </div>
 
-      <div class="detail-card indicators-card">
-        <div class="card-title">
-          <div class="card-icon">📊</div>
-          <div>
-            <h2>Indicateurs RH</h2>
-            <p>Absentéisme et risque turnover</p>
-          </div>
-        </div>
-
-        <div class="indicators detail-indicators">
-          <div class="indicator" [ngClass]="getAbsenteismeClass(absenteisme)">
-            <span class="indicator-icon">📉</span>
-
-            <strong>
-              {{ absenteisme != null ? (absenteisme | number:'1.1-1') + '%' : '—' }}
-            </strong>
-
-            <span>Absentéisme</span>
-
-            <small>
-              {{ absenteismeDate ? (absenteismeDate | date:'dd/MM/yyyy') : 'Dernier calcul' }}
-            </small>
-          </div>
-
-          <div class="indicator" [ngClass]="getScoreClass(scoreTurnover)">
-            <span class="indicator-icon">⚠️</span>
-
-            <strong>
-              {{ scoreTurnover != null ? scoreTurnover : '—' }}
-            </strong>
-
-            <span>Risque turnover</span>
-
-            <small>
-              {{ scoreTurnoverNiveau || 'Score 0-100' }}
-            </small>
-          </div>
-        </div>
-      </div>
+    
     </div>
 
     <!-- NOUVELLE PARTIE : COMPÉTENCES ET FORMATIONS -->

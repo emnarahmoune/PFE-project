@@ -171,8 +171,6 @@ export class AppLayoutComponent implements OnInit, OnDestroy {
         { path: '/manager/dashboard', icon: 'dashboard', label: 'Tableau de bord' },
         { path: '/manager/equipe', icon: 'groups', label: 'Mon équipe' },
         { path: '/manager/conges', icon: 'event', label: 'Demandes de congé' },
-        { path: '/manager/stats', icon: 'bar_chart', label: 'Statistiques' },
-        { path: '/manager/indicateurs', icon: 'analytics', label: 'Indicateurs' },
         { path: '/manager/evaluations', icon: 'assignment', label: 'Évaluations' },
         { path: '/manager/profil', icon: 'person', label: 'Mon profil' }
       ];

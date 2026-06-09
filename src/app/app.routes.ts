@@ -287,14 +287,6 @@ export const routes: Routes = [
         data: { congeMode: 'MANAGER_HISTORIQUE_EMPLOYE' }
       },
 
-      // ==================== STATS MANAGER ====================
-      {
-        path: 'stats',
-        loadComponent: () =>
-          import('./features/stats/stats.component')
-            .then(m => m.StatsComponent)
-      },
-
       // ==================== DÉTAIL EMPLOYÉ MANAGER ====================
       {
         path: 'employe/:id',
@@ -304,17 +296,10 @@ export const routes: Routes = [
         data: { employeMode: 'MANAGER_DETAIL' }
       },
 
-      // ==================== INDICATEURS MANAGER ====================
-      {
-        path: 'indicateurs',
-        loadComponent: () =>
-          import('./features/indicateurs/indicateurs.component')
-            .then(m => m.IndicateursComponent)
-      },
-
       // ==================== PROFIL MANAGER ====================
       {
         path: 'profil',
+
         loadComponent: () =>
           import('./features/profil/profil.component')
             .then(m => m.ProfilComponent),

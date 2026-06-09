@@ -36,11 +36,7 @@ type EmployeMode =
   | 'MANAGER_EQUIPE'
   | 'MANAGER_DETAIL';
 
-interface EmployeExtended extends Employe {
-  absenteismeDate?: string;
-  scoreTurnover?: number;
-  scoreTurnoverNiveau?: string;
-}
+interface EmployeExtended extends Employe {}
 
 function noWhitespaceValidator(c: AbstractControl): ValidationErrors | null {
   return c.value && c.value !== c.value.trim() ? { whitespace: true } : null;
@@ -187,25 +183,18 @@ export class EmployesComponent implements OnInit, OnDestroy {
   searchTerm = '';
   sortBy = 'nom';
 
-  sortOptions = [
-    { value: 'nom', label: 'Nom A-Z' },
-    { value: 'poste', label: 'Poste A-Z' },
-    { value: 'departement', label: 'Département A-Z' },
-    { value: 'statut', label: 'Statut' },
-    { value: 'absenteismeDesc', label: 'Absentéisme élevé' },
-    { value: 'scoreDesc', label: 'Risque élevé' },
-    { value: 'dateEmbaucheDesc', label: 'Embauche récente' }
-  ];
+sortOptions = [
+  { value: 'nom', label: 'Nom A-Z' },
+  { value: 'poste', label: 'Poste A-Z' },
+  { value: 'departement', label: 'Département A-Z' },
+  { value: 'statut', label: 'Statut' },
+  { value: 'dateEmbaucheDesc', label: 'Embauche récente' }
+];
 
   // =========================
   // MANAGER DETAIL
   // =========================
 
-  absenteisme: number | null = null;
-  absenteismeDate: string | null = null;
-
-  scoreTurnover: number | null = null;
-  scoreTurnoverNiveau: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -289,7 +278,6 @@ export class EmployesComponent implements OnInit, OnDestroy {
         if (this.employeId) {
           this.loadManagerEmploye(this.employeId);
           this.loadManagers();
-          this.loadIndicateurs(this.employeId);
         } else {
           this.loading = false;
           this.error = true;
@@ -1260,7 +1248,7 @@ export class EmployesComponent implements OnInit, OnDestroy {
           this.applyFiltersAndSort();
           this.loading = false;
 
-          this.loadIndicators();
+          
         },
         error: err => {
           console.error('Erreur chargement équipe:', err);
@@ -1271,69 +1259,7 @@ export class EmployesComponent implements OnInit, OnDestroy {
       });
   }
 
-  private loadIndicators(): void {
-    if (!this.equipe.length) {
-      return;
-    }
-
-    this.loadingIndicators = true;
-
-    const requests = this.equipe
-      .filter(emp => !!emp.id)
-      .map(emp => {
-        return forkJoin({
-          score: this.managerService.getDernierScoreTurnover(emp.id!),
-          abs: this.managerService.getDernierAbsenteisme(emp.id!)
-        });
-      });
-
-    if (!requests.length) {
-      this.loadingIndicators = false;
-      return;
-    }
-
-    forkJoin(requests)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (results: any[]) => {
-          const employeesWithIds = this.equipe.filter(emp => !!emp.id);
-
-          results.forEach((result, index) => {
-            const emp = employeesWithIds[index];
-
-            if (!emp) {
-              return;
-            }
-
-            emp.scoreTurnover = result?.score?.data?.score ?? null;
-            emp.scoreTurnoverNiveau = result?.score?.data?.niveauRisque ?? null;
-
-            const absData = result?.abs?.data;
-
-            if (Array.isArray(absData) && absData.length > 0) {
-              const monAbs = absData.find((item: any) => Number(item.employeId) === Number(emp.id));
-
-              emp.absenteisme = monAbs?.valeur ?? undefined;
-              emp.absenteismeDate = monAbs?.dateCalcul ?? undefined;
-            } else if (absData && typeof absData === 'object') {
-              emp.absenteisme = absData.valeur ?? absData.taux ?? null;
-              emp.absenteismeDate = absData.dateCalcul ?? null;
-            } else {
-              emp.absenteisme = undefined;
-              emp.absenteismeDate = undefined;
-            }
-          });
-
-          this.applyFiltersAndSort();
-          this.loadingIndicators = false;
-        },
-        error: err => {
-          console.error('Erreur chargement indicateurs équipe:', err);
-          this.loadingIndicators = false;
-        }
-      });
-  }
-
+ 
   filterEmployes(): void {
     this.applyFiltersAndSort();
   }
@@ -1449,42 +1375,9 @@ export class EmployesComponent implements OnInit, OnDestroy {
     return 'default';
   }
 
-  getScoreClass(score: number | null | undefined): string {
-    if (score == null) {
-      return 'badge-neutral';
-    }
+ 
 
-    if (score < 20) {
-      return 'score-low';
-    }
-
-    if (score < 40) {
-      return 'score-medium';
-    }
-
-    if (score < 70) {
-      return 'score-high';
-    }
-
-    return 'score-critical';
-  }
-
-  getAbsenteismeClass(taux: number | null | undefined): string {
-    if (taux == null) {
-      return 'badge-neutral';
-    }
-
-    if (taux < 5) {
-      return 'abs-low';
-    }
-
-    if (taux < 10) {
-      return 'abs-medium';
-    }
-
-    return 'abs-high';
-  }
-
+ 
   trackByEmployeId(index: number, emp: EmployeExtended): number | string {
     return emp.id || index;
   }
@@ -1521,34 +1414,7 @@ export class EmployesComponent implements OnInit, OnDestroy {
       });
   }
 
-  private loadIndicateurs(employeId: number): void {
-    forkJoin({
-      score: this.managerService.getDernierScoreTurnover(employeId),
-      abs: this.managerService.getDernierAbsenteisme(employeId)
-    })
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (res: any) => {
-          this.scoreTurnover = res?.score?.data?.score ?? null;
-          this.scoreTurnoverNiveau = res?.score?.data?.niveauRisque ?? null;
 
-          const absData = res?.abs?.data;
-
-          if (Array.isArray(absData) && absData.length > 0) {
-            const monAbs = absData.find((a: any) => Number(a.employeId) === Number(employeId));
-
-            this.absenteisme = monAbs?.valeur ?? null;
-            this.absenteismeDate = monAbs?.dateCalcul ?? null;
-          } else if (absData && typeof absData === 'object') {
-            this.absenteisme = absData.valeur ?? absData.taux ?? null;
-            this.absenteismeDate = absData.dateCalcul ?? null;
-          }
-        },
-        error: err => {
-          console.error('Erreur chargement indicateurs:', err);
-        }
-      });
-  }
 
   updateManagerFromManagerDetail(newManagerId: number): void {
     if (!this.managerEmploye?.id) {
