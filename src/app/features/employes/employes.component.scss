@@ -2053,3 +2053,12 @@ detail-card,
 .employee-detail-page .employee-profile > .detail-layout:first-of-type .info-card {
   width: 100% !important;
 }
+
+*
+.info-layout {
+  display: block;
+}
+
+.info-layout .info-card {
+  width: 100%;
+}
