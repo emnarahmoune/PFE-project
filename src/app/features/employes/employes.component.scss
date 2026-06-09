@@ -2036,3 +2036,13 @@ detail-card,
     border-radius: 20px;
   }
 }
+
+
+/* FIX manager detail après suppression indicateurs RH */
+.employee-detail-page .detail-layout:first-of-type {
+  grid-template-columns: 1fr;
+}
+
+.employee-detail-page .info-card {
+  width: 100%;
+}
