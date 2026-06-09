@@ -2038,11 +2038,18 @@ detail-card,
 }
 
 
-/* FIX manager detail après suppression indicateurs RH */
-.employee-detail-page .detail-layout:first-of-type {
-  grid-template-columns: 1fr;
-}
 
 .employee-detail-page .info-card {
   width: 100%;
+}
+
+
+
+/* Manager detail : supprimer le vide après suppression indicateurs */
+.employee-detail-page .employee-profile > .detail-layout:first-of-type {
+  display: block !important;
+}
+
+.employee-detail-page .employee-profile > .detail-layout:first-of-type .info-card {
+  width: 100% !important;
 }
