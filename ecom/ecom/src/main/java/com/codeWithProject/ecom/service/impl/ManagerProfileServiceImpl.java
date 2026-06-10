@@ -184,49 +184,58 @@ public void changePassword(Jwt jwt, ChangePasswordRequest dto) {
         return email != null ? email.trim().toLowerCase() : null;
     }
 
-    private ManagerProfileDTO convertToDto(Employe manager) {
-        long anciennete = manager.getDateEmbauche() != null
-                ? ChronoUnit.YEARS.between(manager.getDateEmbauche(), LocalDate.now())
-                : 0L;
+ private ManagerProfileDTO convertToDto(Employe manager) {
 
-        long ancienneteManager = manager.getDateEmbauche() != null
-                ? ChronoUnit.MONTHS.between(manager.getDateEmbauche(), LocalDate.now())
-                : 0L;
+    long anciennete = manager.getDateEmbauche() != null
+            ? ChronoUnit.YEARS.between(manager.getDateEmbauche(), LocalDate.now())
+            : 0L;
 
-        String ancienneteManagerLabel = buildAncienneteLabel(manager.getDateEmbauche());
+    long ancienneteManager = manager.getDateEmbauche() != null
+            ? ChronoUnit.MONTHS.between(manager.getDateEmbauche(), LocalDate.now())
+            : 0L;
 
-        log.info(
-                "PROFILE ANCIENNETE => email={}, dateEmbauche={}, anciennete={}, ancienneteManager={}, label={}",
-                manager.getEmail(),
-                manager.getDateEmbauche(),
-                anciennete,
-                ancienneteManager,
-                ancienneteManagerLabel
-        );
+    String ancienneteManagerLabel = buildAncienneteLabel(manager.getDateEmbauche());
 
-        return ManagerProfileDTO.builder()
-                .id(manager.getId())
-                .matricule(manager.getMatricule())
-                .nom(manager.getNom())
-                .prenom(manager.getPrenom())
-                .email(manager.getEmail())
-                .telephone(manager.getTelephone())
-                .poste(manager.getPoste())
-                .departement(manager.getDepartement())
-                .photoUrl(manager.getPhotoUrl())
-                .dateEmbauche(manager.getDateEmbauche())
-                .dateNomination(manager.getDateEmbauche())
-                .actif(manager.getActif())
-                .role(manager.getRole())
-                .soldeConges(manager.getSoldeConges())
-                .statutCompte(manager.getStatut())
-                .anciennete(anciennete)
-                .ancienneteManager(ancienneteManager)
-                .ancienneteManagerLabel(ancienneteManagerLabel)
-                .nombreEmployesGeres(0)
-                .nomComplet(buildNomComplet(manager))
-                .build();
-    }
+    // ✅ AJOUT ICI
+    int nombreEmployes = employeRepository.findByManagerId(manager.getId()).size();
+
+    log.info(
+            "PROFILE ANCIENNETE => email={}, dateEmbauche={}, anciennete={}, ancienneteManager={}, label={}, nbEmployes={}",
+            manager.getEmail(),
+            manager.getDateEmbauche(),
+            anciennete,
+            ancienneteManager,
+            ancienneteManagerLabel,
+            nombreEmployes
+    );
+
+    return ManagerProfileDTO.builder()
+            .id(manager.getId())
+            .matricule(manager.getMatricule())
+            .nom(manager.getNom())
+            .prenom(manager.getPrenom())
+            .email(manager.getEmail())
+            .telephone(manager.getTelephone())
+            .poste(manager.getPoste())
+            .departement(manager.getDepartement())
+            .photoUrl(manager.getPhotoUrl())
+            .dateEmbauche(manager.getDateEmbauche())
+            .dateNomination(manager.getDateEmbauche())
+            .actif(manager.getActif())
+            .role(manager.getRole())
+            .soldeConges(manager.getSoldeConges())
+            .statutCompte(manager.getStatut())
+            .anciennete(anciennete)
+            .ancienneteManager(ancienneteManager)
+            .ancienneteManagerLabel(ancienneteManagerLabel)
+
+            // ✅ ICI LA BONNE VALEUR
+            .nombreEmployesGeres(nombreEmployes)
+
+            .nomComplet(buildNomComplet(manager))
+            .build();
+
+        }
 
     private String buildAncienneteLabel(LocalDate dateDebut) {
         if (dateDebut == null) {
